@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""              # "Project URL"
     supabase_anon_key: str = ""         # "anon / public" key  (or sb_publishable_... on new projects)
     supabase_service_role_key: str = "" # "service_role / secret" key  (or sb_secret_... on new projects)
+    supabase_jwt_secret: str = ""        # JWT secret for verifying tokens
 
     # Gemini AI
     gemini_api_key: str = ""
