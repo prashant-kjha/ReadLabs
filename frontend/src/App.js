@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthPage from "./pages/AuthPage";
 import Layout from "./components/Layout";
+import TeacherPapersPage from "./pages/teacher/PapersPage";
 
 // Stubs — replaced in Plans 2 and 3
 const TeacherClassesPage   = () => <div className="text-white p-8">Classes — coming in Plan 2</div>;
@@ -18,7 +19,7 @@ function AppRoutes() {
       <Route path="/auth" element={<AuthPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
-          <Route path="/teacher/papers"      element={role === "teacher" ? <div className="text-white p-8">Papers — coming in Task 8</div> : <Navigate to="/auth" />} />
+          <Route path="/teacher/papers"      element={role === "teacher" ? <TeacherPapersPage /> : <Navigate to="/auth" />} />
           <Route path="/teacher/classes"     element={role === "teacher" ? <TeacherClassesPage />   : <Navigate to="/auth" />} />
           <Route path="/student/dashboard"   element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
           <Route path="/" element={<Navigate to={defaultPath} />} />
