@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Any
 import httpx
-from config import get_settings
+from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -71,6 +71,11 @@ class QueryBuilder:
         self._params["limit"] = "1"
         return self
 
+    def single(self) -> "QueryBuilder":
+        self._single = True
+        self._params["limit"] = "1"
+        return self
+
     def insert(self, data: dict) -> "QueryBuilder":
         self._method = "POST"
         self._body = data
@@ -126,6 +131,9 @@ class SupabaseDB:
         self._admin = admin
 
     def table(self, name: str) -> QueryBuilder:
+        return QueryBuilder(name, admin=self._admin)
+
+    def from_(self, name: str) -> QueryBuilder:
         return QueryBuilder(name, admin=self._admin)
 
     async def sign_up(self, email: str, password: str, full_name: str = "") -> dict:
