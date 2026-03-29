@@ -76,14 +76,28 @@ async def get_optional_user(
 
 
 async def require_teacher(user: dict = Depends(get_current_user), db=Depends(get_db)):
-    result = await db.from_("user_profiles").select("role").eq("user_id", user["sub"]).single().execute()
-    if not result.data or result.data.get("role") != "teacher":
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    result = await db.from_("user_profiles").select("role").eq("user_id", user_id).single().execute()
+    if hasattr(result, "error") and result.error:
+        raise HTTPException(status_code=500, detail="Database error checking role")
+    if not result.data:
+        raise HTTPException(status_code=403, detail="User profile not found")
+    if result.data.get("role") != "teacher":
         raise HTTPException(status_code=403, detail="Teacher access required")
     return user
 
 
 async def require_student(user: dict = Depends(get_current_user), db=Depends(get_db)):
-    result = await db.from_("user_profiles").select("role").eq("user_id", user["sub"]).single().execute()
-    if not result.data or result.data.get("role") != "student":
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    result = await db.from_("user_profiles").select("role").eq("user_id", user_id).single().execute()
+    if hasattr(result, "error") and result.error:
+        raise HTTPException(status_code=500, detail="Database error checking role")
+    if not result.data:
+        raise HTTPException(status_code=403, detail="User profile not found")
+    if result.data.get("role") != "student":
         raise HTTPException(status_code=403, detail="Student access required")
     return user
