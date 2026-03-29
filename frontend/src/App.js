@@ -1,25 +1,41 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AuthPage from "./pages/AuthPage";
+import Layout from "./components/Layout";
 
-function App() {
+// Stubs — replaced in Plans 2 and 3
+const TeacherClassesPage   = () => <div className="text-white p-8">Classes — coming in Plan 2</div>;
+const StudentDashboardPage = () => <div className="text-white p-8">Assignments — coming in Plan 3</div>;
+
+function AppRoutes() {
+  const { role } = useAuth();
+  const defaultPath = role === "teacher" ? "/teacher/papers" : "/student/dashboard";
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/auth" element={<AuthPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<Layout />}>
+          <Route path="/teacher/papers"      element={role === "teacher" ? <div className="text-white p-8">Papers — coming in Task 8</div> : <Navigate to="/auth" />} />
+          <Route path="/teacher/classes"     element={role === "teacher" ? <TeacherClassesPage />   : <Navigate to="/auth" />} />
+          <Route path="/student/dashboard"   element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
+          <Route path="/" element={<Navigate to={defaultPath} />} />
+        </Route>
+      </Route>
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Toaster position="top-right" />
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}

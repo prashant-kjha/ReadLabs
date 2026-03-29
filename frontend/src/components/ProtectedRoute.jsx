@@ -1,28 +1,21 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Zap } from 'lucide-react';
 
-export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+export default function ProtectedRoute() {
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#070f1e' }}>
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 flex items-center justify-center animate-pulse">
-            <Zap size={24} className="text-white" />
-          </div>
-          <p className="text-slate-400 text-sm">Loading PaperPulse...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <p className="text-gray-400 text-sm">Loading...</p>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  return children;
+  return <Outlet />;
 }
