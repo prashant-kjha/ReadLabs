@@ -6,6 +6,8 @@ import AuthPage from "./pages/AuthPage";
 import Layout from "./components/Layout";
 import TeacherPapersPage from "./pages/teacher/PapersPage";
 import ClassesPage from "./pages/teacher/ClassesPage";
+import AssignmentReviewPage from "./pages/teacher/AssignmentReviewPage";
+import AssignPaperPage from "./pages/teacher/AssignPaperPage";
 
 // Stubs — replaced in Plans 2 and 3
 const StudentDashboardPage = () => <div className="text-white p-8">Assignments — coming in Plan 3</div>;
@@ -21,6 +23,8 @@ function AppRoutes() {
         <Route element={<Layout />}>
           <Route path="/teacher/papers"      element={role === "teacher" ? <TeacherPapersPage /> : <Navigate to="/auth" />} />
           <Route path="/teacher/classes"     element={role === "teacher" ? <ClassesPage /> : <Navigate to="/auth" />} />
+          <Route path="/teacher/assignments/:assignmentId/review" element={role === "teacher" ? <AssignmentReviewPage /> : <Navigate to="/auth" />} />
+          <Route path="/teacher/classes/:classId/assign"        element={role === "teacher" ? <AssignPaperPage /> : <Navigate to="/auth" />} />
           <Route path="/student/dashboard"   element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
           <Route path="/" element={<Navigate to={defaultPath} />} />
         </Route>
