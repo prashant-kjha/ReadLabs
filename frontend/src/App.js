@@ -5,9 +5,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AuthPage from "./pages/AuthPage";
 import Layout from "./components/Layout";
 import TeacherPapersPage from "./pages/teacher/PapersPage";
+import ClassesPage from "./pages/teacher/ClassesPage";
 
 // Stubs — replaced in Plans 2 and 3
-const TeacherClassesPage   = () => <div className="text-white p-8">Classes — coming in Plan 2</div>;
 const StudentDashboardPage = () => <div className="text-white p-8">Assignments — coming in Plan 3</div>;
 
 function AppRoutes() {
@@ -20,7 +20,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/teacher/papers"      element={role === "teacher" ? <TeacherPapersPage /> : <Navigate to="/auth" />} />
-          <Route path="/teacher/classes"     element={role === "teacher" ? <TeacherClassesPage />   : <Navigate to="/auth" />} />
+          <Route path="/teacher/classes"     element={role === "teacher" ? <ClassesPage /> : <Navigate to="/auth" />} />
           <Route path="/student/dashboard"   element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
           <Route path="/" element={<Navigate to={defaultPath} />} />
         </Route>
