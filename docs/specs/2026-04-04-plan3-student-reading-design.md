@@ -165,8 +165,9 @@ Unlocks after the final section's checkpoint feedback is received. Full-width te
 
 ### App.js additions
 ```
-/student/dashboard          → StudentDashboardPage
-/student/read/:assignmentId → ReadingPage
+/student/dashboard                              → StudentDashboardPage
+/student/read/:assignmentId                     → ReadingPage (previewMode=false)
+/teacher/assignments/:assignmentId/preview      → ReadingPage (previewMode=true)
 ```
 
 ### Layout.jsx
@@ -189,7 +190,55 @@ Pre-compute reading guide remains the only heavy call (~10k tokens), fired once 
 
 ---
 
-## 9. Out of Scope (Plan 3)
+## 9. Teacher Preview Mode
+
+Before publishing, teachers can experience the assignment exactly as students will — including the paper text, guiding questions, highlighted key terms, jargon tools, and layout toggle.
+
+### Entry Point
+
+On `AssignmentReviewPage`, a **"Preview as Student"** button navigates to:
+```
+/teacher/assignments/:assignmentId/preview
+```
+
+This reuses `ReadingPage` with a `preview={true}` prop.
+
+### Preview Behaviour
+
+A persistent banner at the top reads: *"Preview Mode — you are viewing this as a student would. Changes are not saved."*
+
+| Feature | Preview behaviour |
+|---------|------------------|
+| Paper text + layout toggle | Fully functional — identical to student view |
+| Key term highlights + popover | Fully functional — calls `/sessions/{id}/keyterm`, caches as normal |
+| Highlight-to-lookup jargon | Fully functional — calls Gemini, result shown in side drawer |
+| Manual jargon search | Fully functional |
+| Checkpoint textarea + Submit | UI renders and accepts input; Gemini is called and feedback displayed; **no records written to `student_sessions` or `checkpoint_responses`** |
+| So What? textarea + Submit | Same — Gemini called, feedback shown, nothing persisted |
+| Section progression | All sections unlocked immediately — teacher can jump freely |
+| "Next Section" button | Always available, not gated on checkpoint feedback |
+
+### Implementation Approach
+
+`ReadingPage` accepts a `previewMode` boolean prop. When `true`:
+- Session start (`POST /sessions`) is **not** called — the assignment's reading guide is fetched directly via the existing teacher endpoint (`GET /assignments/:id`)
+- Checkpoint and So What? calls go to two new **stateless** endpoints on the sessions router:
+  - `POST /sessions/preview/checkpoint` — calls `generate_checkpoint_feedback`, returns result, writes nothing to DB
+  - `POST /sessions/preview/sowhat` — calls `generate_sowhat_feedback`, returns result, writes nothing to DB
+- Key term and jargon endpoints are called as normal (caching is fine and desirable)
+- Section index state is managed in React local state only
+
+### Routing
+
+```
+/teacher/assignments/:assignmentId/preview  → ReadingPage (previewMode=true)
+```
+
+Protected by teacher auth guard. Added to `App.js`.
+
+---
+
+## 10. Out of Scope (Plan 3)
 
 - Teacher insights dashboard (class-wide checkpoint analytics, `assignment_insights` table) — Plan 4
 - Student ability to revise submitted checkpoint responses
