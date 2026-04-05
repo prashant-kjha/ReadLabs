@@ -58,6 +58,10 @@ class QueryBuilder:
         self._params[column] = f"eq.{value}"
         return self
 
+    def in_(self, column: str, values: list) -> "QueryBuilder":
+        self._params[column] = f"in.({','.join(str(v) for v in values)})"
+        return self
+
     def order(self, column: str, desc: bool = False) -> "QueryBuilder":
         self._params["order"] = f"{column}.{'desc' if desc else 'asc'}"
         return self
