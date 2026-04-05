@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from backend.ai_provider import generate_reading_guide
+from backend.ai_provider import generate_reading_guide, generate_class_insights
 
 
 @pytest.mark.asyncio
@@ -95,3 +95,28 @@ async def test_generate_jargon_explanation_returns_string():
 
     assert isinstance(result, str)
     assert len(result) > 10
+
+
+from backend.ai_provider import generate_class_insights
+
+
+@pytest.mark.asyncio
+async def test_generate_class_insights_returns_structured_result():
+    mock_response = MagicMock()
+    mock_response.text = """{
+        "common_misconception": "Most students confused correlation with causation",
+        "commonly_grasped": "Most students correctly identified the sample size",
+        "student_count": 3
+    }"""
+
+    with patch("backend.ai_provider._model") as mock_model:
+        mock_model.generate_content.return_value = mock_response
+        result = await generate_class_insights(
+            section_title="Results",
+            responses=["The drug cured patients", "It reduced symptoms", "Patients got better"],
+        )
+
+    assert "common_misconception" in result
+    assert "commonly_grasped" in result
+    assert "student_count" in result
+    assert result["student_count"] == 3

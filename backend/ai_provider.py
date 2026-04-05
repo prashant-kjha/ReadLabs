@@ -139,3 +139,46 @@ Return only the explanation, no labels or headers."""
         )
     )
     return response.text.strip()
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
+async def generate_class_insights(section_title: str, responses: list[str]) -> dict:
+    """
+    Analyze all student checkpoint responses for a section.
+    Identifies the most common misconception and the most commonly grasped concept.
+    Called once per assignment section, result cached in assignment_insights table.
+    """
+    responses_text = "\n---\n".join(
+        f"Student {i + 1}: {r}" for i, r in enumerate(responses)
+    )
+    prompt = f"""You are analyzing {len(responses)} student checkpoint responses for the "{section_title}" section of a research paper.
+
+Student responses:
+{responses_text}
+
+Based on these responses, identify patterns across the class.
+
+Return valid JSON with this exact structure:
+{{
+  "common_misconception": "A specific description of what most students got wrong or misunderstood about this section. Be concrete — quote or paraphrase the pattern.",
+  "commonly_grasped": "A specific description of what most students correctly understood. Be concrete.",
+  "student_count": {len(responses)}
+}}
+
+Rules:
+- If fewer than 3 responses, note that patterns are limited
+- Be specific about the content of the misconception, not generic ("students struggled with X" not "students had difficulty")
+- Return ONLY the JSON object, no other text"""
+
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                temperature=0.3,
+                response_mime_type="application/json",
+            ),
+        )
+    )
+    return json.loads(response.text)
