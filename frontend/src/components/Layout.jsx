@@ -8,6 +8,7 @@ const TEACHER_LINKS = [
 
 const STUDENT_LINKS = [
   { to: "/student/dashboard", label: "My Classes" },
+  { to: "/student/self-study", label: "Self-Study" },
 ];
 
 export default function Layout() {

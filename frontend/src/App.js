@@ -12,6 +12,7 @@ import DashboardPage from "./pages/teacher/DashboardPage";
 import AssignmentDrilldownPage from "./pages/teacher/AssignmentDrilldownPage";
 import StudentDashboardPage from "./pages/student/StudentDashboardPage";
 import ReadingPage from "./pages/student/ReadingPage";
+import SelfStudyPage from "./pages/student/SelfStudyPage";
 
 function AppRoutes() {
   const { role } = useAuth();
@@ -34,6 +35,7 @@ function AppRoutes() {
           {/* Student routes */}
           <Route path="/student/dashboard" element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
           <Route path="/student/read/:assignmentId" element={role === "student" ? <ReadingPage previewMode={false} /> : <Navigate to="/auth" />} />
+          <Route path="/student/self-study" element={role === "student" ? <SelfStudyPage /> : <Navigate to="/auth" />} />
           <Route path="/" element={<Navigate to={defaultPath} />} />
         </Route>
       </Route>
