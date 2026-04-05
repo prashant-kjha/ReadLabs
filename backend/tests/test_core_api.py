@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
-from backend.services.core_api import title_similarity, search_core, SEARCH_MINIMUM_SIMILARITY
+from backend.services.core_api import title_similarity, search_core, fetch_core_full_text, SEARCH_MINIMUM_SIMILARITY
 
 
 def test_title_similarity_identical():
@@ -48,3 +48,51 @@ async def test_search_filters_by_relevance():
     titles = [r["title"] for r in results]
     assert "Cooking Recipes for Beginners" not in titles
     assert len(results) <= 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_core_success():
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "title": "Transformer Attention Mechanism",
+        "authors": [{"name": "A. Vaswani"}, {"name": "B. Shazeer"}],
+        "yearPublished": 2017,
+        "fullText": "Full paper text...",
+    }
+
+    mock_ctx = AsyncMock()
+    mock_ctx.get = AsyncMock(return_value=mock_response)
+    mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
+    mock_ctx.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("backend.services.core_api.httpx.AsyncClient", return_value=mock_ctx):
+        result = await fetch_core_full_text("core-1", "Transformer Attention Mechanism")
+
+    assert result is not None
+    assert result["title"] == "Transformer Attention Mechanism"
+    assert result["authors"] == "A. Vaswani, B. Shazeer"
+    assert result["year_published"] == 2017
+    assert result["full_text"] == "Full paper text..."
+
+
+@pytest.mark.asyncio
+async def test_fetch_core_rejects_title_mismatch():
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "title": "Totally Different Paper",
+        "authors": [{"name": "Unknown"}],
+        "yearPublished": 2020,
+        "fullText": "...",
+    }
+
+    mock_ctx = AsyncMock()
+    mock_ctx.get = AsyncMock(return_value=mock_response)
+    mock_ctx.__aenter__ = AsyncMock(return_value=mock_ctx)
+    mock_ctx.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("backend.services.core_api.httpx.AsyncClient", return_value=mock_ctx):
+        result = await fetch_core_full_text("core-1", "Expected Title")
+
+    assert result is None
