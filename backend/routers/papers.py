@@ -1,6 +1,7 @@
 import uuid
-import httpx
+import asyncio
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from supabase import create_client
 from backend.db import get_db
 from backend.deps import require_teacher
 from backend.services.paper_service import extract_text_and_figures
@@ -12,19 +13,24 @@ settings = get_settings()
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
 
 
-async def _upload_to_storage(pdf_bytes: bytes, path: str) -> str:
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f"{settings.supabase_url}/storage/v1/object/{path}",
-            headers={
-                "Authorization": f"Bearer {settings.supabase_service_role_key}",
-                "Content-Type": "application/pdf",
-            },
-            content=pdf_bytes,
+def _get_storage_client():
+    return create_client(settings.supabase_url, settings.supabase_service_role_key)
+
+
+async def _upload_to_storage(pdf_bytes: bytes, object_path: str) -> str:
+    """Upload to Supabase Storage using the Python client (run in thread to avoid blocking)."""
+    def _do_upload():
+        client = _get_storage_client()
+        client.storage.from_("papers").upload(
+            object_path,
+            pdf_bytes,
+            {"content-type": "application/pdf", "upsert": "false"},
         )
-    if resp.status_code not in (200, 201):
-        raise HTTPException(status_code=500, detail="Failed to store PDF in storage")
-    return path
+    try:
+        await asyncio.to_thread(_do_upload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to store PDF: {e}")
+    return object_path
 
 
 @router.post("/upload")
@@ -47,8 +53,9 @@ async def upload_paper(
         file.filename.replace(".pdf", "").replace("_", " ") if file.filename else "Untitled"
     )
 
-    pdf_path = f"papers/{user['sub']}/{uuid.uuid4()}.pdf"
-    await _upload_to_storage(pdf_bytes, pdf_path)
+    object_path = f"{user['sub']}/{uuid.uuid4()}.pdf"
+    await _upload_to_storage(pdf_bytes, object_path)
+    pdf_path = f"papers/{object_path}"
 
     result = await db.from_("papers").insert({
         "title":          paper_title,
@@ -71,11 +78,20 @@ async def upload_paper(
 @router.get("/")
 async def list_papers(user=Depends(require_teacher), db=Depends(get_db)):
     result = await db.from_("papers") \
-        .select("id, title, created_at") \
+        .select("id, title, extracted_text, figures, created_at") \
         .eq("uploaded_by", user["sub"]) \
         .order("created_at", desc=True) \
         .execute()
-    return result.data or []
+    papers = []
+    for p in (result.data or []):
+        papers.append({
+            "id":           p["id"],
+            "title":        p["title"],
+            "created_at":   p["created_at"],
+            "text_length":  len(p["extracted_text"] or ""),
+            "figure_count": len(p["figures"] or []),
+        })
+    return papers
 
 
 @router.get("/{paper_id}")

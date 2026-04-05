@@ -25,7 +25,7 @@ export default function AuthPage() {
       login(data);
       navigate(data.role === "teacher" ? "/teacher/papers" : "/student/dashboard");
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Something went wrong");
+      toast.error(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }

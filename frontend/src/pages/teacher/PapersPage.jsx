@@ -19,12 +19,14 @@ export default function PapersPage() {
     form.append("file", file);
     form.append("title", title || file.name.replace(".pdf", ""));
     try {
-      const { data } = await api.post("/papers/upload", form);
+      const { data } = await api.post("/papers/upload", form, {
+        headers: { "Content-Type": undefined },
+      });
       setPapers((prev) => [data, ...prev]);
       setTitle("");
       toast.success(`Uploaded: ${data.title}`);
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Upload failed");
+      toast.error(err.message || "Upload failed");
     } finally {
       setUploading(false);
       e.target.value = "";

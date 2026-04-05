@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from typing import Literal
-from supabase import create_client
+import httpx
 from backend.config import get_settings
 from backend.db import get_db
 from backend.deps import get_current_user
@@ -9,10 +9,17 @@ from backend.deps import get_current_user
 router = APIRouter()
 settings = get_settings()
 
-try:
-    supabase_admin = create_client(settings.supabase_url, settings.supabase_service_role_key)
-except Exception:
-    supabase_admin = None  # Will be patched in tests; real usage requires valid credentials
+AUTH_URL = f"{settings.supabase_url}/auth/v1"
+ADMIN_HEADERS = {
+    "apikey": settings.supabase_service_role_key,
+    "Authorization": f"Bearer {settings.supabase_service_role_key}",
+    "Content-Type": "application/json",
+}
+ANON_HEADERS = {
+    "apikey": settings.supabase_anon_key,
+    "Authorization": f"Bearer {settings.supabase_anon_key}",
+    "Content-Type": "application/json",
+}
 
 
 class SignupRequest(BaseModel):
@@ -29,30 +36,39 @@ class SigninRequest(BaseModel):
 
 @router.post("/signup")
 async def signup(body: SignupRequest, db=Depends(get_db)):
-    try:
-        auth_resp = supabase_admin.auth.admin.create_user({
-            "email": body.email,
-            "password": body.password,
-            "email_confirm": True,
-        })
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    async with httpx.AsyncClient(timeout=15) as client:
+        # Create user with email already confirmed (admin API)
+        r = await client.post(
+            f"{AUTH_URL}/admin/users",
+            headers=ADMIN_HEADERS,
+            json={"email": body.email, "password": body.password, "email_confirm": True},
+        )
+    if r.status_code >= 400:
+        detail = r.json().get("msg") or r.json().get("message") or r.text
+        raise HTTPException(status_code=400, detail=detail)
 
-    user_id = auth_resp.user.id
+    user_id = r.json()["id"]
+
     await db.from_("user_profiles").insert({
         "user_id": user_id,
         "name": body.name,
         "role": body.role,
     }).execute()
 
-    sign_in = supabase_admin.auth.sign_in_with_password({
-        "email": body.email,
-        "password": body.password,
-    })
+    # Sign in to get tokens
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.post(
+            f"{AUTH_URL}/token?grant_type=password",
+            headers=ANON_HEADERS,
+            json={"email": body.email, "password": body.password},
+        )
+    if r.status_code >= 400:
+        raise HTTPException(status_code=400, detail="Account created but sign-in failed")
 
+    tokens = r.json()
     return {
-        "access_token": sign_in.session.access_token,
-        "refresh_token": sign_in.session.refresh_token,
+        "access_token": tokens["access_token"],
+        "refresh_token": tokens["refresh_token"],
         "user_id": user_id,
         "name": body.name,
         "role": body.role,
@@ -61,15 +77,18 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
 
 @router.post("/signin")
 async def signin(body: SigninRequest, db=Depends(get_db)):
-    try:
-        sign_in = supabase_admin.auth.sign_in_with_password({
-            "email": body.email,
-            "password": body.password,
-        })
-    except Exception:
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.post(
+            f"{AUTH_URL}/token?grant_type=password",
+            headers=ANON_HEADERS,
+            json={"email": body.email, "password": body.password},
+        )
+    if r.status_code >= 400:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    user_id = sign_in.user.id
+    tokens = r.json()
+    user_id = tokens["user"]["id"]
+
     profile_resp = await db.from_("user_profiles").select("name, role") \
         .eq("user_id", user_id).single().execute()
 
@@ -77,8 +96,8 @@ async def signin(body: SigninRequest, db=Depends(get_db)):
         raise HTTPException(status_code=404, detail="User profile not found")
 
     return {
-        "access_token": sign_in.session.access_token,
-        "refresh_token": sign_in.session.refresh_token,
+        "access_token": tokens["access_token"],
+        "refresh_token": tokens["refresh_token"],
         "user_id": user_id,
         "name": profile_resp.data["name"],
         "role": profile_resp.data["role"],

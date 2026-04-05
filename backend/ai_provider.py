@@ -80,9 +80,13 @@ The student wrote:
 
 In 2–3 sentences: acknowledge one specific thing they captured correctly, then point to one specific thing they missed or misunderstood relative to the guiding questions. Do not rewrite their response or summarize the section. Be encouraging but precise. Return only the feedback text, no labels or headers."""
 
-    response = _model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=0.4),
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(temperature=0.4),
+        )
     )
     return response.text.strip()
 
@@ -104,9 +108,13 @@ The student wrote this "So What?" paragraph about the paper's significance:
 
 In 3–4 sentences: affirm one thing they got right about the paper's significance, then identify one specific place where they overstated, understated, or mischaracterized the contribution. Be specific and encouraging. Return only the feedback text, no labels or headers."""
 
-    response = _model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=0.4),
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(temperature=0.4),
+        )
     )
     return response.text.strip()
 
@@ -122,8 +130,12 @@ Paper context:
 
 Return only the explanation, no labels or headers."""
 
-    response = _model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=0.3),
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(temperature=0.3),
+        )
     )
     return response.text.strip()
