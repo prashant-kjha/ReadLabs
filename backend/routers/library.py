@@ -1,12 +1,12 @@
 import uuid
 import asyncio
 import logging
+from typing import Any
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from supabase import create_client as _supabase_client
 from backend.db import get_db
 from backend.deps import require_student
 from backend.services.paper_service import extract_text_and_figures
-from backend.services.core_api import search_core, fetch_core_full_text
 from backend.ai_provider import generate_reading_guide
 from backend.config import get_settings
 
@@ -25,12 +25,12 @@ async def _process_self_study(
     assignment_id: str,
     extracted_text: str,
     figure_count: int,
+    db: Any,
 ) -> None:
     """Background task: generate reading guide for self-study paper, auto-publish."""
-    sb = _get_storage_client()
     try:
         reading_guide = await generate_reading_guide(extracted_text, figure_count)
-        sb.table("assignments").update({
+        await db.from_("assignments").update({
             "reading_guide": reading_guide,
             "difficulty": reading_guide.get("difficulty", "intermediate"),
             "status": "published",  # skip draft — auto-publish
@@ -40,7 +40,7 @@ async def _process_self_study(
         # (category is set by user on upload or auto-detected)
     except Exception as e:
         logger.error("Self-study guide generation failed: %s", e)
-        sb.table("assignments").update({
+        await db.from_("assignments").update({
             "status": "published",  # still publish so student can see error
             "reading_guide": {"sections": [], "generation_error": str(e)},
         }).eq("id", assignment_id).execute()
@@ -54,7 +54,7 @@ async def upload_paper(
     category: str = Form(default=""),
     user=Depends(require_student),
     db=Depends(get_db),
-):
+) -> dict:
     """Student uploads a PDF for self-study. Auto-generates reading guide."""
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are accepted")
@@ -113,6 +113,7 @@ async def upload_paper(
         assignment_id=assignment["id"],
         extracted_text=extracted["text"],
         figure_count=len(extracted["figures"]),
+        db=db,
     )
 
     return {
@@ -124,7 +125,7 @@ async def upload_paper(
 
 
 @router.get("/status/{assignment_id}")
-async def get_status(assignment_id: str, user=Depends(require_student), db=Depends(get_db)):
+async def get_status(assignment_id: str, user=Depends(require_student), db=Depends(get_db)) -> dict:
     """Poll reading guide generation status."""
     result = await db.from_("assignments") \
         .select("id, status, reading_guide, difficulty") \
