@@ -108,3 +108,46 @@ def test_update_progress():
 
     assert r.status_code == 200
     assert r.json()["ok"] is True
+
+
+def test_submit_checkpoint_returns_pending():
+    student = {"sub": "s-1"}
+    session = {"id": "sess-1", "assignment_id": "asn-1"}
+    assignment = {"reading_guide": GUIDE}
+    checkpoint = [{"id": "cp-1", "section_index": 0, "student_text": "My answer", "ai_feedback": None}]
+
+    db = make_db(session, assignment, checkpoint)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with patch("backend.routers.sessions._run_checkpoint_feedback"):
+            r = client.post("/api/v1/sessions/sess-1/checkpoint",
+                            json={"section_index": 0, "student_text": "My answer"})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert r.json()["feedback_pending"] is True
+
+
+def test_submit_sowhat_returns_pending():
+    student = {"sub": "s-1"}
+    session = {"id": "sess-1", "assignment_id": "asn-1"}
+    assignment = {"reading_guide": GUIDE, "paper_id": "p-1"}
+    paper = {"title": "Test Paper"}
+    sowhat = [{"id": "sw-1", "student_text": "It matters because...", "ai_feedback": None}]
+
+    db = make_db(session, assignment, paper, sowhat)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with patch("backend.routers.sessions._run_sowhat_feedback"):
+            r = client.post("/api/v1/sessions/sess-1/sowhat",
+                            json={"student_text": "It matters because..."})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert r.json()["feedback_pending"] is True
