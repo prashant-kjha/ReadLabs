@@ -34,7 +34,7 @@ function AppRoutes() {
           <Route path="/teacher/assignments/:assignmentId/students/:studentId/responses" element={role === "teacher" ? <AssignmentDrilldownPage /> : <Navigate to="/auth" />} />
           {/* Student routes */}
           <Route path="/student/dashboard" element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
-          <Route path="/student/read/:assignmentId" element={role === "student" ? <ReadingPage previewMode={false} /> : <Navigate to="/auth" />} />
+          <Route path="/student/read/:assignmentId" element={role === "student" ? <ReadingPage previewMode={false} optionalCheckpoints={true} /> : <Navigate to="/auth" />} />
           <Route path="/student/self-study" element={role === "student" ? <SelfStudyPage /> : <Navigate to="/auth" />} />
           <Route path="/" element={<Navigate to={defaultPath} />} />
         </Route>

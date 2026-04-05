@@ -32,7 +32,7 @@ function HighlightedText({ text, keyTerms, onTermClick }) {
   );
 }
 
-export default function ReadingPage({ previewMode = false }) {
+export default function ReadingPage({ previewMode = false, optionalCheckpoints = false }) {
   const { assignmentId } = useParams();
   const navigate = useNavigate();
 
@@ -275,6 +275,18 @@ export default function ReadingPage({ previewMode = false }) {
     }
   };
 
+  const skipCheckpoint = async () => {
+    setCheckpoints((prev) => ({ ...prev, [currentSection]: { text: "", ai_feedback: null, pending: false, skipped: true } }));
+    if (!previewMode && sessionId) {
+      await api.patch(`/sessions/${sessionId}/progress`, { current_section_index: currentSection + 1 }).catch(() => {});
+    }
+    if (isLastSection && !showSoWhat) {
+      setCurrentSection(sections.length);
+    } else if (!isLastSection) {
+      advanceSection();
+    }
+  };
+
   // ── Derived state ──────────────────────────────────────────────────────────
 
   if (loading) return <div className="p-8 text-gray-400">Loading...</div>;
@@ -282,9 +294,9 @@ export default function ReadingPage({ previewMode = false }) {
 
   const sections = readingGuide.sections;
   const section = sections[currentSection];
-  const cp = checkpoints[currentSection] || { text: "", ai_feedback: null, pending: false };
+  const cp = checkpoints[currentSection] || { text: "", ai_feedback: null, pending: false, skipped: false };
   const allSectionsComplete = sections.every((_, i) => checkpoints[i]?.ai_feedback);
-  const canAdvance = previewMode || !!cp.ai_feedback;
+  const canAdvance = previewMode || !!cp.ai_feedback || (optionalCheckpoints && cp.skipped);
   const isLastSection = currentSection === sections.length - 1;
   const showSoWhat = allSectionsComplete || previewMode;
 
@@ -367,14 +379,27 @@ export default function ReadingPage({ previewMode = false }) {
         disabled={!!cp.ai_feedback}
         className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-600 resize-none disabled:opacity-60"
       />
-      {!cp.ai_feedback && (
-        <button
-          onClick={submitCheckpoint}
-          disabled={cp.pending || !cp.text?.trim()}
-          className="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
-        >
-          {cp.pending ? "Getting feedback…" : "Submit"}
-        </button>
+      {!cp.ai_feedback && !cp.skipped && (
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={submitCheckpoint}
+            disabled={cp.pending || !cp.text?.trim()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+          >
+            {cp.pending ? "Getting feedback…" : "Submit"}
+          </button>
+          {optionalCheckpoints && (
+            <button
+              onClick={skipCheckpoint}
+              className="bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              Skip
+            </button>
+          )}
+        </div>
+      )}
+      {cp.skipped && !cp.ai_feedback && optionalCheckpoints && (
+        <p className="mt-2 text-gray-500 text-xs italic">Section skipped. You can come back and submit a response later.</p>
       )}
       {cp.pending && (
         <div className="mt-3 flex items-center gap-2 text-gray-400 text-sm">
@@ -423,14 +448,24 @@ export default function ReadingPage({ previewMode = false }) {
         placeholder="Describe the paper's significance in your own words…"
         className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-600 resize-none disabled:opacity-60"
       />
-      {!soWhat.ai_feedback && (
-        <button
-          onClick={submitSoWhat}
-          disabled={soWhat.pending || !soWhat.text.trim()}
-          className="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
-        >
-          {soWhat.pending ? "Getting feedback…" : "Submit"}
-        </button>
+      {!soWhat.ai_feedback && !soWhat.skipped && (
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={submitSoWhat}
+            disabled={soWhat.pending || !soWhat.text.trim()}
+            className="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50 transition-colors"
+          >
+            {soWhat.pending ? "Getting feedback…" : "Submit"}
+          </button>
+          {optionalCheckpoints && (
+            <button
+              onClick={() => { setSoWhat((s) => ({ ...s, skipped: true })); if (!previewMode) setCurrentSection(sections.length + 1); }}
+              className="bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              Skip
+            </button>
+          )}
+        </div>
       )}
       {soWhat.pending && (
         <div className="mt-3 flex items-center gap-2 text-gray-400 text-sm">
