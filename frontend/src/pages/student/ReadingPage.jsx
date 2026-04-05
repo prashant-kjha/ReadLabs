@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
 
@@ -34,7 +34,6 @@ function HighlightedText({ text, keyTerms, onTermClick }) {
 
 export default function ReadingPage({ previewMode = false, optionalCheckpoints = false }) {
   const { assignmentId } = useParams();
-  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState(null);
@@ -61,6 +60,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
       initSession();
     }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentId]);
 
   const initPreview = async () => {

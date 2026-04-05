@@ -26,6 +26,7 @@ export default function SelfStudyPage() {
   useEffect(() => {
     loadPapers();
     loadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
   const loadPapers = async () => {

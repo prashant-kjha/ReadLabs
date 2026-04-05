@@ -58,6 +58,11 @@ class QueryBuilder:
         self._params[column] = f"eq.{value}"
         return self
 
+    def is_(self, column: str, value: str) -> "QueryBuilder":
+        """PostgREST null check. Use value='null' for IS NULL."""
+        self._params[column] = f"is.{value}"
+        return self
+
     def in_(self, column: str, values: list) -> "QueryBuilder":
         self._params[column] = f"in.({','.join(str(v) for v in values)})"
         return self

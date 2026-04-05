@@ -207,7 +207,7 @@ async def fetch_core_paper(
         # Paper already exists — create assignment if none
         paper = existing.data
         existing_asn = await db.from_("assignments").select("id, status") \
-            .eq("paper_id", paper["id"]).eq("class_id", None).single().execute()
+            .eq("paper_id", paper["id"]).is_("class_id", "null").single().execute()
 
         if existing_asn.data:
             return {
