@@ -121,7 +121,7 @@ def test_submit_checkpoint_returns_pending():
     app.dependency_overrides[require_student] = lambda: student
     app.dependency_overrides[get_db] = lambda: db
     try:
-        with patch("backend.routers.sessions._run_checkpoint_feedback"):
+        with patch("backend.routers.sessions._run_checkpoint_feedback", new=AsyncMock()):
             r = client.post("/api/v1/sessions/sess-1/checkpoint",
                             json={"section_index": 0, "student_text": "My answer"})
     finally:
@@ -143,7 +143,7 @@ def test_submit_sowhat_returns_pending():
     app.dependency_overrides[require_student] = lambda: student
     app.dependency_overrides[get_db] = lambda: db
     try:
-        with patch("backend.routers.sessions._run_sowhat_feedback"):
+        with patch("backend.routers.sessions._run_sowhat_feedback", new=AsyncMock()):
             r = client.post("/api/v1/sessions/sess-1/sowhat",
                             json={"student_text": "It matters because..."})
     finally:
@@ -164,7 +164,7 @@ def test_jargon_lookup_returns_pending():
     app.dependency_overrides[require_student] = lambda: student
     app.dependency_overrides[get_db] = lambda: db
     try:
-        with patch("backend.routers.sessions._run_jargon_explanation"):
+        with patch("backend.routers.sessions._run_jargon_explanation", new=AsyncMock()):
             r = client.post("/api/v1/sessions/sess-1/jargon",
                             json={"term": "RCT", "context_snippet": "...RCT was used..."})
     finally:

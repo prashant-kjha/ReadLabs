@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from backend.db import get_db
@@ -83,6 +84,8 @@ async def start_session(body: StartSessionRequest, user=Depends(require_student)
             "status": "in_progress",
             "current_section_index": 0,
         }).execute()
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to create session")
         session = result.data[0]
 
     paper = await db.from_("papers").select("title") \
@@ -156,7 +159,9 @@ async def _run_checkpoint_feedback(
     from supabase import create_client as _sc
     supa = _sc(settings.supabase_url, settings.supabase_service_role_key)
     feedback = await generate_checkpoint_feedback(section_title, guiding_questions, student_text)
-    supa.table("checkpoint_responses").update({"ai_feedback": feedback}).eq("id", checkpoint_id).execute()
+    await asyncio.to_thread(
+        lambda: supa.table("checkpoint_responses").update({"ai_feedback": feedback}).eq("id", checkpoint_id).execute()
+    )
 
 
 async def _run_sowhat_feedback(
@@ -211,6 +216,8 @@ async def submit_checkpoint(
         "student_text": body.student_text,
         "ai_feedback": None,
     }, on_conflict="session_id,section_index").execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to save checkpoint")
     checkpoint_id = result.data[0]["id"]
 
     background_tasks.add_task(
@@ -252,6 +259,8 @@ async def submit_sowhat(
         "student_text": body.student_text,
         "ai_feedback": None,
     }, on_conflict="session_id").execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to save So What? response")
     sowhat_id = result.data[0]["id"]
 
     background_tasks.add_task(
@@ -337,6 +346,8 @@ async def lookup_jargon(
         "term": body.term.lower(),
         "explanation": None,
     }).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to save jargon lookup")
     lookup_id = result.data[0]["id"]
 
     background_tasks.add_task(
