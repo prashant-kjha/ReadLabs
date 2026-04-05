@@ -307,7 +307,9 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
       <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Sections</p>
       <div className="space-y-1">
         {sections.map((s, i) => {
-          const done = !!checkpoints[i]?.ai_feedback;
+          const cp = checkpoints[i] || {};
+          const done = !!cp.ai_feedback;
+          const skipped = !!cp.skipped;
           const active = i === currentSection;
           const locked = !previewMode && i > currentSection && !done;
           return (
@@ -318,10 +320,17 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
               className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 ${
                 active ? "bg-indigo-600 text-white" :
                 locked ? "text-gray-600 cursor-not-allowed" :
+                skipped ? "text-gray-600" :
                 "text-gray-400 hover:text-white hover:bg-gray-800"
               }`}
             >
-              {done && <span className="text-green-400 text-xs">✓</span>}
+              {skipped ? (
+                <span className="text-gray-500 text-xs">Skipped</span>
+              ) : done ? (
+                <span className="text-green-400 text-xs">✓</span>
+              ) : (
+                <span className="text-gray-700 text-xs">{i + 1}</span>
+              )}
               <span className="truncate">{s.title}</span>
             </button>
           );
