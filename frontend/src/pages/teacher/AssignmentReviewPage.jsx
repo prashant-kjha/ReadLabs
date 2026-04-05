@@ -116,6 +116,13 @@ export default function AssignmentReviewPage() {
             <option value="advanced">Advanced</option>
           </select>
           <button
+            type="button"
+            onClick={() => navigate(`/teacher/assignments/${assignmentId}/preview`)}
+            className="bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors"
+          >
+            Preview as Student
+          </button>
+          <button
             onClick={() => handleSave(false)}
             disabled={saving}
             className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
