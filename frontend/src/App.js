@@ -4,12 +4,12 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthPage from "./pages/AuthPage";
 import Layout from "./components/Layout";
-import TeacherPapersPage from "./pages/teacher/PapersPage";
+import PapersPage from "./pages/teacher/PapersPage";
 import ClassesPage from "./pages/teacher/ClassesPage";
 import AssignmentReviewPage from "./pages/teacher/AssignmentReviewPage";
 import AssignPaperPage from "./pages/teacher/AssignPaperPage";
-
-// Stubs — replaced in Plans 2 and 3
+import DashboardPage from "./pages/teacher/DashboardPage";
+import AssignmentDrilldownPage from "./pages/teacher/AssignmentDrilldownPage";
 import StudentDashboardPage from "./pages/student/StudentDashboardPage";
 import ReadingPage from "./pages/student/ReadingPage";
 
@@ -22,13 +22,18 @@ function AppRoutes() {
       <Route path="/auth" element={<AuthPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
-          <Route path="/teacher/papers"      element={role === "teacher" ? <TeacherPapersPage /> : <Navigate to="/auth" />} />
-          <Route path="/teacher/classes"     element={role === "teacher" ? <ClassesPage /> : <Navigate to="/auth" />} />
+          {/* Teacher routes */}
+          <Route path="/teacher/papers" element={role === "teacher" ? <PapersPage /> : <Navigate to="/auth" />} />
+          <Route path="/teacher/classes" element={role === "teacher" ? <ClassesPage /> : <Navigate to="/auth" />} />
           <Route path="/teacher/assignments/:assignmentId/review" element={role === "teacher" ? <AssignmentReviewPage /> : <Navigate to="/auth" />} />
-          <Route path="/teacher/classes/:classId/assign"        element={role === "teacher" ? <AssignPaperPage /> : <Navigate to="/auth" />} />
+          <Route path="/teacher/classes/:classId/assign" element={role === "teacher" ? <AssignPaperPage /> : <Navigate to="/auth" />} />
           <Route path="/teacher/assignments/:assignmentId/preview" element={role === "teacher" ? <ReadingPage previewMode={true} /> : <Navigate to="/auth" />} />
-          <Route path="/student/dashboard"                  element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
-          <Route path="/student/read/:assignmentId"         element={role === "student" ? <ReadingPage previewMode={false} /> : <Navigate to="/auth" />} />
+          <Route path="/teacher/classes/:classId/dashboard" element={role === "teacher" ? <DashboardPage /> : <Navigate to="/auth" />} />
+          <Route path="/teacher/assignments/:assignmentId/drilldown" element={role === "teacher" ? <AssignmentDrilldownPage /> : <Navigate to="/auth" />} />
+          <Route path="/teacher/assignments/:assignmentId/students/:studentId/responses" element={role === "teacher" ? <AssignmentDrilldownPage /> : <Navigate to="/auth" />} />
+          {/* Student routes */}
+          <Route path="/student/dashboard" element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
+          <Route path="/student/read/:assignmentId" element={role === "student" ? <ReadingPage previewMode={false} /> : <Navigate to="/auth" />} />
           <Route path="/" element={<Navigate to={defaultPath} />} />
         </Route>
       </Route>

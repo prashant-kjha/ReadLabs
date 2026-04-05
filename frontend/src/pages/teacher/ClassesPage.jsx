@@ -125,12 +125,20 @@ export default function ClassesPage() {
               ))}
             </div>
 
-            <button
-              onClick={() => navigate(`/teacher/classes/${selected.id}/assign`)}
-              className="mt-5 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Assign a Paper
-            </button>
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => navigate(`/teacher/classes/${selected.id}/assign`)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Assign Paper
+              </button>
+              <button
+                onClick={() => navigate(`/teacher/classes/${selected.id}/dashboard`)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Dashboard
+              </button>
+            </div>
           </div>
         )}
       </div>
