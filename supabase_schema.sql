@@ -198,3 +198,32 @@ create policy "Authenticated users upload papers" on storage.objects
   for insert with check (bucket_id = 'papers' and auth.role() = 'authenticated');
 create policy "Authenticated users read papers" on storage.objects
   for select using (bucket_id = 'papers' and auth.role() = 'authenticated');
+
+-- ── Self-study mode migrations ─────────────────────────────────────────────
+
+ALTER TABLE papers ADD COLUMN IF NOT EXISTS is_self_study boolean NOT NULL DEFAULT false;
+ALTER TABLE papers ADD COLUMN IF NOT EXISTS category text;
+ALTER TABLE papers ADD COLUMN IF NOT EXISTS core_id text;
+ALTER TABLE papers ADD COLUMN IF NOT EXISTS authors text;
+ALTER TABLE papers ADD COLUMN IF NOT EXISTS year_published int;
+ALTER TABLE papers ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'upload'
+  CHECK (source IN ('upload', 'core_api'));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_papers_core_id ON papers(core_id) WHERE core_id IS NOT NULL;
+
+ALTER TABLE assignments ALTER COLUMN class_id DROP NOT NULL;
+
+-- Self-study papers readable by any authenticated user
+CREATE POLICY "Authenticated users read self-study papers" ON papers
+  FOR SELECT USING (is_self_study = true AND auth.role() = 'authenticated');
+
+-- Self-study assignments readable by student who owns them
+CREATE POLICY "Students read own self-study assignments" ON assignments
+  FOR SELECT USING (
+    class_id IS NULL
+    AND EXISTS (
+      SELECT 1 FROM student_sessions
+      WHERE student_sessions.assignment_id = assignments.id
+        AND student_sessions.student_id = auth.uid()
+    )
+  );
