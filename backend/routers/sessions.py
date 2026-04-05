@@ -66,10 +66,12 @@ async def start_session(body: StartSessionRequest, user=Depends(require_student)
     if assignment.data["status"] != "published":
         raise HTTPException(status_code=403, detail="Assignment is not published")
 
-    enrollment = await db.from_("class_enrollments").select("class_id") \
-        .eq("class_id", assignment.data["class_id"]).eq("student_id", user["sub"]).single().execute()
-    if not enrollment.data:
-        raise HTTPException(status_code=403, detail="Not enrolled in this class")
+    # Only check enrollment for classroom assignments (not self-study)
+    if assignment.data.get("class_id"):
+        enrollment = await db.from_("class_enrollments").select("class_id") \
+            .eq("class_id", assignment.data["class_id"]).eq("student_id", user["sub"]).single().execute()
+        if not enrollment.data:
+            raise HTTPException(status_code=403, detail="Not enrolled in this class")
 
     existing = await db.from_("student_sessions") \
         .select("id, status, current_section_index") \

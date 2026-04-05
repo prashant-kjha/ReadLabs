@@ -215,3 +215,23 @@ def test_keyterm_returns_generated():
     assert r.status_code == 200
     assert r.json()["cached"] is False
     assert "randomized" in r.json()["explanation"]
+
+
+def test_start_session_self_study_skips_enrollment():
+    student = {"sub": "s-1"}
+    assignment = {"id": "asn-1", "class_id": None, "paper_id": "p-1", "reading_guide": None, "difficulty": "intermediate", "status": "published"}
+    no_session = None
+    new_session = [{"id": "sess-1", "status": "in_progress", "current_section_index": 0}]
+    paper = {"title": "Self-Study Paper"}
+
+    db = make_db(assignment, no_session, new_session, paper)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        r = client.post("/api/v1/sessions/", json={"assignment_id": "asn-1"})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert r.json()["session_id"] == "sess-1"
