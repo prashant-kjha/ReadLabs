@@ -41,3 +41,57 @@ async def test_generate_reading_guide_handles_malformed_json():
         mock_model.generate_content.return_value = mock_response
         with pytest.raises(Exception):
             await generate_reading_guide("Some paper text", figure_count=0)
+
+
+from backend.ai_provider import generate_checkpoint_feedback, generate_sowhat_feedback, generate_jargon_explanation
+
+
+@pytest.mark.asyncio
+async def test_generate_checkpoint_feedback_returns_string():
+    mock_response = MagicMock()
+    mock_response.text = "You correctly identified the sample size. However, you missed that the study used a double-blind design."
+
+    with patch("backend.ai_provider._model") as mock_model:
+        mock_model.generate_content.return_value = mock_response
+        result = await generate_checkpoint_feedback(
+            section_title="Methods",
+            guiding_questions=["Look for: how many participants?", "Consider: what controls were used?"],
+            student_text="They studied some people and measured outcomes.",
+        )
+
+    assert isinstance(result, str)
+    assert len(result) > 20
+
+
+@pytest.mark.asyncio
+async def test_generate_sowhat_feedback_returns_string():
+    mock_response = MagicMock()
+    mock_response.text = "You noted this advances treatment options. However, the paper shows 30% reduction, not a cure."
+
+    with patch("backend.ai_provider._model") as mock_model:
+        mock_model.generate_content.return_value = mock_response
+        result = await generate_sowhat_feedback(
+            paper_title="RCT Study of Drug X",
+            section_titles=["Abstract", "Methods", "Results"],
+            difficulty="intermediate",
+            student_text="This study proves the drug cures the disease.",
+        )
+
+    assert isinstance(result, str)
+    assert len(result) > 20
+
+
+@pytest.mark.asyncio
+async def test_generate_jargon_explanation_returns_string():
+    mock_response = MagicMock()
+    mock_response.text = "RCT stands for Randomized Controlled Trial — participants are randomly assigned to groups."
+
+    with patch("backend.ai_provider._model") as mock_model:
+        mock_model.generate_content.return_value = mock_response
+        result = await generate_jargon_explanation(
+            term="RCT",
+            context_snippet="This randomized controlled trial enrolled 42 patients...",
+        )
+
+    assert isinstance(result, str)
+    assert len(result) > 10
