@@ -2,11 +2,13 @@ import uuid
 import asyncio
 import logging
 from typing import Any
+from pydantic import BaseModel
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from supabase import create_client as _supabase_client
 from backend.db import get_db
 from backend.deps import require_student
 from backend.services.paper_service import extract_text_and_figures
+from backend.services.core_api import search_core, fetch_core_full_text
 from backend.ai_provider import generate_reading_guide
 from backend.config import get_settings
 
@@ -133,3 +135,143 @@ async def get_status(assignment_id: str, user=Depends(require_student), db=Depen
     if not result.data:
         raise HTTPException(status_code=404, detail="Assignment not found")
     return result.data
+
+
+class FetchCoreRequest(BaseModel):
+    core_id: str
+    title: str
+
+
+@router.get("/search")
+async def search_papers(q: str = "", user=Depends(require_student)):
+    """Search CORE API for open-access papers. Results are title-verified."""
+    if not q.strip():
+        return []
+    results = await search_core(q.strip())
+    return results
+
+
+@router.get("/browse")
+async def browse_papers(
+    category: str = "",
+    limit: int = 20,
+    offset: int = 0,
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    """Browse community library papers, optionally filtered by category."""
+    query = db.from_("papers") \
+        .select("id, title, authors, year_published, category, is_self_study, source, core_id, created_at") \
+        .eq("is_self_study", True)
+
+    if category.strip():
+        query = query.eq("category", category.strip())
+
+    result = await query.order("created_at", desc=True) \
+        .limit(min(limit, 50)).execute()
+
+    papers = result.data or []
+
+    # Attach assignment status for each paper (has reading guide been generated?)
+    paper_ids = [p["id"] for p in papers]
+    if paper_ids:
+        assignments = await db.from_("assignments") \
+            .select("paper_id, status, difficulty") \
+            .in_("paper_id", paper_ids).execute()
+        asn_map = {a["paper_id"]: a for a in (assignments.data or [])}
+    else:
+        asn_map = {}
+
+    return [
+        {
+            **p,
+            "assignment": asn_map.get(p["id"]),
+        }
+        for p in papers
+    ]
+
+
+@router.post("/fetch")
+async def fetch_core_paper(
+    body: FetchCoreRequest,
+    background_tasks: BackgroundTasks,
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    """Fetch a paper from CORE API, create self-study assignment. Title-verified."""
+    # Check if already in library
+    existing = await db.from_("papers").select("id, title") \
+        .eq("core_id", body.core_id).single().execute()
+
+    if existing.data:
+        # Paper already exists — create assignment if none
+        paper = existing.data
+        existing_asn = await db.from_("assignments").select("id, status") \
+            .eq("paper_id", paper["id"]).eq("class_id", None).single().execute()
+
+        if existing_asn.data:
+            return {
+                "assignment_id": existing_asn.data["id"],
+                "paper_id": paper["id"],
+                "title": paper["title"],
+                "status": existing_asn.data["status"],
+            }
+
+    # Fetch full text from CORE with title verification
+    core_data = await fetch_core_full_text(body.core_id, body.title)
+    if not core_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Paper title doesn't match what was selected. Please search again or upload PDF directly.",
+        )
+
+    # Insert paper
+    paper_result = await db.from_("papers").insert({
+        "title": core_data["title"],
+        "extracted_text": core_data["full_text"],
+        "figures": [],
+        "uploaded_by": user["sub"],
+        "is_self_study": True,
+        "category": None,  # will be set by AI during guide generation
+        "source": "core_api",
+        "core_id": core_data["core_id"],
+        "authors": core_data.get("authors"),
+        "year_published": core_data.get("year_published"),
+    }).execute()
+    paper = paper_result.data[0]
+
+    # Create assignment
+    assignment_result = await db.from_("assignments").insert({
+        "class_id": None,
+        "paper_id": paper["id"],
+        "status": "processing",
+    }).execute()
+    assignment = assignment_result.data[0]
+
+    # Trigger background guide generation
+    background_tasks.add_task(
+        _process_self_study,
+        assignment_id=assignment["id"],
+        extracted_text=core_data["full_text"] or "",
+        figure_count=0,
+        db=db,
+    )
+
+    return {
+        "assignment_id": assignment["id"],
+        "paper_id": paper["id"],
+        "title": core_data["title"],
+        "status": "processing",
+    }
+
+
+@router.get("/categories")
+async def list_categories(user=Depends(require_student), db=Depends(get_db)):
+    """List all categories that have papers in the library."""
+    result = await db.from_("papers") \
+        .select("category") \
+        .eq("is_self_study", True) \
+        .order("category").execute()
+
+    cats = list({p["category"] for p in (result.data or []) if p["category"]})
+    return cats
