@@ -10,7 +10,8 @@ import AssignmentReviewPage from "./pages/teacher/AssignmentReviewPage";
 import AssignPaperPage from "./pages/teacher/AssignPaperPage";
 
 // Stubs — replaced in Plans 2 and 3
-const StudentDashboardPage = () => <div className="text-white p-8">Assignments — coming in Plan 3</div>;
+import StudentDashboardPage from "./pages/student/StudentDashboardPage";
+import ReadingPage from "./pages/student/ReadingPage";
 
 function AppRoutes() {
   const { role } = useAuth();
@@ -25,7 +26,9 @@ function AppRoutes() {
           <Route path="/teacher/classes"     element={role === "teacher" ? <ClassesPage /> : <Navigate to="/auth" />} />
           <Route path="/teacher/assignments/:assignmentId/review" element={role === "teacher" ? <AssignmentReviewPage /> : <Navigate to="/auth" />} />
           <Route path="/teacher/classes/:classId/assign"        element={role === "teacher" ? <AssignPaperPage /> : <Navigate to="/auth" />} />
-          <Route path="/student/dashboard"   element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
+          <Route path="/teacher/assignments/:assignmentId/preview" element={role === "teacher" ? <ReadingPage previewMode={true} /> : <Navigate to="/auth" />} />
+          <Route path="/student/dashboard"                  element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
+          <Route path="/student/read/:assignmentId"         element={role === "student" ? <ReadingPage previewMode={false} /> : <Navigate to="/auth" />} />
           <Route path="/" element={<Navigate to={defaultPath} />} />
         </Route>
       </Route>
