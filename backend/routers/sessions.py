@@ -263,3 +263,116 @@ async def submit_sowhat(
         student_text=body.student_text,
     )
     return {"id": sowhat_id, "feedback_pending": True}
+
+
+# ── Preview endpoints (teacher, stateless) — must be before /{session_id}/jargon ──
+
+@router.post("/preview/checkpoint")
+async def preview_checkpoint(body: PreviewCheckpointRequest, user=Depends(require_teacher)):
+    feedback = await generate_checkpoint_feedback(
+        section_title=body.section_title,
+        guiding_questions=body.guiding_questions,
+        student_text=body.student_text,
+    )
+    return {"feedback": feedback}
+
+
+@router.post("/preview/sowhat")
+async def preview_sowhat(body: PreviewSoWhatRequest, user=Depends(require_teacher)):
+    feedback = await generate_sowhat_feedback(
+        paper_title=body.paper_title,
+        section_titles=body.section_titles,
+        difficulty=body.difficulty,
+        student_text=body.student_text,
+    )
+    return {"feedback": feedback}
+
+
+@router.post("/preview/jargon")
+async def preview_jargon(body: PreviewJargonRequest, user=Depends(require_teacher)):
+    explanation = await generate_jargon_explanation(body.term, body.context_snippet)
+    return {"term": body.term, "explanation": explanation}
+
+
+@router.post("/preview/keyterm")
+async def preview_keyterm(body: PreviewKeyTermRequest, user=Depends(require_teacher), db=Depends(get_db)):
+    cached = await db.from_("key_term_definitions").select("explanation") \
+        .eq("assignment_id", body.assignment_id).eq("term", body.term.lower()).single().execute()
+    if cached.data:
+        return {"term": body.term, "explanation": cached.data["explanation"], "cached": True}
+
+    explanation = await generate_jargon_explanation(body.term, body.context_snippet)
+    await db.from_("key_term_definitions").upsert({
+        "assignment_id": body.assignment_id,
+        "term": body.term.lower(),
+        "explanation": explanation,
+    }, on_conflict="assignment_id,term").execute()
+
+    return {"term": body.term, "explanation": explanation, "cached": False}
+
+
+# ── Jargon lookup (ad-hoc, async) ────────────────────────────────────────────
+
+@router.post("/{session_id}/jargon")
+async def lookup_jargon(
+    session_id: str,
+    body: JargonRequest,
+    background_tasks: BackgroundTasks,
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    session = await db.from_("student_sessions").select("id") \
+        .eq("id", session_id).eq("student_id", user["sub"]).single().execute()
+    if not session.data:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Deduplicate within session
+    existing = await db.from_("jargon_lookups").select("id, explanation") \
+        .eq("session_id", session_id).eq("term", body.term.lower()).single().execute()
+    if existing.data and existing.data.get("explanation"):
+        return {"id": existing.data["id"], "term": body.term, "explanation": existing.data["explanation"], "feedback_pending": False}
+
+    result = await db.from_("jargon_lookups").insert({
+        "session_id": session_id,
+        "term": body.term.lower(),
+        "explanation": None,
+    }).execute()
+    lookup_id = result.data[0]["id"]
+
+    background_tasks.add_task(
+        _run_jargon_explanation,
+        lookup_id=lookup_id,
+        term=body.term,
+        context_snippet=body.context_snippet,
+    )
+    return {"id": lookup_id, "term": body.term, "feedback_pending": True}
+
+
+# ── Key term lookup (cached, near-synchronous) ────────────────────────────────
+
+@router.post("/{session_id}/keyterm")
+async def lookup_keyterm(
+    session_id: str,
+    body: KeyTermRequest,
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    session = await db.from_("student_sessions").select("assignment_id") \
+        .eq("id", session_id).eq("student_id", user["sub"]).single().execute()
+    if not session.data:
+        raise HTTPException(status_code=404, detail="Session not found")
+    assignment_id = session.data["assignment_id"]
+
+    cached = await db.from_("key_term_definitions").select("explanation") \
+        .eq("assignment_id", assignment_id).eq("term", body.term.lower()).single().execute()
+    if cached.data:
+        return {"term": body.term, "explanation": cached.data["explanation"], "cached": True}
+
+    explanation = await generate_jargon_explanation(body.term, body.context_snippet)
+    await db.from_("key_term_definitions").upsert({
+        "assignment_id": assignment_id,
+        "term": body.term.lower(),
+        "explanation": explanation,
+    }, on_conflict="assignment_id,term").execute()
+
+    return {"term": body.term, "explanation": explanation, "cached": False}

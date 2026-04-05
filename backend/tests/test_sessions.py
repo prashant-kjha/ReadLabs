@@ -151,3 +151,67 @@ def test_submit_sowhat_returns_pending():
 
     assert r.status_code == 200
     assert r.json()["feedback_pending"] is True
+
+
+def test_jargon_lookup_returns_pending():
+    student = {"sub": "s-1"}
+    session = {"id": "sess-1", "assignment_id": "asn-1"}
+    no_existing = None
+    inserted = [{"id": "jargon-1", "term": "rct", "explanation": None}]
+
+    db = make_db(session, no_existing, inserted)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with patch("backend.routers.sessions._run_jargon_explanation"):
+            r = client.post("/api/v1/sessions/sess-1/jargon",
+                            json={"term": "RCT", "context_snippet": "...RCT was used..."})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert r.json()["feedback_pending"] is True
+
+
+def test_keyterm_returns_cached():
+    student = {"sub": "s-1"}
+    session = {"id": "sess-1", "assignment_id": "asn-1"}
+    cached = {"explanation": "RCT means randomized controlled trial."}
+
+    db = make_db(session, cached)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        r = client.post("/api/v1/sessions/sess-1/keyterm",
+                        json={"term": "RCT", "context_snippet": "..."})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert r.json()["cached"] is True
+    assert "randomized" in r.json()["explanation"]
+
+
+def test_keyterm_returns_generated():
+    student = {"sub": "s-1"}
+    session = {"id": "sess-1", "assignment_id": "asn-1"}
+    no_cached = None
+    upserted = [{"explanation": "RCT is a randomized controlled trial."}]
+
+    db = make_db(session, no_cached, upserted)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with patch("backend.routers.sessions.generate_jargon_explanation",
+                   new=AsyncMock(return_value="RCT is a randomized controlled trial.")):
+            r = client.post("/api/v1/sessions/sess-1/keyterm",
+                            json={"term": "RCT", "context_snippet": "..."})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert r.json()["cached"] is False
+    assert "randomized" in r.json()["explanation"]
