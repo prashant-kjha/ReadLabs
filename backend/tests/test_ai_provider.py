@@ -1,6 +1,7 @@
+import json
 import pytest
 from unittest.mock import MagicMock, patch
-from backend.ai_provider import generate_reading_guide, generate_class_insights
+from backend.ai_provider import generate_reading_guide, generate_class_insights, generate_annotation_socratic_prompt, generate_quiz_questions, grade_short_answer
 
 
 @pytest.mark.asyncio
@@ -120,3 +121,111 @@ async def test_generate_class_insights_returns_structured_result():
     assert "commonly_grasped" in result
     assert "student_count" in result
     assert result["student_count"] == 3
+
+
+@pytest.mark.asyncio
+async def test_generate_reading_guide_includes_superpowers_fields():
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "sections": [{
+            "title": "Methods",
+            "text": "We studied X.",
+            "guiding_questions": ["Look for: study design"],
+            "key_terms": ["RCT"],
+            "teacher_notes": "",
+            "section_type": "Methods",
+            "simplifications": {
+                "undergrad": "Researchers used RCT.",
+                "high_school": "Scientists tested two groups.",
+                "eli5": "They compared two groups to see which worked better."
+            }
+        }],
+        "difficulty": "intermediate",
+        "methodology_elements": [{
+            "section_index": 0,
+            "element_type": "study_design",
+            "label": "RCT",
+            "description": "Randomized controlled trial",
+            "explanation": "Participants were randomly assigned to groups.",
+            "follow_up_questions": ["Why randomize?"],
+            "difficulty": "intermediate"
+        }],
+        "critical_prompts": [{
+            "section_index": 0,
+            "prompt_text": "What assumptions did the authors make?",
+            "prompt_type": "evaluation"
+        }]
+    })
+    with patch('backend.ai_provider._model') as mock_model:
+        mock_model.generate_content.return_value = mock_response
+        result = await generate_reading_guide("paper text here", 2)
+
+    assert "sections" in result
+    assert "methodology_elements" in result
+    assert "critical_prompts" in result
+    section = result["sections"][0]
+    assert "section_type" in section
+    assert "simplifications" in section
+    assert set(section["simplifications"].keys()) == {"undergrad", "high_school", "eli5"}
+    assert result["methodology_elements"][0]["element_type"] == "study_design"
+    assert result["critical_prompts"][0]["prompt_type"] == "evaluation"
+
+
+@pytest.mark.asyncio
+async def test_generate_annotation_socratic_prompt():
+    mock_response = MagicMock()
+    mock_response.text = "What about this passage caught your attention?"
+    with patch('backend.ai_provider._model') as mock_model:
+        mock_model.generate_content.return_value = mock_response
+        result = await generate_annotation_socratic_prompt(
+            highlighted_text="The p-value was 0.03",
+            section_title="Results"
+        )
+    assert isinstance(result, str)
+    assert len(result) > 10
+
+
+@pytest.mark.asyncio
+async def test_generate_quiz_questions():
+    mock_response = MagicMock()
+    mock_response.text = json.dumps([
+        {
+            "question_text": "What was the primary outcome measure?",
+            "question_type": "multiple_choice",
+            "options": ["A", "B", "C", "D"],
+            "correct_answer": "A",
+            "explanation": "The primary outcome was X."
+        },
+        {
+            "question_text": "Describe the main limitation.",
+            "question_type": "short_answer",
+            "options": None,
+            "correct_answer": "Small sample size",
+            "explanation": "Discussed in Discussion."
+        }
+    ])
+    with patch('backend.ai_provider._model') as mock_model:
+        mock_model.generate_content.return_value = mock_response
+        result = await generate_quiz_questions(
+            paper_title="Effects of X on Y",
+            sections=[{"title": "Methods", "text": "We used RCT."}, {"title": "Results", "text": "p=0.03"}],
+            difficulty="intermediate"
+        )
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert result[0]["question_type"] == "multiple_choice"
+
+
+@pytest.mark.asyncio
+async def test_grade_short_answer():
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({"score": 1, "explanation": "Partially correct."})
+    with patch('backend.ai_provider._model') as mock_model:
+        mock_model.generate_content.return_value = mock_response
+        result = await grade_short_answer(
+            question="What is the main limitation?",
+            correct_answer="Small sample size limited generalizability",
+            student_answer="The sample was small"
+        )
+    assert result["score"] == 1
+    assert "explanation" in result

@@ -227,3 +227,136 @@ CREATE POLICY "Students read own self-study assignments" ON assignments
         AND student_sessions.student_id = auth.uid()
     )
   );
+
+-- ── Superpowers: Annotations ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS annotations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL REFERENCES student_sessions(id) ON DELETE CASCADE,
+  section_index integer NOT NULL,
+  start_char integer NOT NULL,
+  end_char integer NOT NULL,
+  highlight_text text NOT NULL,
+  note_text text,
+  color text DEFAULT '#3B82F9',
+  category text DEFAULT 'important'
+    CHECK (category IN ('important', 'confusion', 'question', 'idea')),
+  ai_prompt_shown boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_annotations_session ON annotations(session_id, section_index);
+
+ALTER TABLE annotations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Students manage own annotations" ON annotations
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM student_sessions
+            WHERE student_sessions.id = annotations.session_id
+              AND student_sessions.student_id = auth.uid())
+  );
+
+-- ── Superpowers: Methodology Elements ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS methodology_elements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assignment_id uuid NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+  section_index integer NOT NULL,
+  element_type text NOT NULL
+    CHECK (element_type IN (
+      'study_design', 'sample_size', 'statistical_test', 'control',
+      'effect_size', 'limitation', 'assumption', 'variable', 'finding', 'key_result'
+    )),
+  label text NOT NULL,
+  description text NOT NULL,
+  explanation text NOT NULL,
+  follow_up_questions jsonb DEFAULT '[]',
+  difficulty text DEFAULT 'intermediate'
+    CHECK (difficulty IN ('beginner', 'intermediate', 'advanced'))
+);
+
+ALTER TABLE methodology_elements ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Students read methodology for own sessions" ON methodology_elements
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM student_sessions
+            WHERE student_sessions.assignment_id = methodology_elements.assignment_id
+              AND student_sessions.student_id = auth.uid())
+  );
+
+-- ── Superpowers: Critical Prompts ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS critical_prompts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assignment_id uuid NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+  section_index integer,
+  prompt_text text NOT NULL,
+  prompt_type text NOT NULL
+    CHECK (prompt_type IN ('evaluation', 'connection', 'synthesis', 'application')),
+  ai_followup text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE critical_prompts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Students read critical prompts for own sessions" ON critical_prompts
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM student_sessions
+            WHERE student_sessions.assignment_id = critical_prompts.assignment_id
+              AND student_sessions.student_id = auth.uid())
+  );
+
+-- ── Superpowers: Quiz Questions ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS quiz_questions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  assignment_id uuid NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+  question_text text NOT NULL,
+  question_type text NOT NULL
+    CHECK (question_type IN ('multiple_choice', 'short_answer')),
+  options jsonb,
+  correct_answer text,
+  explanation text,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE quiz_questions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Students read quiz for own sessions" ON quiz_questions
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM student_sessions
+            WHERE student_sessions.assignment_id = quiz_questions.assignment_id
+              AND student_sessions.student_id = auth.uid())
+  );
+CREATE POLICY "Students insert quiz for own sessions" ON quiz_questions
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM student_sessions
+            WHERE student_sessions.assignment_id = quiz_questions.assignment_id
+              AND student_sessions.student_id = auth.uid())
+  );
+
+-- ── Superpowers: Quiz Attempts ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS quiz_attempts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  assignment_id uuid NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+  answers jsonb NOT NULL,
+  score integer NOT NULL,
+  max_score integer NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE quiz_attempts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Students manage own quiz attempts" ON quiz_attempts
+  FOR ALL USING (auth.uid() = student_id);
+
+-- ── Superpowers: Reading Stats ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS reading_stats (
+  student_id uuid PRIMARY KEY,
+  papers_read integer DEFAULT 0,
+  quizzes_passed integer DEFAULT 0,
+  current_streak integer DEFAULT 0,
+  longest_streak integer DEFAULT 0,
+  last_read_at timestamptz,
+  level integer DEFAULT 1,
+  xp integer DEFAULT 0,
+  total_sections_completed integer DEFAULT 0,
+  checkpoints_completed integer DEFAULT 0,
+  average_comprehension_score real DEFAULT 0
+);
+
+ALTER TABLE reading_stats ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Students manage own reading stats" ON reading_stats
+  FOR ALL USING (auth.uid() = student_id);
