@@ -182,3 +182,107 @@ Rules:
         )
     )
     return json.loads(response.text)
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
+async def generate_annotation_socratic_prompt(highlight_text: str, section_title: str) -> str:
+    """Generate a Socratic-style thinking prompt for a student's annotation highlight."""
+    prompt = f"""A student highlighted this passage from the "{section_title}" section of a research paper:
+
+"{highlight_text}"
+
+Write a single thought-provoking question that helps the student think more deeply about WHY this passage matters in the context of the section. Do not explain the passage. Return only the question text."""
+
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(temperature=0.5),
+        )
+    )
+    return response.text.strip()
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
+async def generate_quiz_questions(
+    paper_title: str, sections: list[dict], difficulty: str
+) -> list[dict]:
+    """Generate quiz questions from a paper's reading guide sections."""
+    section_summaries = []
+    for s in sections:
+        section_summaries.append(f"- {s['title']}: {s.get('text', '')[:200]}")
+    sections_text = "\n".join(section_summaries)
+
+    prompt = f"""Generate 5 quiz questions for a {difficulty}-level student who read the paper "{paper_title}".
+
+Paper sections:
+{sections_text}
+
+Return a JSON array of question objects with this exact structure:
+[
+  {{
+    "question_type": "multiple_choice",
+    "question_text": "...",
+    "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+    "correct_answer": "A) ...",
+    "explanation": "Brief explanation of the correct answer"
+  }},
+  {{
+    "question_type": "short_answer",
+    "question_text": "...",
+    "correct_answer": "Model answer",
+    "explanation": "Brief explanation"
+  }}
+]
+
+Rules:
+- Mix of 3 multiple-choice and 2 short-answer questions
+- Questions should test comprehension, not memorization
+- Return ONLY the JSON array, no other text"""
+
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                temperature=0.3,
+                response_mime_type="application/json",
+            ),
+        )
+    )
+    return json.loads(response.text)
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
+async def grade_short_answer(
+    question_text: str, correct_answer: str, student_answer: str
+) -> dict:
+    """Grade a short-answer quiz response and return a score with explanation."""
+    prompt = f"""Grade this student answer to a quiz question.
+
+Question: {question_text}
+Model answer: {correct_answer}
+Student answer: {student_answer}
+
+Return valid JSON:
+{{
+  "score": <0, 1, or 2 where 0=wrong, 1=partial, 2=correct>,
+  "explanation": "Brief explanation of the score"
+}}
+
+Return ONLY the JSON object."""
+
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                temperature=0.2,
+                response_mime_type="application/json",
+            ),
+        )
+    )
+    return json.loads(response.text)
