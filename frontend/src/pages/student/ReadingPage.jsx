@@ -2,6 +2,18 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
+import {
+  getCriticalPrompt,
+  getMethodologyElements,
+  listAnnotations,
+  createAnnotation,
+  deleteAnnotation,
+  getAnnotationAiPrompt,
+  getQuiz,
+  generateQuiz,
+  submitQuizAttempt,
+  addXp,
+} from "../../lib/superpowersApi";
 
 // Renders paper text with key terms highlighted
 function HighlightedText({ text, keyTerms, onTermClick }) {
@@ -32,6 +44,38 @@ function HighlightedText({ text, keyTerms, onTermClick }) {
   );
 }
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const ANNOTATION_COLORS = {
+  important: "#FBBF24",
+  confusion: "#F97316",
+  question: "#3B82F6",
+  idea: "#22C55E",
+};
+
+const SIMPLIFICATION_LEVELS = [
+  { key: "original", label: "Original" },
+  { key: "undergrad", label: "Undergrad" },
+  { key: "high_school", label: "High School" },
+  { key: "eli5", label: "ELI5" },
+];
+
+const SECTION_TYPE_TIPS = {
+  Introduction: "Look for: the research gap, the main claim, and how the authors position their work.",
+  Methods: "Look for: study design, sample size, controls, and statistical tests.",
+  Results: "Look for: key findings, statistical significance, and effect sizes.",
+  Discussion: "Look for: limitations, implications, future directions, and how findings connect to the field.",
+  Other: "Read for context and supporting information.",
+};
+
+const SECTION_TYPE_COLORS = {
+  Introduction: "bg-blue-500/20 text-blue-300",
+  Methods: "bg-purple-500/20 text-purple-300",
+  Results: "bg-green-500/20 text-green-300",
+  Discussion: "bg-amber-500/20 text-amber-300",
+  Other: "bg-gray-500/20 text-gray-400",
+};
+
 export default function ReadingPage({ previewMode = false, optionalCheckpoints = false }) {
   const { assignmentId } = useParams();
 
@@ -50,6 +94,24 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
   const [manualTerm, setManualTerm] = useState("");
   const pollRef = useRef(null);
   const textRef = useRef(null);
+
+  // Superpowers state
+  const [simplificationLevel, setSimplificationLevel] = useState("original");
+  const [activeTypeTip, setActiveTypeTip] = useState(null);
+  const [criticalPrompt, setCriticalPrompt] = useState(null);
+  const [criticalPromptOpen, setCriticalPromptOpen] = useState(false);
+  const [currentAssignmentId, setCurrentAssignmentId] = useState(null);
+  const [methodologyElements, setMethodologyElements] = useState([]);
+  const [methodologyOpen, setMethodologyOpen] = useState(false);
+  const [methodologyLoading, setMethodologyLoading] = useState(false);
+  const [annotations, setAnnotations] = useState([]);
+  const [highlightTooltip, setHighlightTooltip] = useState(null);
+  const [annotationSidebarOpen, setAnnotationSidebarOpen] = useState(false);
+  const [quizQuestions, setQuizQuestions] = useState([]);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizResults, setQuizResults] = useState(null);
+  const [quizGenerating, setQuizGenerating] = useState(false);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
 
   // ── Init ───────────────────────────────────────────────────────────────────
 
@@ -78,6 +140,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
     try {
       const { data } = await api.post("/sessions/", { assignment_id: assignmentId });
       setSessionId(data.session_id);
+      setCurrentAssignmentId(data.assignment_id);
       setReadingGuide(data.reading_guide);
       setPaperTitle(data.paper_title || "Paper");
       setCurrentSection(data.current_section_index || 0);
@@ -93,6 +156,10 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
       setCheckpoints(cpMap);
       if (data.sowhat) {
         setSoWhat({ text: data.sowhat.student_text, ai_feedback: data.sowhat.ai_feedback, pending: !data.sowhat.ai_feedback });
+      }
+      // Load annotations
+      if (data.session_id) {
+        listAnnotations(data.session_id).then(setAnnotations).catch(() => {});
       }
       setLoading(false);
     } catch (err) {
@@ -152,26 +219,77 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
   const advanceSection = async () => {
     const next = currentSection + 1;
     setCurrentSection(next);
+    setSimplificationLevel("original");
+    setCriticalPrompt(null);
+    setCriticalPromptOpen(false);
+    setMethodologyElements([]);
+    setMethodologyOpen(false);
     if (!previewMode && sessionId) {
       await api.patch(`/sessions/${sessionId}/progress`, { current_section_index: next }).catch(() => {});
+      addXp("section").catch(() => {});
     }
   };
 
-  // ── Text selection for highlight-to-lookup ─────────────────────────────────
+  // ── Text selection for annotation + highlight-to-lookup ────────────────────
 
   const handleMouseUp = () => {
     const sel = window.getSelection();
-    if (!sel || sel.isCollapsed) { setFloatingLookup(null); return; }
+    if (!sel || sel.isCollapsed) { setHighlightTooltip(null); setFloatingLookup(null); return; }
     const text = sel.toString().trim();
-    if (text.length < 2) { setFloatingLookup(null); return; }
-    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    if (text.length < 2) { setHighlightTooltip(null); setFloatingLookup(null); return; }
+
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    let startChar = 0;
+    let endChar = 0;
+    if (textRef.current) {
+      const preRange = range.cloneRange();
+      preRange.selectNodeContents(textRef.current);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      startChar = preRange.toString().length;
+      endChar = startChar + text.length;
+    }
+
+    setHighlightTooltip({
+      text,
+      startChar,
+      endChar,
+      top: rect.top + window.scrollY - 52,
+      left: Math.min(rect.left, window.innerWidth - 280),
+    });
     setFloatingLookup({ text, top: rect.top + window.scrollY - 44, left: Math.min(rect.left, window.innerWidth - 120) });
+  };
+
+  // ── Annotation save ────────────────────────────────────────────────────────
+
+  const saveAnnotation = async (category) => {
+    if (!highlightTooltip || !sessionId) return;
+    const color = ANNOTATION_COLORS[category] || ANNOTATION_COLORS.important;
+    try {
+      const ann = await createAnnotation({
+        session_id: sessionId,
+        section_index: currentSection,
+        start_char: highlightTooltip.startChar,
+        end_char: highlightTooltip.endChar,
+        highlight_text: highlightTooltip.text,
+        color,
+        category,
+      });
+      setAnnotations((prev) => [...prev, ann]);
+      toast.success(`Saved as "${category}"`);
+    } catch {
+      toast.error("Failed to save highlight");
+    }
+    setHighlightTooltip(null);
+    window.getSelection()?.removeAllRanges();
   };
 
   // ── Jargon lookup (highlight or manual) ───────────────────────────────────
 
   const lookupJargon = async (term) => {
     setFloatingLookup(null);
+    setHighlightTooltip(null);
     window.getSelection()?.removeAllRanges();
     const section = readingGuide.sections[currentSection];
     const context = section?.text?.slice(0, 500) || "";
@@ -237,6 +355,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
 
     try {
       await api.post(`/sessions/${sessionId}/checkpoint`, { section_index: currentSection, student_text: text });
+      addXp("checkpoint").catch(() => {});
       startPolling(sessionId);
     } catch (err) {
       setCheckpoints((prev) => ({ ...prev, [currentSection]: { ...prev[currentSection], pending: false } }));
@@ -268,6 +387,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
 
     try {
       await api.post(`/sessions/${sessionId}/sowhat`, { student_text: soWhat.text });
+      addXp("sowhat").catch(() => {});
       startPolling(sessionId);
     } catch (err) {
       setSoWhat((s) => ({ ...s, pending: false }));
@@ -299,8 +419,50 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
   const canAdvance = previewMode || !!cp.ai_feedback || (optionalCheckpoints && cp.skipped);
   const isLastSection = currentSection === sections.length - 1;
   const showSoWhat = allSectionsComplete || previewMode;
+  const isSoWhatSection = currentSection === sections.length;
+  const isQuizSection = currentSection === sections.length + 1;
 
   // ── Render helpers ─────────────────────────────────────────────────────────
+
+  const SimplificationToggle = () => {
+    const hasSimplifications = !!section?.simplifications;
+    if (!hasSimplifications) return null;
+    return (
+      <div className="flex items-center gap-1 mb-3">
+        <span className="text-xs text-gray-500 mr-1">Reading level:</span>
+        {SIMPLIFICATION_LEVELS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setSimplificationLevel(key)}
+            className={`text-xs px-2 py-1 rounded transition-colors ${
+              simplificationLevel === key
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-800 text-gray-400 hover:text-white"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const PaperText = () => {
+    const displayText =
+      simplificationLevel !== "original" && section.simplifications?.[simplificationLevel]
+        ? section.simplifications[simplificationLevel]
+        : section.text;
+
+    return (
+      <div ref={textRef} className="text-gray-300 text-sm leading-7 select-text" onMouseUp={handleMouseUp}>
+        <HighlightedText
+          text={displayText}
+          keyTerms={simplificationLevel === "original" ? (section.key_terms || []) : []}
+          onTermClick={lookupKeyTerm}
+        />
+      </div>
+    );
+  };
 
   const SectionSidebar = () => (
     <div className="w-48 shrink-0">
@@ -332,6 +494,11 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
                 <span className="text-gray-700 text-xs">{i + 1}</span>
               )}
               <span className="truncate">{s.title}</span>
+              {s.section_type && (
+                <span className={`text-xs px-1 rounded shrink-0 ${SECTION_TYPE_COLORS[s.section_type] || SECTION_TYPE_COLORS.Other}`}>
+                  {s.section_type.slice(0, 1)}
+                </span>
+              )}
             </button>
           );
         })}
@@ -345,9 +512,58 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
             So What?
           </button>
         )}
+        {(soWhat.ai_feedback || soWhat.skipped) && (
+          <button
+            onClick={() => setCurrentSection(sections.length + 1)}
+            className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${
+              currentSection === sections.length + 1 ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"
+            }`}
+          >
+            Quiz
+          </button>
+        )}
       </div>
+      <StructureCoach />
     </div>
   );
+
+  const StructureCoach = () => {
+    const typeCounts = {};
+    const completedCounts = {};
+    sections.forEach((s, i) => {
+      const t = s.section_type || "Other";
+      typeCounts[t] = (typeCounts[t] || 0) + 1;
+      if (checkpoints[i]?.ai_feedback) completedCounts[t] = (completedCounts[t] || 0) + 1;
+    });
+
+    const types = Object.keys(typeCounts);
+    if (types.length === 0) return null;
+
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-800">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Structure Guide</p>
+        <div className="space-y-1.5">
+          {types.map((type) => (
+            <button
+              key={type}
+              onClick={() => setActiveTypeTip(activeTypeTip === type ? null : type)}
+              className={`w-full text-left text-xs px-2 py-1.5 rounded flex items-center justify-between ${SECTION_TYPE_COLORS[type] || SECTION_TYPE_COLORS.Other}`}
+            >
+              <span>{type}</span>
+              <span className="text-gray-500">
+                {completedCounts[type] || 0}/{typeCounts[type]}
+              </span>
+            </button>
+          ))}
+        </div>
+        {activeTypeTip && (
+          <div className="mt-2 text-xs text-gray-400 bg-gray-800 rounded p-2 leading-relaxed">
+            {SECTION_TYPE_TIPS[activeTypeTip] || SECTION_TYPE_TIPS.Other}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const GuidingQuestions = () => (
     <div className="mb-4">
@@ -360,20 +576,6 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
           </li>
         ))}
       </ul>
-    </div>
-  );
-
-  const PaperText = () => (
-    <div
-      ref={textRef}
-      className="text-gray-300 text-sm leading-7 select-text"
-      onMouseUp={handleMouseUp}
-    >
-      <HighlightedText
-        text={section.text}
-        keyTerms={section.key_terms || []}
-        onTermClick={lookupKeyTerm}
-      />
     </div>
   );
 
@@ -424,6 +626,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
           {cp.ai_feedback}
         </div>
       )}
+      <CriticalPromptPanel />
       {canAdvance && !isLastSection && (
         <button
           onClick={advanceSection}
@@ -442,6 +645,207 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
       )}
     </div>
   );
+
+  const CriticalPromptPanel = () => {
+    const loadPrompt = async () => {
+      if (!currentAssignmentId || previewMode) return;
+      try {
+        const data = await getCriticalPrompt(currentAssignmentId, currentSection);
+        setCriticalPrompt(data);
+        setCriticalPromptOpen(true);
+      } catch {
+        // Silently skip if no prompt available
+      }
+    };
+
+    if (!criticalPrompt && !criticalPromptOpen) {
+      return (
+        <button
+          onClick={loadPrompt}
+          className="mt-3 text-xs text-gray-500 hover:text-indigo-400 underline transition-colors"
+        >
+          Critical thinking prompt →
+        </button>
+      );
+    }
+
+    if (!criticalPrompt) return null;
+
+    return (
+      <div className="mt-4 border border-indigo-900/50 rounded-lg p-3 bg-indigo-950/30">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs text-indigo-400 uppercase tracking-wider font-medium">
+            Critical Thinking
+          </span>
+          <button
+            onClick={() => { setCriticalPromptOpen(false); setCriticalPrompt(null); }}
+            className="text-gray-600 hover:text-gray-400 text-sm"
+          >
+            ×
+          </button>
+        </div>
+        <p className="text-gray-300 text-sm leading-relaxed">{criticalPrompt.prompt_text}</p>
+        <span className="text-xs text-gray-600 capitalize mt-1 block">{criticalPrompt.prompt_type}</span>
+      </div>
+    );
+  };
+
+  const MethodologyDecoder = () => {
+    const [expertMode, setExpertMode] = useState(false);
+
+    const loadElements = async () => {
+      if (!currentAssignmentId || previewMode || methodologyLoading) return;
+      setMethodologyLoading(true);
+      try {
+        const data = await getMethodologyElements(currentAssignmentId, currentSection);
+        setMethodologyElements(data || []);
+        setMethodologyOpen(true);
+      } catch {
+        toast.error("Could not load methodology elements");
+      } finally {
+        setMethodologyLoading(false);
+      }
+    };
+
+    if (!methodologyOpen) {
+      return (
+        <button
+          onClick={loadElements}
+          disabled={methodologyLoading}
+          className="mt-3 text-xs text-indigo-400 hover:text-indigo-300 underline disabled:opacity-50"
+        >
+          {methodologyLoading ? "Loading…" : "Decode Methods →"}
+        </button>
+      );
+    }
+
+    if (methodologyElements.length === 0) {
+      return (
+        <div className="mt-3 text-xs text-gray-500">
+          No methodology elements identified for this section.
+          <button onClick={() => setMethodologyOpen(false)} className="ml-2 text-gray-600 hover:text-gray-400">Close</button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 border border-gray-700 rounded-lg p-3">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Methodology</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setExpertMode((m) => !m)}
+              className={`text-xs px-2 py-0.5 rounded transition-colors ${expertMode ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"}`}
+            >
+              Expert
+            </button>
+            <button onClick={() => setMethodologyOpen(false)} className="text-gray-600 hover:text-gray-400 text-sm">×</button>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {methodologyElements.map((elem) => (
+            <div key={elem.id} className="bg-gray-800/50 rounded p-2">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded capitalize">
+                  {elem.element_type.replace(/_/g, " ")}
+                </span>
+                <span className="text-sm text-white font-medium">{elem.label}</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-1">{elem.description}</p>
+              {expertMode && <p className="text-xs text-gray-300 leading-relaxed">{elem.explanation}</p>}
+              {expertMode && elem.follow_up_questions?.length > 0 && (
+                <p className="text-xs text-indigo-400 mt-1 italic">{elem.follow_up_questions[0]}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const HighlightTooltip = () => {
+    if (!highlightTooltip || previewMode) return null;
+    return (
+      <div
+        style={{ position: "absolute", top: highlightTooltip.top, left: highlightTooltip.left, zIndex: 50 }}
+        className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl p-2 flex items-center gap-1"
+      >
+        {Object.entries(ANNOTATION_COLORS).map(([cat, color]) => (
+          <button
+            key={cat}
+            title={cat}
+            onClick={() => saveAnnotation(cat)}
+            style={{ backgroundColor: color }}
+            className="w-5 h-5 rounded-full hover:scale-110 transition-transform"
+          />
+        ))}
+        <div className="w-px h-4 bg-gray-700 mx-1" />
+        <button
+          onClick={() => { lookupJargon(highlightTooltip.text); setHighlightTooltip(null); }}
+          className="text-xs text-gray-400 hover:text-white px-1"
+        >
+          Look up
+        </button>
+      </div>
+    );
+  };
+
+  const AnnotationSidebar = () => {
+    const sessionAnnotations = annotations.filter((a) => a.section_index === currentSection);
+    const [aiPrompts, setAiPrompts] = useState({});
+
+    const askAI = async (ann) => {
+      try {
+        const { prompt } = await getAnnotationAiPrompt(ann.id);
+        setAiPrompts((prev) => ({ ...prev, [ann.id]: prompt }));
+      } catch {
+        toast.error("Could not get AI prompt");
+      }
+    };
+
+    const removeAnnotation = async (annId) => {
+      try {
+        await deleteAnnotation(annId);
+        setAnnotations((prev) => prev.filter((a) => a.id !== annId));
+      } catch {
+        toast.error("Failed to delete annotation");
+      }
+    };
+
+    return (
+      <div className="fixed right-0 top-0 h-full w-80 bg-gray-900 border-l border-gray-800 shadow-xl z-50 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+          <h3 className="text-white font-medium text-sm">Annotations ({annotations.length})</h3>
+          <button onClick={() => setAnnotationSidebarOpen(false)} className="text-gray-500 hover:text-white text-lg leading-none">×</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {sessionAnnotations.length === 0 && (
+            <p className="text-gray-600 text-xs text-center mt-8">No annotations in this section yet.</p>
+          )}
+          {sessionAnnotations.map((ann) => (
+            <div key={ann.id} className="bg-gray-800 rounded-lg p-2.5">
+              <div className="flex items-start gap-2">
+                <div className="w-2.5 h-2.5 rounded-full mt-0.5 shrink-0" style={{ backgroundColor: ann.color }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-gray-300 text-xs leading-relaxed">"{ann.highlight_text}"</p>
+                  {ann.note_text && <p className="text-gray-500 text-xs mt-1 italic">{ann.note_text}</p>}
+                  {aiPrompts[ann.id] && (
+                    <p className="text-indigo-400 text-xs mt-1 italic">{aiPrompts[ann.id]}</p>
+                  )}
+                  <div className="flex gap-2 mt-1.5">
+                    {!aiPrompts[ann.id] && (
+                      <button onClick={() => askAI(ann)} className="text-xs text-indigo-500 hover:text-indigo-300">Ask AI</button>
+                    )}
+                    <button onClick={() => removeAnnotation(ann.id)} className="text-xs text-gray-600 hover:text-red-400">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   const SoWhatPanel = () => (
     <div className="max-w-2xl">
@@ -500,7 +904,128 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
     </div>
   );
 
-  const isSoWhatSection = currentSection === sections.length;
+  const QuizPanel = () => {
+    const startQuiz = async () => {
+      if (!currentAssignmentId) return;
+      setQuizGenerating(true);
+      try {
+        let questions = await getQuiz(currentAssignmentId);
+        if (questions.length === 0) {
+          questions = await generateQuiz(currentAssignmentId);
+        }
+        setQuizQuestions(questions);
+      } catch {
+        toast.error("Could not load quiz");
+      } finally {
+        setQuizGenerating(false);
+      }
+    };
+
+    const submitQuiz = async () => {
+      setQuizSubmitting(true);
+      try {
+        const results = await submitQuizAttempt(currentAssignmentId, quizAnswers);
+        setQuizResults(results);
+        const correctCount = results.results.filter((r) => r.score === r.max).length;
+        for (let i = 0; i < correctCount; i++) {
+          await addXp("quiz_correct").catch(() => {});
+        }
+      } catch {
+        toast.error("Failed to submit quiz");
+      } finally {
+        setQuizSubmitting(false);
+      }
+    };
+
+    if (quizResults) {
+      const pct = Math.round((quizResults.score / quizResults.max_score) * 100);
+      return (
+        <div className="max-w-2xl">
+          <h2 className="text-white font-semibold text-lg mb-4">Quiz Results</h2>
+          <div className="bg-indigo-950/50 border border-indigo-800/50 rounded-xl p-5 mb-4">
+            <p className="text-3xl font-bold text-white">{pct}%</p>
+            <p className="text-indigo-300 text-sm">{quizResults.score} / {quizResults.max_score} points</p>
+          </div>
+          <div className="space-y-3">
+            {quizResults.results.map((r, i) => {
+              const q = quizQuestions.find((q) => q.id === r.question_id);
+              return (
+                <div key={r.question_id} className={`rounded-lg p-3 ${r.score === r.max ? "bg-green-900/30 border border-green-700/40" : "bg-red-900/20 border border-red-800/40"}`}>
+                  <p className="text-gray-200 text-sm font-medium mb-1">{q?.question_text}</p>
+                  <p className="text-gray-400 text-xs">Correct: {r.correct_answer}</p>
+                  <p className="text-gray-500 text-xs mt-1 italic">{r.explanation}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    if (quizQuestions.length > 0) {
+      const allAnswered = quizQuestions.every((q) => quizAnswers[q.id]?.trim());
+      return (
+        <div className="max-w-2xl">
+          <h2 className="text-white font-semibold text-lg mb-4">Comprehension Quiz</h2>
+          <div className="space-y-5">
+            {quizQuestions.map((q, i) => (
+              <div key={q.id} className="bg-gray-900 rounded-xl p-4">
+                <p className="text-gray-200 text-sm font-medium mb-3">{i + 1}. {q.question_text}</p>
+                {q.question_type === "multiple_choice" ? (
+                  <div className="space-y-2">
+                    {(q.options || []).map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={q.id}
+                          value={opt}
+                          checked={quizAnswers[q.id] === opt}
+                          onChange={() => setQuizAnswers((prev) => ({ ...prev, [q.id]: opt }))}
+                          className="text-indigo-600"
+                        />
+                        <span className="text-gray-300 text-sm">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <textarea
+                    rows={3}
+                    value={quizAnswers[q.id] || ""}
+                    onChange={(e) => setQuizAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                    placeholder="Your answer…"
+                    className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-600 resize-none"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={submitQuiz}
+            disabled={!allAnswered || quizSubmitting}
+            className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2 rounded-lg disabled:opacity-50 transition-colors"
+          >
+            {quizSubmitting ? "Grading…" : "Submit Quiz"}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="max-w-2xl">
+        <h2 className="text-white font-semibold text-lg mb-2">Test Your Understanding</h2>
+        <p className="text-gray-400 text-sm mb-4">
+          Answer 5 questions to check your comprehension of this paper.
+        </p>
+        <button
+          onClick={startQuiz}
+          disabled={quizGenerating}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2 rounded-lg disabled:opacity-50 transition-colors"
+        >
+          {quizGenerating ? "Generating quiz…" : "Generate Quiz"}
+        </button>
+      </div>
+    );
+  };
 
   // ── Main render ────────────────────────────────────────────────────────────
 
@@ -526,6 +1051,14 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
           >
             {layout === "stacked" ? "⇔ Side by Side" : "↕ Stacked"}
           </button>
+          {!previewMode && (
+            <button
+              onClick={() => setAnnotationSidebarOpen((o) => !o)}
+              className="text-gray-400 hover:text-white text-xs border border-gray-700 rounded px-2.5 py-1 transition-colors"
+            >
+              Annotations ({annotations.length})
+            </button>
+          )}
         </div>
       </div>
 
@@ -534,7 +1067,9 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
         <SectionSidebar />
 
         <div className="flex-1 min-w-0">
-          {isSoWhatSection ? (
+          {isQuizSection ? (
+            <QuizPanel />
+          ) : isSoWhatSection ? (
             <SoWhatPanel />
           ) : layout === "stacked" ? (
             /* Stacked layout */
@@ -545,7 +1080,9 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
               </div>
               <div className="bg-gray-900 rounded-xl p-5">
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Paper Text</p>
+                <SimplificationToggle />
                 <PaperText />
+                {!previewMode && <MethodologyDecoder />}
               </div>
               <div className="bg-gray-900 rounded-xl p-5">
                 <CheckpointArea />
@@ -565,7 +1102,9 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
               </div>
               <div className="w-1/2 overflow-y-auto bg-gray-900 rounded-xl p-5">
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Paper Text</p>
+                <SimplificationToggle />
                 <PaperText />
+                {!previewMode && <MethodologyDecoder />}
               </div>
             </div>
           )}
@@ -573,7 +1112,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
       </div>
 
       {/* Floating highlight-to-lookup button */}
-      {floatingLookup && (
+      {floatingLookup && !highlightTooltip && (
         <button
           style={{ position: "absolute", top: floatingLookup.top, left: floatingLookup.left }}
           onClick={() => lookupJargon(floatingLookup.text)}
@@ -582,6 +1121,12 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
           Look up "{floatingLookup.text.slice(0, 20)}{floatingLookup.text.length > 20 ? "…" : ""}"
         </button>
       )}
+
+      {/* Highlight annotation tooltip */}
+      <HighlightTooltip />
+
+      {/* Annotation sidebar */}
+      {annotationSidebarOpen && <AnnotationSidebar />}
 
       {/* Manual jargon search pinned at bottom */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-gray-800 bg-gray-950 px-6 py-3 flex items-center gap-2">
