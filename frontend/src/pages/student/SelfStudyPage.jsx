@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
+import { getRecommendations } from "../../lib/superpowersApi";
 
 const CATEGORIES = ["All", "Biology", "Computer Science", "Medicine", "Physics", "Chemistry", "Mathematics", "Engineering", "Psychology", "Economics"];
 
@@ -22,10 +23,12 @@ export default function SelfStudyPage() {
   const [uploading, setUploading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [fetching, setFetching] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
 
   useEffect(() => {
     loadPapers();
     loadCategories();
+    getRecommendations().then(setRecommendations).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
@@ -130,6 +133,45 @@ export default function SelfStudyPage() {
 
   const displayPapers = searchResults !== null ? searchResults.map((r) => ({ ...r, fromSearch: true })) : papers;
 
+  const startRecommendedPaper = async (paperId) => {
+    setFetching(paperId);
+    try {
+      const { data } = await api.post("/library/fetch", { paper_id: paperId });
+      pollAndNavigate(data.assignment_id);
+    } catch {
+      toast.error("Could not start paper");
+    } finally {
+      setFetching(null);
+    }
+  };
+
+  const RecommendationPanel = () => {
+    if (recommendations.length === 0) return null;
+    return (
+      <div className="mb-6">
+        <h2 className="text-white font-semibold text-base mb-3">Recommended for You</h2>
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {recommendations.map(({ paper, reason }) => (
+            <div key={paper.id} className="bg-gray-800 rounded-xl p-4 shrink-0 w-64 flex flex-col">
+              <p className="text-white text-sm font-medium leading-snug mb-1">{paper.title}</p>
+              {paper.authors && <p className="text-gray-500 text-xs mb-1">{paper.authors}</p>}
+              {paper.category && (
+                <span className="text-xs bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded self-start mb-2">
+                  {paper.category}
+                </span>
+              )}
+              <p className="text-gray-500 text-xs italic mb-3 flex-1">{reason}</p>
+              <button onClick={() => startRecommendedPaper(paper.id)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
+                Start Reading
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
@@ -149,6 +191,8 @@ export default function SelfStudyPage() {
           onChange={handleUpload}
         />
       </div>
+
+      <RecommendationPanel />
 
       {/* Search bar */}
       <form onSubmit={handleSearch} className="flex gap-2 mb-6">
