@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS methodology_elements (
   label text NOT NULL,
   description text NOT NULL,
   explanation text NOT NULL,
-  follow_up_questions jsonb DEFAULT '[] CHECK (follow_up_questions @> 0),
+  follow_up_questions jsonb DEFAULT '[]',
   difficulty text DEFAULT 'intermediate'
     CHECK (difficulty IN ('beginner', 'intermediate', 'advanced'))
 );
