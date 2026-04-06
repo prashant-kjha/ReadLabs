@@ -19,15 +19,30 @@ def _one(data):
 
 
 async def _process_assignment(assignment_id: str, extracted_text: str, figure_count: int) -> None:
-    """Background task: call Gemini and store reading guide."""
+    """Background task: call Gemini and store reading guide + superpowers data."""
     sb = _supabase_client(settings.supabase_url, settings.supabase_service_role_key)
     try:
-        reading_guide = await generate_reading_guide(extracted_text, figure_count)
+        full_result = await generate_reading_guide(extracted_text, figure_count)
+
+        methodology_elements = full_result.pop("methodology_elements", [])
+        critical_prompts = full_result.pop("critical_prompts", [])
+
         sb.table("assignments").update({
-            "reading_guide": reading_guide,
-            "difficulty": reading_guide.get("difficulty", "intermediate"),
+            "reading_guide": full_result,
+            "difficulty": full_result.get("difficulty", "intermediate"),
             "status": "draft",
         }).eq("id", assignment_id).execute()
+
+        if methodology_elements:
+            for elem in methodology_elements:
+                elem["assignment_id"] = assignment_id
+            sb.table("methodology_elements").insert(methodology_elements).execute()
+
+        if critical_prompts:
+            for prompt in critical_prompts:
+                prompt["assignment_id"] = assignment_id
+            sb.table("critical_prompts").insert(critical_prompts).execute()
+
     except Exception as e:
         sb.table("assignments").update({
             "status": "draft",
