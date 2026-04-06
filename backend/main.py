@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import auth, papers, classes, assignments, enrollment, sessions, dashboard, library
+from backend.routers import auth, papers, classes, assignments, enrollment, sessions, dashboard, library, superpowers
 
 app = FastAPI(title="ReadLabAI API")
 
@@ -20,6 +20,7 @@ app.include_router(enrollment.router, prefix="/api/v1/enrollment", tags=["enroll
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
 app.include_router(library.router, prefix="/api/v1/library", tags=["library"])
+app.include_router(superpowers.router, prefix="/api/v1/superpowers", tags=["superpowers"])
 
 
 @app.get("/health")

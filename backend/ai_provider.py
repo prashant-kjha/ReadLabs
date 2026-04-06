@@ -284,7 +284,7 @@ Return ONLY the JSON array, no markdown."""
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
 async def grade_short_answer(question: str, correct_answer: str, student_answer: str) -> dict:
-    """Grade a short answer 0-2. Returns {{"score": int, "explanation": str}}."""
+    """Grade a short answer 0-2. Returns {"score": int, "explanation": str}."""
     prompt = f"""Grade this student answer for a research paper quiz.
 
 Question: {question}
