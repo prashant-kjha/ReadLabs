@@ -34,19 +34,52 @@ Return a JSON object with this exact structure:
         "Consider: [a third prompt]"
       ],
       "key_terms": ["jargon term 1", "jargon term 2"],
-      "teacher_notes": ""
+      "teacher_notes": "",
+      "section_type": "Introduction",
+      "simplifications": {{
+        "undergrad": "technical terms kept, simpler sentence structure, 3-4 sentences",
+        "high_school": "key concepts only in everyday language, 3-4 sentences",
+        "eli5": "core idea in plain language with analogies, 2-3 sentences"
+      }}
     }}
   ],
-  "difficulty": "beginner"
+  "difficulty": "beginner",
+  "methodology_elements": [
+    {{
+      "section_index": 0,
+      "element_type": "study_design",
+      "label": "human-readable label for this element",
+      "description": "one sentence describing what was found",
+      "explanation": "2-3 sentences explaining why this matters to a student",
+      "follow_up_questions": ["one follow-up question to deepen understanding"],
+      "difficulty": "intermediate"
+    }}
+  ],
+  "critical_prompts": [
+    {{
+      "section_index": 0,
+      "prompt_text": "evaluative question for this section",
+      "prompt_type": "evaluation"
+    }}
+  ]
 }}
 
 Rules:
-- Detect only sections that actually exist in this paper (Abstract, Introduction, Methods, Results, Discussion, Conclusion, Limitations, etc.)
-- Guiding questions must be framed as reading prompts (what to look FOR before reading), not comprehension quiz questions asked after
+- Detect only sections that actually exist in this paper
+- Guiding questions must be framed as reading prompts (what to look FOR before reading)
 - Include 3 guiding questions per section
-- Include 2–5 key terms per section that a student might not know
-- difficulty: "beginner" = high school reader, "intermediate" = undergraduate, "advanced" = graduate level
-- teacher_notes is always an empty string — the teacher fills this in
+- Include 2-5 key terms per section
+- difficulty: "beginner" = high school reader, "intermediate" = undergraduate, "advanced" = graduate
+- teacher_notes is always an empty string
+- section_type must be one of: "Introduction", "Methods", "Results", "Discussion", "Other"
+- simplifications: write all three levels for every section (undergrad, high_school, eli5)
+- methodology_elements: only for sections with actual methodology content (Methods, Results). May be empty list []
+- element_type must be one of: study_design, sample_size, statistical_test, control, effect_size, limitation, assumption, variable, finding, key_result
+- critical_prompts: one prompt per section. prompt_type must be one of: evaluation, connection, synthesis, application
+  - Introduction sections: use "connection" or "evaluation"
+  - Methods sections: use "evaluation" or "application"
+  - Results sections: use "synthesis" or "evaluation"
+  - Discussion sections: use "synthesis" or "application"
 - Return ONLY the JSON object, no markdown, no explanation"""
 
     loop = asyncio.get_event_loop()
@@ -177,6 +210,102 @@ Rules:
             prompt,
             generation_config=genai.GenerationConfig(
                 temperature=0.3,
+                response_mime_type="application/json",
+            ),
+        )
+    )
+    return json.loads(response.text)
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
+async def generate_annotation_socratic_prompt(highlighted_text: str, section_title: str) -> str:
+    """Generate a Socratic question about text a student highlighted."""
+    prompt = f"""A student highlighted this passage from the "{section_title}" section of a research paper:
+
+"{highlighted_text}"
+
+Ask one Socratic question (10-20 words) that helps the student reflect on WHY this passage caught their attention.
+Do not summarize, explain, or evaluate the passage. Just ask the question.
+Return only the question text, no labels."""
+
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(temperature=0.5),
+        )
+    )
+    return response.text.strip()
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
+async def generate_quiz_questions(paper_title: str, sections: list[dict], difficulty: str) -> list[dict]:
+    """Generate 5 quiz questions for a paper. One call per paper, cached in quiz_questions table."""
+    sections_text = "\n".join(
+        f"## {s['title']}\n{s.get('text', '')[:300]}" for s in sections[:6]
+    )
+    prompt = f"""Generate 5 comprehension quiz questions for a {difficulty}-level research paper titled "{paper_title}".
+
+Paper sections:
+{sections_text}
+
+Return a JSON array of exactly 5 questions. Mix: 3 multiple choice + 2 short answer.
+
+Each question:
+{{
+  "question_text": "the question",
+  "question_type": "multiple_choice" | "short_answer",
+  "options": ["A: ...", "B: ...", "C: ...", "D: ..."] or null,
+  "correct_answer": "A: ..." or "expected short answer",
+  "explanation": "why this is the correct answer, 1-2 sentences"
+}}
+
+Rules:
+- Multiple choice: 4 options (A-D prefix), one clearly correct
+- Short answer: 1-2 sentence expected answer
+- Questions must be answerable from the section excerpts provided
+- No trick questions; focus on key concepts and findings
+Return ONLY the JSON array, no markdown."""
+
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                temperature=0.3,
+                response_mime_type="application/json",
+            ),
+        )
+    )
+    return json.loads(response.text)
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
+async def grade_short_answer(question: str, correct_answer: str, student_answer: str) -> dict:
+    """Grade a short answer 0-2. Returns {{"score": int, "explanation": str}}."""
+    prompt = f"""Grade this student answer for a research paper quiz.
+
+Question: {question}
+Expected answer: {correct_answer}
+Student's answer: {student_answer}
+
+Score 0-2:
+- 2: fully correct, captures the key concept
+- 1: partially correct, missing one key element
+- 0: incorrect or irrelevant
+
+Return JSON: {{"score": 0|1|2, "explanation": "one sentence explaining the score"}}
+Return ONLY the JSON object."""
+
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(
+        None,
+        lambda: _model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                temperature=0.2,
                 response_mime_type="application/json",
             ),
         )
