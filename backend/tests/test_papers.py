@@ -70,6 +70,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
 from backend.main import app
 from backend.deps import require_teacher as _require_teacher
+from backend.deps import require_student as _require_student
 from backend.db import get_db as _get_db
 
 api_client = TestClient(app)
@@ -133,3 +134,44 @@ def test_upload_returns_paper_metadata():
     assert body["title"] == "Test Paper"
     assert "figure_count" in body
     assert "text_length" in body
+
+
+def test_get_pdf_url_requires_auth():
+    """Unauthenticated requests to GET /papers/{id}/pdf-url should return 401."""
+    response = api_client.get("/api/v1/papers/some-id/pdf-url")
+    assert response.status_code == 401
+
+
+def test_get_pdf_url_returns_signed_url():
+    """Authenticated student should receive a signed URL for a paper's PDF."""
+    mock_student = {"sub": "student-uuid-123"}
+
+    mock_db = MagicMock()
+    mock_db.from_ = MagicMock(return_value=mock_db)
+    mock_db.select = MagicMock(return_value=mock_db)
+    mock_db.eq = MagicMock(return_value=mock_db)
+    mock_db.single = MagicMock(return_value=mock_db)
+    mock_db.execute = AsyncMock(return_value=MagicMock(
+        data={"pdf_path": "papers/teacher-uuid-999/abc-123.pdf"}
+    ))
+
+    mock_signed = {"signedURL": "/storage/v1/object/sign/papers/teacher-uuid-999/abc-123.pdf?token=xyz"}
+
+    with patch("backend.routers.papers._get_storage_client") as mock_get_client:
+        mock_client = MagicMock()
+        mock_client.storage.from_("papers").create_signed_url.return_value = mock_signed
+        mock_get_client.return_value = mock_client
+
+        app.dependency_overrides[_require_student] = lambda: mock_student
+        app.dependency_overrides[_get_db] = lambda: mock_db
+        try:
+            response = api_client.get("/api/v1/papers/paper-uuid-1/pdf-url")
+        finally:
+            app.dependency_overrides.pop(_require_student, None)
+            app.dependency_overrides.pop(_get_db, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "url" in body
+    assert "teacher-uuid-999/abc-123.pdf" in body["url"]
+    assert "token=xyz" in body["url"]
