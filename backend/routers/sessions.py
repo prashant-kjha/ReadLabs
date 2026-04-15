@@ -73,22 +73,26 @@ async def start_session(body: StartSessionRequest, user=Depends(require_student)
         if not enrollment.data:
             raise HTTPException(status_code=403, detail="Not enrolled in this class")
 
-    existing = await db.from_("student_sessions") \
-        .select("id, status, current_section_index") \
-        .eq("student_id", user["sub"]).eq("assignment_id", body.assignment_id).single().execute()
+    # Insert a new session.  If a row already exists (race condition /
+    # React StrictMode double-fire), the unique constraint catches it and
+    # we fall back to fetching the existing row — preserving progress.
+    result = await db.from_("student_sessions").insert({
+        "student_id": user["sub"],
+        "assignment_id": body.assignment_id,
+        "status": "in_progress",
+        "current_section_index": 0,
+    }).execute()
 
-    if existing.data:
-        session = existing.data
+    if result.data:
+        session = result.data[0] if isinstance(result.data, list) else result.data
     else:
-        result = await db.from_("student_sessions").insert({
-            "student_id": user["sub"],
-            "assignment_id": body.assignment_id,
-            "status": "in_progress",
-            "current_section_index": 0,
-        }).execute()
-        if not result.data:
+        # Duplicate — fetch the existing row instead
+        existing = await db.from_("student_sessions") \
+            .select("id, status, current_section_index") \
+            .eq("student_id", user["sub"]).eq("assignment_id", body.assignment_id).single().execute()
+        if not existing.data:
             raise HTTPException(status_code=500, detail="Failed to create session")
-        session = result.data[0]
+        session = existing.data[0] if isinstance(existing.data, list) else existing.data
 
     paper = await db.from_("papers").select("title") \
         .eq("id", assignment.data["paper_id"]).single().execute()
@@ -96,6 +100,7 @@ async def start_session(body: StartSessionRequest, user=Depends(require_student)
     return {
         "session_id": session["id"],
         "assignment_id": body.assignment_id,
+        "paper_id": assignment.data["paper_id"],
         "status": session["status"],
         "current_section_index": session["current_section_index"],
         "reading_guide": assignment.data["reading_guide"],
