@@ -17,13 +17,47 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Auto-refresh on token expiry (safety net — Supabase client handles most refreshes)
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    const msg = err.response?.data?.detail || err.message || 'An error occurred';
+  async (err) => {
+    const original = err.config;
+    if (
+      err.response?.status === 401 &&
+      err.response?.data?.detail === "Token expired" &&
+      !original._retry
+    ) {
+      original._retry = true;
+      try {
+        const { data: { session } } = await supabase.auth.refreshSession();
+        if (session?.access_token) {
+          // Persist refreshed tokens
+          const stored = localStorage.getItem("readlab_user");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            localStorage.setItem("readlab_user", JSON.stringify({
+              ...parsed,
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            }));
+          }
+          original.headers.Authorization = `Bearer ${session.access_token}`;
+          return api(original);
+        }
+      } catch {
+        // Refresh failed — force re-login
+        localStorage.removeItem("readlab_user");
+        window.location.href = "/auth";
+        return Promise.reject(new Error("Session expired. Please log in again."));
+      }
+    }
+    const msg = err.response?.data?.detail || err.message || "An error occurred";
     return Promise.reject(new Error(msg));
   }
 );
+
+// ── PDF URL ────────────────────────────────────────────────────────────────
+export const getPdfUrl = (paperId) => api.get(`/papers/${paperId}/pdf-url`).then((r) => r.data);
 
 // ── Papers ──────────────────────────────────────────────────────────────────
 export const papersApi = {
