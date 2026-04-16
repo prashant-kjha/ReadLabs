@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { SkipForward, Search } from "lucide-react";
 import { getCriticalPrompt } from "../../lib/superpowersApi";
 import toast from "react-hot-toast";
+
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 500;
 
 export default function AiGuidancePanel({
   section, currentSection, sections,
@@ -17,6 +20,30 @@ export default function AiGuidancePanel({
 }) {
   const isQuizSection = currentSection === sections.length + 1;
   const isSoWhatSection = currentSection === sections.length;
+  const [internalWidth, setInternalWidth] = useState(panelWidth);
+
+  useEffect(() => { setInternalWidth(panelWidth); }, [panelWidth]);
+
+  const handleDragStart = useCallback((e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = internalWidth;
+
+    const handleDragMove = (moveEvent) => {
+      const delta = startX - moveEvent.clientX;
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
+      setInternalWidth(newWidth);
+      localStorage.setItem("readlab_ai_panel_width", newWidth.toString());
+    };
+
+    const handleDragEnd = () => {
+      document.removeEventListener("mousemove", handleDragMove);
+      document.removeEventListener("mouseup", handleDragEnd);
+    };
+
+    document.addEventListener("mousemove", handleDragMove);
+    document.addEventListener("mouseup", handleDragEnd);
+  }, [internalWidth]);
 
   if (!panelVisible) return null;
 
@@ -45,8 +72,8 @@ export default function AiGuidancePanel({
   };
 
   return (
-    <div className="shrink-0 bg-surface border-l border-border flex flex-col relative" style={{ width: `${panelWidth}px` }}>
-      <div className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize z-10 hover:bg-primary/30 transition-colors" />
+    <div className="shrink-0 bg-surface border-l border-border flex flex-col relative" style={{ width: `${internalWidth}px` }}>
+      <div className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize z-10 hover:bg-primary/30 transition-colors" onMouseDown={handleDragStart} />
       <div className="px-4 py-2 border-b border-border">
         <span className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider">AI Guidance</span>
       </div>
