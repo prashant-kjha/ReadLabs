@@ -1,6 +1,10 @@
-from fastapi import FastAPI
+import logging
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from backend.routers import auth, papers, classes, assignments, enrollment, sessions, dashboard, library, superpowers
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="ReadLabAI API")
 
@@ -11,6 +15,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global exception handler — ensures all errors return JSON with CORS headers
+@app.exception_handler(Exception)
+async def global_error_handler(request: Request, exc: Exception):
+    logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+    from backend.config import get_settings
+    detail = "Internal server error" if get_settings().environment == "production" else str(exc)
+    return JSONResponse(status_code=500, content={"detail": detail})
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(papers.router, prefix="/api/v1/papers", tags=["papers"])

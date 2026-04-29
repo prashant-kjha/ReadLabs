@@ -4,9 +4,16 @@ import google.generativeai as genai
 from tenacity import retry, stop_after_attempt, wait_exponential
 from backend.config import get_settings
 
-settings = get_settings()
-genai.configure(api_key=settings.gemini_api_key)
-_model = genai.GenerativeModel("gemini-2.5-flash")
+_model = None
+
+
+def _get_model():
+    global _model
+    if _model is None:
+        settings = get_settings()
+        genai.configure(api_key=settings.gemini_api_key)
+        _model = genai.GenerativeModel("gemini-2.5-flash")
+    return _model
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
@@ -18,7 +25,7 @@ async def generate_reading_guide(extracted_text: str, figure_count: int) -> dict
     prompt = f"""You are creating a guided reading experience for students reading a research paper.
 
 Paper text (may be truncated to 50,000 characters):
-{extracted_text[:50000]}
+{extracted_text[:30000]}
 
 This paper contains {figure_count} embedded figures, images, or tables.
 
@@ -82,10 +89,10 @@ Rules:
   - Discussion sections: use "synthesis" or "application"
 - Return ONLY the JSON object, no markdown, no explanation"""
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None,
-        lambda: _model.generate_content(
+        lambda: _get_model().generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
                 temperature=0.3,
@@ -113,10 +120,10 @@ The student wrote:
 
 In 2–3 sentences: acknowledge one specific thing they captured correctly, then point to one specific thing they missed or misunderstood relative to the guiding questions. Do not rewrite their response or summarize the section. Be encouraging but precise. Return only the feedback text, no labels or headers."""
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None,
-        lambda: _model.generate_content(
+        lambda: _get_model().generate_content(
             prompt,
             generation_config=genai.GenerationConfig(temperature=0.4),
         )
@@ -141,10 +148,10 @@ The student wrote this "So What?" paragraph about the paper's significance:
 
 In 3–4 sentences: affirm one thing they got right about the paper's significance, then identify one specific place where they overstated, understated, or mischaracterized the contribution. Be specific and encouraging. Return only the feedback text, no labels or headers."""
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None,
-        lambda: _model.generate_content(
+        lambda: _get_model().generate_content(
             prompt,
             generation_config=genai.GenerationConfig(temperature=0.4),
         )
@@ -163,10 +170,10 @@ Paper context:
 
 Return only the explanation, no labels or headers."""
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None,
-        lambda: _model.generate_content(
+        lambda: _get_model().generate_content(
             prompt,
             generation_config=genai.GenerationConfig(temperature=0.3),
         )
@@ -203,10 +210,10 @@ Rules:
 - Be specific about the content of the misconception, not generic ("students struggled with X" not "students had difficulty")
 - Return ONLY the JSON object, no other text"""
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None,
-        lambda: _model.generate_content(
+        lambda: _get_model().generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
                 temperature=0.3,
@@ -228,10 +235,10 @@ Ask one Socratic question (10-20 words) that helps the student reflect on WHY th
 Do not summarize, explain, or evaluate the passage. Just ask the question.
 Return only the question text, no labels."""
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None,
-        lambda: _model.generate_content(
+        lambda: _get_model().generate_content(
             prompt,
             generation_config=genai.GenerationConfig(temperature=0.5),
         )
@@ -268,10 +275,10 @@ Rules:
 - No trick questions; focus on key concepts and findings
 Return ONLY the JSON array, no markdown."""
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None,
-        lambda: _model.generate_content(
+        lambda: _get_model().generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
                 temperature=0.3,
@@ -299,10 +306,10 @@ Score 0-2:
 Return JSON: {{"score": 0|1|2, "explanation": "one sentence explaining the score"}}
 Return ONLY the JSON object."""
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(
         None,
-        lambda: _model.generate_content(
+        lambda: _get_model().generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
                 temperature=0.2,

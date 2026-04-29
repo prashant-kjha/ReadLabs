@@ -206,3 +206,10 @@ def get_anon_db() -> SupabaseDB:
     if _anon_db is None:
         _anon_db = SupabaseDB(admin=False)
     return _anon_db
+
+
+def storage_headers() -> dict:
+    return {
+        "apikey": settings.supabase_service_role_key,
+        "Authorization": f"Bearer {settings.supabase_service_role_key}",
+    }

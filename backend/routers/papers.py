@@ -2,7 +2,7 @@ import uuid
 import logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
-from backend.db import get_db
+from backend.db import get_db, storage_headers
 from backend.deps import require_teacher, require_student
 from backend.services.paper_service import extract_text_and_figures
 from backend.config import get_settings
@@ -14,16 +14,11 @@ settings = get_settings()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
 
-STORAGE_HEADERS = {
-    "apikey": settings.supabase_service_role_key,
-    "Authorization": f"Bearer {settings.supabase_service_role_key}",
-}
-
 
 async def _upload_to_storage(pdf_bytes: bytes, object_path: str) -> str:
     """Upload to Supabase Storage via httpx (no supabase-py dependency)."""
     url = f"{settings.supabase_url}/storage/v1/object/papers/{object_path}"
-    headers = {**STORAGE_HEADERS, "Content-Type": "application/pdf"}
+    headers = {**storage_headers(), "Content-Type": "application/pdf"}
     async with httpx.AsyncClient(timeout=60) as c:
         r = await c.post(url, headers=headers, content=pdf_bytes)
     if r.status_code not in (200, 201):
@@ -123,7 +118,7 @@ async def get_pdf_url(paper_id: str, user=Depends(require_student), db=Depends(g
 
     try:
         url = f"{settings.supabase_url}/storage/v1/object/sign/papers/{object_path}"
-        headers = {**STORAGE_HEADERS, "Content-Type": "application/json"}
+        headers = {**storage_headers(), "Content-Type": "application/json"}
         async with httpx.AsyncClient(timeout=15) as c:
             r = await c.post(url, headers=headers, json={"expiresIn": "3600"})
         if r.status_code != 200:

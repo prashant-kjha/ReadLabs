@@ -4,7 +4,7 @@ import logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from supabase import create_client as _supabase_client
-from backend.db import get_db
+from backend.db import get_db, storage_headers
 from backend.deps import require_student
 from backend.services.paper_service import extract_text_and_figures
 from backend.services.core_api import search_core, fetch_core_full_text
@@ -17,11 +17,6 @@ router = APIRouter()
 settings = get_settings()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
-
-STORAGE_HEADERS = {
-    "apikey": settings.supabase_service_role_key,
-    "Authorization": f"Bearer {settings.supabase_service_role_key}",
-}
 
 
 async def _process_self_study(
@@ -87,7 +82,7 @@ async def upload_paper(
     # Upload to Supabase Storage via httpx
     object_path = f"self-study/{user['sub']}/{uuid.uuid4()}.pdf"
     storage_url = f"{settings.supabase_url}/storage/v1/object/papers/{object_path}"
-    upload_headers = {**STORAGE_HEADERS, "Content-Type": "application/pdf"}
+    upload_headers = {**storage_headers(), "Content-Type": "application/pdf"}
     async with httpx.AsyncClient(timeout=60) as c:
         r = await c.post(storage_url, headers=upload_headers, content=pdf_bytes)
     if r.status_code not in (200, 201):
