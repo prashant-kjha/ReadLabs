@@ -1,10 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, EmailStr
-from typing import Literal
 import httpx
 from backend.config import get_settings
 from backend.db import get_db
 from backend.deps import get_current_user
+from backend.schemas.auth import SignupRequest, SigninRequest, AuthResponse, MeResponse
 
 router = APIRouter()
 settings = get_settings()
@@ -22,19 +21,7 @@ ANON_HEADERS = {
 }
 
 
-class SignupRequest(BaseModel):
-    email: EmailStr
-    password: str
-    name: str
-    role: Literal["teacher", "student"]
-
-
-class SigninRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-
-@router.post("/signup")
+@router.post("/signup", response_model=AuthResponse)
 async def signup(body: SignupRequest, db=Depends(get_db)):
     async with httpx.AsyncClient(timeout=15) as client:
         # Create user with email already confirmed (admin API)
@@ -75,7 +62,7 @@ async def signup(body: SignupRequest, db=Depends(get_db)):
     }
 
 
-@router.post("/signin")
+@router.post("/signin", response_model=AuthResponse)
 async def signin(body: SigninRequest, db=Depends(get_db)):
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.post(
@@ -104,7 +91,7 @@ async def signin(body: SigninRequest, db=Depends(get_db)):
     }
 
 
-@router.get("/me")
+@router.get("/me", response_model=MeResponse)
 async def me(user=Depends(get_current_user), db=Depends(get_db)):
     profile_resp = await db.from_("user_profiles").select("name, role") \
         .eq("user_id", user["sub"]).single().execute()

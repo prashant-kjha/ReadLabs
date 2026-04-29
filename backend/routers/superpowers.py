@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from pydantic import BaseModel
 from typing import Optional
 from supabase import create_client as _supabase_client
 from backend.db import get_db
@@ -11,35 +10,15 @@ from backend.ai_provider import (
     grade_short_answer,
 )
 from backend.config import get_settings
+from backend.schemas.superpowers import (
+    CreateAnnotationRequest, UpdateAnnotationRequest,
+    XpRequest, QuizAttemptRequest,
+)
 
 router = APIRouter()
 settings = get_settings()
 
 UTC = timezone.utc
-
-
-# ── Request Models ─────────────────────────────────────────────────────────────
-
-class CreateAnnotationRequest(BaseModel):
-    session_id: str
-    section_index: int
-    start_char: int
-    end_char: int
-    highlight_text: str
-    color: str = "#3B82F9"
-    category: str = "important"
-
-class UpdateAnnotationRequest(BaseModel):
-    note_text: Optional[str] = None
-    color: Optional[str] = None
-    category: Optional[str] = None
-
-class XpRequest(BaseModel):
-    action: str
-
-class QuizAttemptRequest(BaseModel):
-    assignment_id: str
-    answers: dict
 
 
 # ── XP Constants ──────────────────────────────────────────────────────────────

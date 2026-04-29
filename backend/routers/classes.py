@@ -1,19 +1,15 @@
 import random
 import string
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
 from backend.db import get_db
 from backend.deps import require_teacher
+from backend.schemas.classes import CreateClassRequest
 
 router = APIRouter()
 
 
 def _make_code(length: int = 6) -> str:
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
-
-
-class CreateClassRequest(BaseModel):
-    name: str
 
 
 @router.post("/")

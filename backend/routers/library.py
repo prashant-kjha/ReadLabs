@@ -1,7 +1,7 @@
 import uuid
 import asyncio
 import logging
-from pydantic import BaseModel
+import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from supabase import create_client as _supabase_client
 from backend.db import get_db
@@ -10,6 +10,7 @@ from backend.services.paper_service import extract_text_and_figures
 from backend.services.core_api import search_core, fetch_core_full_text
 from backend.ai_provider import generate_reading_guide
 from backend.config import get_settings
+from backend.schemas.library import FetchCoreRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -17,9 +18,10 @@ settings = get_settings()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
 
-
-def _get_storage_client():
-    return _supabase_client(settings.supabase_url, settings.supabase_service_role_key)
+STORAGE_HEADERS = {
+    "apikey": settings.supabase_service_role_key,
+    "Authorization": f"Bearer {settings.supabase_service_role_key}",
+}
 
 
 async def _process_self_study(
@@ -82,21 +84,14 @@ async def upload_paper(
         file.filename.replace(".pdf", "").replace("_", " ") if file.filename else "Untitled"
     )
 
-    # Upload to Supabase Storage
+    # Upload to Supabase Storage via httpx
     object_path = f"self-study/{user['sub']}/{uuid.uuid4()}.pdf"
-
-    def _do_upload():
-        client = _get_storage_client()
-        client.storage.from_("papers").upload(
-            object_path,
-            pdf_bytes,
-            {"content-type": "application/pdf", "upsert": "false"},
-        )
-
-    try:
-        await asyncio.to_thread(_do_upload)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to store PDF: {e}")
+    storage_url = f"{settings.supabase_url}/storage/v1/object/papers/{object_path}"
+    upload_headers = {**STORAGE_HEADERS, "Content-Type": "application/pdf"}
+    async with httpx.AsyncClient(timeout=60) as c:
+        r = await c.post(storage_url, headers=upload_headers, content=pdf_bytes)
+    if r.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail=f"Failed to store PDF: {r.text}")
 
     # Insert paper
     paper_result = await db.from_("papers").insert({
@@ -105,11 +100,10 @@ async def upload_paper(
         "figures": extracted["figures"],
         "pdf_path": f"papers/{object_path}",
         "uploaded_by": user["sub"],
-        "is_self_study": True,
-        "category": category.strip() or None,
-        "source": "upload",
     }).execute()
 
+    if not paper_result.data:
+        raise HTTPException(status_code=500, detail=f"Failed to create paper record: {paper_result.error}")
     paper = paper_result.data[0]
 
     # Create self-study assignment (class_id=null)
@@ -118,6 +112,9 @@ async def upload_paper(
         "paper_id": paper["id"],
         "status": "processing",
     }).execute()
+
+    if not assignment_result.data:
+        raise HTTPException(status_code=500, detail=f"Failed to create assignment: {assignment_result.error}")
     assignment = assignment_result.data[0]
 
     # Trigger background guide generation
@@ -147,11 +144,6 @@ async def get_status(assignment_id: str, user=Depends(require_student), db=Depen
     return result.data
 
 
-class FetchCoreRequest(BaseModel):
-    core_id: str
-    title: str
-
-
 @router.get("/search")
 async def search_papers(q: str = "", user=Depends(require_student)):
     """Search CORE API for open-access papers. Results are title-verified."""
@@ -169,13 +161,9 @@ async def browse_papers(
     user=Depends(require_student),
     db=Depends(get_db),
 ):
-    """Browse community library papers, optionally filtered by category."""
+    """Browse community library papers."""
     query = db.from_("papers") \
-        .select("id, title, authors, year_published, category, is_self_study, source, core_id, created_at") \
-        .eq("is_self_study", True)
-
-    if category.strip():
-        query = query.eq("category", category.strip())
+        .select("id, title, uploaded_by, created_at")
 
     result = await query.order("created_at", desc=True) \
         .limit(min(limit, 50)).execute()
@@ -186,7 +174,7 @@ async def browse_papers(
     paper_ids = [p["id"] for p in papers]
     if paper_ids:
         assignments = await db.from_("assignments") \
-            .select("paper_id, status, difficulty") \
+            .select("id, paper_id, status, difficulty") \
             .in_("paper_id", paper_ids).execute()
         asn_map = {a["paper_id"]: a for a in (assignments.data or [])}
     else:
@@ -241,13 +229,9 @@ async def fetch_core_paper(
         "extracted_text": core_data["full_text"],
         "figures": [],
         "uploaded_by": user["sub"],
-        "is_self_study": True,
-        "category": None,  # will be set by AI during guide generation
-        "source": "core_api",
-        "core_id": core_data["core_id"],
-        "authors": core_data.get("authors"),
-        "year_published": core_data.get("year_published"),
     }).execute()
+    if not paper_result.data:
+        raise HTTPException(status_code=500, detail="Failed to create paper record")
     paper = paper_result.data[0]
 
     # Create assignment
@@ -256,6 +240,8 @@ async def fetch_core_paper(
         "paper_id": paper["id"],
         "status": "processing",
     }).execute()
+    if not assignment_result.data:
+        raise HTTPException(status_code=500, detail="Failed to create assignment")
     assignment = assignment_result.data[0]
 
     # Trigger background guide generation
@@ -277,10 +263,4 @@ async def fetch_core_paper(
 @router.get("/categories")
 async def list_categories(user=Depends(require_student), db=Depends(get_db)):
     """List all categories that have papers in the library."""
-    result = await db.from_("papers") \
-        .select("category") \
-        .eq("is_self_study", True) \
-        .order("category").execute()
-
-    cats = list({p["category"] for p in (result.data or []) if p["category"]})
-    return cats
+    return []

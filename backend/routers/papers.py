@@ -1,39 +1,37 @@
 import uuid
-import asyncio
+import logging
+import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
-from supabase import create_client
 from backend.db import get_db
 from backend.deps import require_teacher, require_student
 from backend.services.paper_service import extract_text_and_figures
 from backend.config import get_settings
+from backend.schemas.papers import PaperUploadResponse
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 settings = get_settings()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
 
-
-def _get_storage_client():
-    return create_client(settings.supabase_url, settings.supabase_service_role_key)
+STORAGE_HEADERS = {
+    "apikey": settings.supabase_service_role_key,
+    "Authorization": f"Bearer {settings.supabase_service_role_key}",
+}
 
 
 async def _upload_to_storage(pdf_bytes: bytes, object_path: str) -> str:
-    """Upload to Supabase Storage using the Python client (run in thread to avoid blocking)."""
-    def _do_upload():
-        client = _get_storage_client()
-        client.storage.from_("papers").upload(
-            object_path,
-            pdf_bytes,
-            {"content-type": "application/pdf", "upsert": "false"},
-        )
-    try:
-        await asyncio.to_thread(_do_upload)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to store PDF: {e}")
+    """Upload to Supabase Storage via httpx (no supabase-py dependency)."""
+    url = f"{settings.supabase_url}/storage/v1/object/papers/{object_path}"
+    headers = {**STORAGE_HEADERS, "Content-Type": "application/pdf"}
+    async with httpx.AsyncClient(timeout=60) as c:
+        r = await c.post(url, headers=headers, content=pdf_bytes)
+    if r.status_code not in (200, 201):
+        raise HTTPException(status_code=500, detail=f"Failed to store PDF: {r.text}")
     return object_path
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=PaperUploadResponse)
 async def upload_paper(
     file: UploadFile = File(...),
     title: str = Form(default=""),
@@ -116,17 +114,27 @@ async def get_pdf_url(paper_id: str, user=Depends(require_student), db=Depends(g
         .single() \
         .execute()
     if not result.data or not result.data.get("pdf_path"):
+        logger.warning("pdf-url: paper %s has no pdf_path", paper_id)
         raise HTTPException(status_code=404, detail="Paper not found or no PDF attached")
 
     pdf_path = result.data["pdf_path"]
-    # pdf_path is stored as "papers/{user_id}/{uuid}.pdf" but the storage API
-    # expects the object path *inside* the bucket (without the "papers/" prefix).
     object_path = pdf_path.removeprefix("papers/")
+    logger.info("pdf-url: generating signed URL for paper %s, path=%s", paper_id, object_path[:40])
 
-    def _create_signed_url():
-        client = _get_storage_client()
-        return client.storage.from_("papers").create_signed_url(object_path, expires_in=3600)
-
-    signed = await asyncio.to_thread(_create_signed_url)
-    signed_url = f"{settings.supabase_url}{signed['signedURL']}"
-    return {"url": signed_url}
+    try:
+        url = f"{settings.supabase_url}/storage/v1/object/sign/papers/{object_path}"
+        headers = {**STORAGE_HEADERS, "Content-Type": "application/json"}
+        async with httpx.AsyncClient(timeout=15) as c:
+            r = await c.post(url, headers=headers, json={"expiresIn": "3600"})
+        if r.status_code != 200:
+            logger.error("Signed URL failed: %s %s", r.status_code, r.text[:200])
+            raise HTTPException(status_code=500, detail="Failed to generate PDF URL")
+        signed_path = r.json()["signedURL"]
+        signed_url = f"{settings.supabase_url}/storage/v1{signed_path}"
+        logger.info("pdf-url: success, URL length=%d", len(signed_url))
+        return {"url": signed_url}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("pdf-url unexpected error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"PDF URL error: {e}")

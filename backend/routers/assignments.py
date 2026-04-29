@@ -1,11 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from pydantic import BaseModel
-from typing import Optional
 from supabase import create_client as _supabase_client
 from backend.db import get_db
 from backend.deps import require_teacher
 from backend.ai_provider import generate_reading_guide
 from backend.config import get_settings
+from backend.schemas.assignments import CreateAssignmentRequest, UpdateAssignmentRequest
 
 router = APIRouter()
 settings = get_settings()
@@ -49,16 +48,6 @@ async def _process_assignment(assignment_id: str, extracted_text: str, figure_co
             "reading_guide": {"sections": [], "generation_error": str(e)},
         }).eq("id", assignment_id).execute()
 
-
-class CreateAssignmentRequest(BaseModel):
-    class_id: str
-    paper_id: str
-
-
-class UpdateAssignmentRequest(BaseModel):
-    reading_guide: Optional[dict] = None
-    difficulty: Optional[str] = None
-    status: Optional[str] = None
 
 
 @router.post("/")
@@ -134,7 +123,7 @@ async def update_assignment(
     if existing_record["status"] == "published":
         raise HTTPException(status_code=400, detail="Cannot modify a published assignment")
 
-    updates = {k: v for k, v in body.dict().items() if v is not None}
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 

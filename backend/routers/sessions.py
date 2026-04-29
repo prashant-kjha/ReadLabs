@@ -1,57 +1,20 @@
 import asyncio
+import logging
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from pydantic import BaseModel
 from backend.db import get_db
 from backend.deps import require_student, require_teacher
 from backend.config import get_settings
 from backend.ai_provider import generate_checkpoint_feedback, generate_sowhat_feedback, generate_jargon_explanation
+from backend.schemas.sessions import (
+    StartSessionRequest, ProgressRequest, CheckpointRequest,
+    SoWhatRequest, JargonRequest, KeyTermRequest,
+    PreviewCheckpointRequest, PreviewSoWhatRequest,
+    PreviewJargonRequest, PreviewKeyTermRequest,
+)
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 settings = get_settings()
-
-
-# ── Request models ────────────────────────────────────────────────────────────
-
-class StartSessionRequest(BaseModel):
-    assignment_id: str
-
-class ProgressRequest(BaseModel):
-    current_section_index: int
-
-class CheckpointRequest(BaseModel):
-    section_index: int
-    student_text: str
-
-class SoWhatRequest(BaseModel):
-    student_text: str
-
-class JargonRequest(BaseModel):
-    term: str
-    context_snippet: str
-
-class KeyTermRequest(BaseModel):
-    term: str
-    context_snippet: str
-
-class PreviewCheckpointRequest(BaseModel):
-    section_title: str
-    guiding_questions: list[str]
-    student_text: str
-
-class PreviewSoWhatRequest(BaseModel):
-    paper_title: str
-    section_titles: list[str]
-    difficulty: str
-    student_text: str
-
-class PreviewJargonRequest(BaseModel):
-    term: str
-    context_snippet: str
-
-class PreviewKeyTermRequest(BaseModel):
-    assignment_id: str
-    term: str
-    context_snippet: str
 
 
 # ── Core session endpoints ────────────────────────────────────────────────────
@@ -181,7 +144,9 @@ async def _run_sowhat_feedback(
     from supabase import create_client as _sc
     supa = _sc(settings.supabase_url, settings.supabase_service_role_key)
     feedback = await generate_sowhat_feedback(paper_title, section_titles, difficulty, student_text)
-    supa.table("sowhat_responses").update({"ai_feedback": feedback}).eq("id", sowhat_id).execute()
+    await asyncio.to_thread(
+        lambda: supa.table("sowhat_responses").update({"ai_feedback": feedback}).eq("id", sowhat_id).execute()
+    )
 
 
 async def _run_jargon_explanation(
@@ -192,7 +157,9 @@ async def _run_jargon_explanation(
     from supabase import create_client as _sc
     supa = _sc(settings.supabase_url, settings.supabase_service_role_key)
     explanation = await generate_jargon_explanation(term, context_snippet)
-    supa.table("jargon_lookups").update({"explanation": explanation}).eq("id", lookup_id).execute()
+    await asyncio.to_thread(
+        lambda: supa.table("jargon_lookups").update({"explanation": explanation}).eq("id", lookup_id).execute()
+    )
 
 
 # ── Checkpoint ────────────────────────────────────────────────────────────────
@@ -333,7 +300,6 @@ async def preview_keyterm(body: PreviewKeyTermRequest, user=Depends(require_teac
 async def lookup_jargon(
     session_id: str,
     body: JargonRequest,
-    background_tasks: BackgroundTasks,
     user=Depends(require_student),
     db=Depends(get_db),
 ):
@@ -348,22 +314,27 @@ async def lookup_jargon(
     if existing.data and existing.data.get("explanation"):
         return {"id": existing.data["id"], "term": body.term, "explanation": existing.data["explanation"], "feedback_pending": False}
 
+    logger.info("jargon: generating explanation for term=%r, context=%d chars", body.term, len(body.context_snippet))
+    try:
+        explanation = await generate_jargon_explanation(body.term, body.context_snippet)
+    except Exception as e:
+        logger.error("jargon: generate_jargon_explanation failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"AI generation failed: {e}")
+    logger.info("jargon: got explanation type=%s len=%s repr=%.100s", type(explanation).__name__, len(explanation) if explanation else "None", repr(explanation))
+
+    if not explanation:
+        logger.warning("jargon: explanation is empty/falsy, using placeholder")
+        explanation = f"{body.term}: definition not available."
+
     result = await db.from_("jargon_lookups").insert({
         "session_id": session_id,
         "term": body.term.lower(),
-        "explanation": None,
+        "explanation": explanation,
     }).execute()
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to save jargon lookup")
-    lookup_id = result.data[0]["id"]
 
-    background_tasks.add_task(
-        _run_jargon_explanation,
-        lookup_id=lookup_id,
-        term=body.term,
-        context_snippet=body.context_snippet,
-    )
-    return {"id": lookup_id, "term": body.term, "feedback_pending": True}
+    return {"id": result.data[0]["id"], "term": body.term, "explanation": explanation, "feedback_pending": False}
 
 
 # ── Key term lookup (cached, near-synchronous) ────────────────────────────────
