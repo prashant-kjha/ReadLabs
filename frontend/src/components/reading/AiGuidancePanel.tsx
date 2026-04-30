@@ -2,6 +2,57 @@ import { useState, useCallback, useEffect } from "react";
 import { SkipForward, Search } from "lucide-react";
 import { getCriticalPrompt } from "../../lib/superpowersApi";
 import toast from "react-hot-toast";
+import type { Section } from "../../types/sessions";
+import type { QuizQuestion, QuizResult, CriticalPrompt } from "../../types/superpowers";
+
+interface CheckpointState {
+  text: string;
+  ai_feedback: string | null;
+  pending: boolean;
+  skipped: boolean;
+}
+
+interface SoWhatState {
+  text: string;
+  ai_feedback: string | null;
+  pending: boolean;
+  skipped: boolean;
+}
+
+interface AiGuidancePanelProps {
+  section: Section;
+  currentSection: number;
+  sections: Section[];
+  checkpoint: CheckpointState;
+  setCheckpoint: (text: string) => void;
+  submitCheckpoint: () => Promise<void>;
+  skipCheckpoint: () => Promise<void>;
+  canAdvance: boolean;
+  advanceSection: () => Promise<void>;
+  isLastSection: boolean;
+  soWhat: SoWhatState;
+  setSoWhat: (val: string | Partial<SoWhatState>) => void;
+  submitSoWhat: () => Promise<void>;
+  quizQuestions: QuizQuestion[];
+  setQuizQuestions: (q: QuizQuestion[]) => void;
+  quizAnswers: Record<string, string>;
+  setQuizAnswers: (a: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
+  quizResults: QuizResult | null;
+  setQuizResults: (r: QuizResult | null) => void;
+  quizGenerating: boolean;
+  setQuizGenerating: (v: boolean) => void;
+  quizSubmitting: boolean;
+  setQuizSubmitting: (v: boolean) => void;
+  currentAssignmentId: string | null;
+  lookupJargon: () => Promise<void>;
+  jargonExplanation: string | null;
+  jargonPending: boolean;
+  previewMode: boolean;
+  optionalCheckpoints: boolean;
+  showSoWhat: boolean;
+  panelWidth: number;
+  panelVisible: boolean;
+}
 
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 500;
@@ -17,19 +68,19 @@ export default function AiGuidancePanel({
   lookupJargon, jargonExplanation, jargonPending,
   previewMode, optionalCheckpoints, showSoWhat,
   panelWidth, panelVisible,
-}) {
+}: AiGuidancePanelProps) {
   const isQuizSection = currentSection === sections.length + 1;
   const isSoWhatSection = currentSection === sections.length;
   const [internalWidth, setInternalWidth] = useState(panelWidth);
 
   useEffect(() => { setInternalWidth(panelWidth); }, [panelWidth]);
 
-  const handleDragStart = useCallback((e) => {
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
     const startWidth = internalWidth;
 
-    const handleDragMove = (moveEvent) => {
+    const handleDragMove = (moveEvent: MouseEvent) => {
       const delta = startX - moveEvent.clientX;
       const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
       setInternalWidth(newWidth);
@@ -60,6 +111,7 @@ export default function AiGuidancePanel({
   };
 
   const submitQuiz = async () => {
+    if (!currentAssignmentId) return;
     setQuizSubmitting(true);
     try {
       const { submitQuizAttempt, addXp } = await import("../../lib/superpowersApi");
@@ -100,8 +152,15 @@ export default function AiGuidancePanel({
 
 function SectionContent({ section, currentSection, currentAssignmentId, checkpoint, setCheckpoint,
   submitCheckpoint, skipCheckpoint, canAdvance, advanceSection, isLastSection, showSoWhat,
-  previewMode, optionalCheckpoints, lookupJargon, jargonExplanation, jargonPending }) {
-  const [criticalPrompt, setCriticalPrompt] = useState(null);
+  previewMode, optionalCheckpoints, lookupJargon, jargonExplanation, jargonPending }: {
+  section: Section; currentSection: number; currentAssignmentId: string | null;
+  checkpoint: CheckpointState; setCheckpoint: (text: string) => void;
+  submitCheckpoint: () => Promise<void>; skipCheckpoint: () => Promise<void>;
+  canAdvance: boolean; advanceSection: () => Promise<void>; isLastSection: boolean;
+  showSoWhat: boolean; previewMode: boolean; optionalCheckpoints: boolean;
+  lookupJargon: () => Promise<void>; jargonExplanation: string | null; jargonPending: boolean;
+}) {
+  const [criticalPrompt, setCriticalPrompt] = useState<CriticalPrompt | null>(null);
   const [criticalPromptOpen, setCriticalPromptOpen] = useState(false);
   const [jargonTerm, setJargonTerm] = useState("");
 
@@ -114,7 +173,7 @@ function SectionContent({ section, currentSection, currentAssignmentId, checkpoi
     } catch {}
   };
 
-  const handleJargonLookup = () => { if (jargonTerm.trim()) lookupJargon(jargonTerm.trim()); };
+  const handleJargonLookup = () => { if (jargonTerm.trim()) lookupJargon(); };
 
   if (!section) return null;
 
@@ -209,7 +268,10 @@ function SectionContent({ section, currentSection, currentAssignmentId, checkpoi
   );
 }
 
-function SoWhatContent({ soWhat, setSoWhat, submitSoWhat, previewMode, optionalCheckpoints }) {
+function SoWhatContent({ soWhat, setSoWhat, submitSoWhat, previewMode, optionalCheckpoints }: {
+  soWhat: SoWhatState; setSoWhat: (val: string | Partial<SoWhatState>) => void;
+  submitSoWhat: () => Promise<void>; previewMode: boolean; optionalCheckpoints: boolean;
+}) {
   return (
     <>
       <h2 className="text-[var(--color-text)] font-semibold text-lg mb-1">So What?</h2>
@@ -247,7 +309,12 @@ function SoWhatContent({ soWhat, setSoWhat, submitSoWhat, previewMode, optionalC
   );
 }
 
-function QuizContent({ quizQuestions, quizAnswers, setQuizAnswers, quizResults, quizGenerating, quizSubmitting, startQuiz, submitQuiz }) {
+function QuizContent({ quizQuestions, quizAnswers, setQuizAnswers, quizResults, quizGenerating, quizSubmitting, startQuiz, submitQuiz }: {
+  quizQuestions: QuizQuestion[]; quizAnswers: Record<string, string>;
+  setQuizAnswers: (a: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
+  quizResults: QuizResult | null; quizGenerating: boolean; quizSubmitting: boolean;
+  startQuiz: () => Promise<void>; submitQuiz: () => Promise<void>;
+}) {
   if (quizResults) {
     const pct = Math.round((quizResults.score / quizResults.max_score) * 100);
     return (

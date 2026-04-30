@@ -27,17 +27,18 @@ const STUDENT_LINKS = [
   { to: "/student/self-study", label: "Self-Study", icon: Search },
 ];
 
-const LEVEL_TITLES = ["", "Novice Reader", "Apprentice", "Skilled Reader", "Expert Reader", "Scholar"];
-const LEVEL_THRESHOLDS = [0, 100, 250, 500, 1000];
+import type { ReadingStats } from "../types/superpowers";
 
 function StreakWidget() {
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState<ReadingStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getStats()
       .then(setStats)
-      .catch(() => {})
+      .catch(() => {
+      // Stats are non-critical
+    })
       .finally(() => setLoading(false));
   }, []);
 
@@ -54,11 +55,6 @@ function StreakWidget() {
 
   const level = stats.level || 1;
   const xp = stats.xp || 0;
-  const nextThreshold = level < LEVEL_THRESHOLDS.length ? LEVEL_THRESHOLDS[level] : LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
-  const prevThreshold = LEVEL_THRESHOLDS[level - 1] || 0;
-  const progress = nextThreshold > prevThreshold
-    ? Math.min(100, Math.round(((xp - prevThreshold) / (nextThreshold - prevThreshold)) * 100))
-    : 100;
 
   return (
     <div className="flex items-center gap-3">

@@ -1,6 +1,24 @@
 import { Check, SkipForward } from "lucide-react";
+import type { Section } from "../../types/sessions";
 
-const SECTION_TYPE_COLORS = {
+interface SectionSidebarProps {
+  sections: Section[];
+  currentSection: number;
+  setCurrentSection: (i: number) => void;
+  checkpoints: Record<number, { ai_feedback?: string | null; skipped?: boolean }>;
+  showSoWhat: boolean;
+  showQuiz: boolean;
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
+  previewMode: boolean;
+}
+
+interface CheckpointEntry {
+  ai_feedback?: string | null;
+  skipped?: boolean;
+}
+
+const SECTION_TYPE_COLORS: Record<string, string> = {
   Introduction: "bg-blue-500/20 text-blue-300",
   Methods: "bg-purple-500/20 text-purple-300",
   Results: "bg-green-500/20 text-green-300",
@@ -14,13 +32,11 @@ export default function SectionsSidebar({
   setCurrentSection,
   checkpoints,
   showSoWhat,
-  soWhatDone,
   showQuiz,
   collapsed,
   setCollapsed,
   previewMode,
-  optionalCheckpoints,
-}) {
+}: SectionSidebarProps) {
   if (collapsed) {
     return (
       <div className="w-11 shrink-0 bg-surface border-r border-border flex flex-col items-center py-3 gap-1">
@@ -148,9 +164,9 @@ export default function SectionsSidebar({
   );
 }
 
-function StructureCoach({ sections, checkpoints }) {
-  const typeCounts = {};
-  const completedCounts = {};
+function StructureCoach({ sections, checkpoints }: { sections: Section[]; checkpoints: Record<number, CheckpointEntry> }) {
+  const typeCounts: Record<string, number> = {};
+  const completedCounts: Record<string, number> = {};
   sections.forEach((s, i) => {
     const t = s.section_type || "Other";
     typeCounts[t] = (typeCounts[t] || 0) + 1;

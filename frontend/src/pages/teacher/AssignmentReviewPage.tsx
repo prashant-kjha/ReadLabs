@@ -4,11 +4,32 @@ import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { Eye, Save, Send } from "lucide-react";
 
+interface GuideSection {
+  title: string;
+  text?: string;
+  guiding_questions: string[];
+  key_terms?: string[];
+  teacher_notes?: string;
+}
+
+interface ReadingGuide {
+  sections: GuideSection[];
+  difficulty: string;
+  generation_error?: string;
+  [key: string]: unknown;
+}
+
+interface Assignment {
+  status: string;
+  reading_guide?: ReadingGuide;
+  [key: string]: unknown;
+}
+
 export default function AssignmentReviewPage() {
   const { assignmentId } = useParams();
   const navigate = useNavigate();
-  const [assignment, setAssignment] = useState(null);
-  const [guide, setGuide] = useState(null);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [guide, setGuide] = useState<ReadingGuide | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -32,12 +53,13 @@ export default function AssignmentReviewPage() {
     return () => clearInterval(interval);
   }, [load, assignment?.status]);
 
-  const updateQuestion = (sectionIdx, qIdx, value) => {
+  const updateQuestion = (sectionIdx: number, qIdx: number, value: string) => {
     setGuide((prev) => {
+      if (!prev) return prev;
       const sections = [...prev.sections];
       sections[sectionIdx] = {
-        ...sections[sectionIdx],
-        guiding_questions: sections[sectionIdx].guiding_questions.map((q, i) =>
+        ...sections[sectionIdx]!,
+        guiding_questions: sections[sectionIdx]!.guiding_questions.map((q: string, i: number) =>
           i === qIdx ? value : q
         ),
       };
@@ -45,16 +67,20 @@ export default function AssignmentReviewPage() {
     });
   };
 
-  const updateTeacherNotes = (sectionIdx, value) => {
+  const updateTeacherNotes = (sectionIdx: number, value: string) => {
     setGuide((prev) => {
+      if (!prev) return prev;
       const sections = [...prev.sections];
-      sections[sectionIdx] = { ...sections[sectionIdx], teacher_notes: value };
+      sections[sectionIdx] = { ...sections[sectionIdx]!, teacher_notes: value };
       return { ...prev, sections };
     });
   };
 
-  const updateDifficulty = (value) => {
-    setGuide((prev) => ({ ...prev, difficulty: value }));
+  const updateDifficulty = (value: string) => {
+    setGuide((prev) => {
+      if (!prev) return prev;
+      return { ...prev, difficulty: value };
+    });
   };
 
   const handleSave = async (publish = false) => {
@@ -62,13 +88,14 @@ export default function AssignmentReviewPage() {
     try {
       await api.patch(`/assignments/${assignmentId}`, {
         reading_guide: guide,
-        difficulty: guide.difficulty,
+        difficulty: guide!.difficulty,
         ...(publish ? { status: "published" } : {}),
       });
       toast.success(publish ? "Assignment published!" : "Changes saved");
       if (publish) navigate("/teacher/classes");
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Save failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Save failed";
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -144,7 +171,7 @@ export default function AssignmentReviewPage() {
       </div>
 
       <div className="space-y-6">
-        {guide.sections.map((section, sIdx) => (
+        {guide.sections.map((section: GuideSection, sIdx: number) => (
           <div key={sIdx} className="card p-5">
             <h2 className="text-[var(--color-text)] font-semibold text-lg mb-1">{section.title}</h2>
             {section.text && (
@@ -155,7 +182,7 @@ export default function AssignmentReviewPage() {
               <p className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wide mb-2">
                 Guiding Questions
               </p>
-              {section.guiding_questions.map((q, qIdx) => (
+              {section.guiding_questions.map((q: string, qIdx: number) => (
                 <input
                   key={qIdx}
                   type="text"
@@ -166,13 +193,13 @@ export default function AssignmentReviewPage() {
               ))}
             </div>
 
-            {section.key_terms?.length > 0 && (
+            {section.key_terms && section.key_terms.length > 0 && (
               <div className="mb-4">
                 <p className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wide mb-1.5">
                   Key Terms
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {section.key_terms.map((term, tIdx) => (
+                  {section.key_terms.map((term: string, tIdx: number) => (
                     <span
                       key={tIdx}
                       className="badge bg-muted text-[var(--color-text)] text-xs"

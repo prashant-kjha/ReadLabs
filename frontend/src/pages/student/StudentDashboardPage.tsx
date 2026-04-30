@@ -1,24 +1,43 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { Plus, BookOpen, X } from "lucide-react";
 
-const DIFFICULTY_COLORS = {
+interface EnrolledClass {
+  class_id: string;
+  class_name: string;
+  class_code: string;
+  teacher_name: string;
+  assignments: { id: string; paper_title: string; difficulty: string }[];
+}
+
+interface SessionInfo {
+  assignment_id: string;
+  status: "not_started" | "in_progress" | "completed";
+}
+
+const DIFFICULTY_COLORS: Record<string, string> = {
   beginner: "badge bg-emerald-500/10 text-success",
   intermediate: "badge bg-amber-500/10 text-warning",
   advanced: "badge bg-red-500/10 text-red-400",
 };
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<string, string> = {
   not_started: "badge bg-muted text-[var(--color-text-secondary)]",
   in_progress: "badge bg-primary-light text-primary",
   completed: "badge bg-emerald-500/10 text-success",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  not_started: "Not Started",
+  in_progress: "In Progress",
+  completed: "Completed",
+};
+
 export default function StudentDashboardPage() {
-  const [classes, setClasses] = useState([]);
-  const [sessions, setSessions] = useState([]);
+  const [classes, setClasses] = useState<EnrolledClass[]>([]);
+  const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -37,14 +56,14 @@ export default function StudentDashboardPage() {
       ]);
       setClasses(classRes.data);
       setSessions(sessionRes.data);
-    } catch (err) {
-      toast.error(err.message || "Failed to load data");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleJoin = async (e) => {
+  const handleJoin = async (e: FormEvent) => {
     e.preventDefault();
     if (!classCode.trim()) return;
     setJoining(true);
@@ -54,20 +73,20 @@ export default function StudentDashboardPage() {
       setShowModal(false);
       setClassCode("");
       loadData();
-    } catch (err) {
-      toast.error(err.message || "Could not join class");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not join class");
     } finally {
       setJoining(false);
     }
   };
 
-  const getSessionStatus = (assignmentId) => {
+  const getSessionStatus = (assignmentId: string): string => {
     const session = sessions.find((s) => s.assignment_id === assignmentId);
     return session ? session.status : "not_started";
   };
 
-  const getSessionLabel = (status) => {
-    return { not_started: "Not Started", in_progress: "In Progress", completed: "Completed" }[status] || status;
+  const getSessionLabel = (status: string): string => {
+    return STATUS_LABELS[status] || status;
   };
 
   if (loading) return <div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>;

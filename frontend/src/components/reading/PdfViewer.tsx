@@ -2,21 +2,21 @@ import { useState, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-export default function PdfViewer({ url }) {
-  const [numPages, setNumPages] = useState(null);
+export default function PdfViewer({ url }: { url: string | null }) {
+  const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
 
-  const onDocumentLoadSuccess = useCallback(({ numPages }) => {
+  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setPageNumber(1);
   }, []);
 
-  const goToPage = (n) => {
+  const goToPage = (n: number) => {
     if (numPages && n >= 1 && n <= numPages) setPageNumber(n);
   };
 

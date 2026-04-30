@@ -70,7 +70,7 @@ interface ReadingState {
   setSectionsCollapsed: (collapsed: boolean) => void;
   setAiPanelWidth: (width: number) => void;
   setAiPanelVisible: (visible: boolean) => void;
-  setQuizAnswers: (answers: Record<string, string>) => void;
+  setQuizAnswers: (answers: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
   setQuizResults: (results: QuizResult | null) => void;
   setQuizGenerating: (v: boolean) => void;
   setQuizSubmitting: (v: boolean) => void;
@@ -100,9 +100,9 @@ function startPolling(
       });
       set({ checkpoints: cpMap });
       if (data.sowhat) {
-        set((s) => ({
-          soWhat: { ...s.soWhat, ai_feedback: data.sowhat.ai_feedback, pending: !data.sowhat.ai_feedback },
-        }));
+        const current = get().soWhat;
+        const sowhatFeedback = data.sowhat.ai_feedback;
+        set({ soWhat: { ...current, ai_feedback: sowhatFeedback, pending: !sowhatFeedback } });
         if (!data.sowhat.ai_feedback) pending = true;
       }
       if (!pending) {
@@ -199,7 +199,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   setCurrentSection: (index) => set({ currentSection: index }),
 
   advanceSection: async () => {
-    const { currentSection, sessionId, readingGuide } = get();
+    const { currentSection, sessionId } = get();
     const next = currentSection + 1;
     set({ currentSection: next });
     if (sessionId) {
@@ -210,7 +210,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
 
   updateCpText: (sectionIndex, text) => {
     set((s) => ({
-      checkpoints: { ...s.checkpoints, [sectionIndex]: { ...s.checkpoints[sectionIndex], text } },
+      checkpoints: { ...s.checkpoints, [sectionIndex]: { ...(s.checkpoints[sectionIndex] ?? { text: "", ai_feedback: null, pending: false, skipped: false }), text } },
     }));
   },
 
@@ -218,7 +218,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
     const { currentSection, checkpoints, readingGuide, sessionId } = get();
     const cp = checkpoints[currentSection];
     if (!cp?.text?.trim()) return;
-    set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { ...s.checkpoints[currentSection], pending: true } } }));
+    set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { ...(s.checkpoints[currentSection] ?? { text: "", ai_feedback: null, pending: false, skipped: false }), pending: true } } }));
 
     if (previewMode) {
       const section = readingGuide!.sections[currentSection]!;
@@ -230,7 +230,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
         });
         set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { text: cp.text, ai_feedback: data.feedback, pending: false, skipped: false } } }));
       } catch {
-        set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { ...s.checkpoints[currentSection], pending: false } } }));
+        set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { ...(s.checkpoints[currentSection] ?? { text: "", ai_feedback: null, pending: false, skipped: false }), pending: false } } }));
         toast.error("Could not get feedback");
       }
       return;
@@ -241,12 +241,12 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
       addXp("checkpoint").catch(() => {});
       startPolling(get, set);
     } catch (err: unknown) {
-      set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { ...s.checkpoints[currentSection], pending: false } } }));
+      set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { ...(s.checkpoints[currentSection] ?? { text: "", ai_feedback: null, pending: false, skipped: false }), pending: false } } }));
       toast.error(err instanceof Error ? err.message : "Submission failed");
     }
   },
 
-  skipCheckpoint: async (optionalCheckpoints) => {
+  skipCheckpoint: async (_optionalCheckpoints) => {
     const { currentSection, sessionId, readingGuide, checkpoints } = get();
     set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { text: "", ai_feedback: null, pending: false, skipped: true } } }));
     if (sessionId) {
@@ -332,7 +332,13 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   },
 
   setAiPanelVisible: (visible) => set({ aiPanelVisible: visible }),
-  setQuizAnswers: (answers) => set({ quizAnswers: answers }),
+  setQuizAnswers: (answers) => {
+    if (typeof answers === "function") {
+      set({ quizAnswers: answers(get().quizAnswers) });
+    } else {
+      set({ quizAnswers: answers });
+    }
+  },
   setQuizResults: (results) => set({ quizResults: results }),
   setQuizGenerating: (v) => set({ quizGenerating: v }),
   setQuizSubmitting: (v) => set({ quizSubmitting: v }),

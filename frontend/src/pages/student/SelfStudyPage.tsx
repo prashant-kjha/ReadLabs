@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
@@ -7,7 +7,18 @@ import { Upload, Search, BookOpen, X } from "lucide-react";
 
 const CATEGORIES = ["All", "Biology", "Computer Science", "Medicine", "Physics", "Chemistry", "Mathematics", "Engineering", "Psychology", "Economics"];
 
-const DIFFICULTY_COLORS = {
+interface LibraryPaper {
+  id?: string;
+  core_id?: string;
+  title: string;
+  authors?: string;
+  year_published?: number;
+  category?: string;
+  assignment?: { id: string; difficulty: string; status: string };
+  fromSearch?: boolean;
+}
+
+const DIFFICULTY_COLORS: Record<string, string> = {
   beginner: "badge bg-emerald-500/10 text-success",
   intermediate: "badge bg-amber-500/10 text-warning",
   advanced: "badge bg-red-500/10 text-red-400",
@@ -15,16 +26,16 @@ const DIFFICULTY_COLORS = {
 
 export default function SelfStudyPage() {
   const navigate = useNavigate();
-  const fileRef = useRef(null);
-  const [papers, setPapers] = useState([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [papers, setPapers] = useState<LibraryPaper[]>([]);
   const [categories, setCategories] = useState(CATEGORIES);
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState(null);
+  const [searchResults, setSearchResults] = useState<LibraryPaper[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [fetching, setFetching] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
+  const [fetching, setFetching] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<{ paper: { id: string; title: string; authors?: string; category?: string }; reason: string }[]>([]);
 
   useEffect(() => {
     loadPapers();
@@ -54,7 +65,7 @@ export default function SelfStudyPage() {
     }
   };
 
-  const handleSearch = async (e) => {
+  const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     setSearching(true);
@@ -69,7 +80,7 @@ export default function SelfStudyPage() {
     }
   };
 
-  const handleUpload = async (e) => {
+  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
@@ -81,26 +92,26 @@ export default function SelfStudyPage() {
       const { data } = await api.post("/library/upload", form);
       toast.success("Paper uploaded! Generating reading guide...");
       pollAndNavigate(data.assignment_id);
-    } catch (err) {
-      toast.error(err.message || "Upload failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
       setUploading(false);
     }
     e.target.value = "";
   };
 
-  const handleFetchCore = async (coreId, title) => {
+  const handleFetchCore = async (coreId: string, title: string) => {
     setFetching(coreId);
     try {
       const { data } = await api.post("/library/fetch", { core_id: coreId, title });
       toast.success("Fetching paper... Generating reading guide...");
       pollAndNavigate(data.assignment_id);
-    } catch (err) {
-      toast.error(err.message || "Could not fetch paper");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not fetch paper");
       setFetching(null);
     }
   };
 
-  const pollAndNavigate = async (assignmentId) => {
+  const pollAndNavigate = async (assignmentId: string) => {
     let attempts = 0;
     const poll = async () => {
       try {
@@ -127,7 +138,7 @@ export default function SelfStudyPage() {
     poll();
   };
 
-  const handleStartReading = async (assignment) => {
+  const handleStartReading = async (assignment: { id: string } | null) => {
     if (!assignment) {
       toast.error("Reading guide not ready yet");
       return;
@@ -142,7 +153,7 @@ export default function SelfStudyPage() {
 
   const displayPapers = searchResults !== null ? searchResults.map((r) => ({ ...r, fromSearch: true })) : papers;
 
-  const startRecommendedPaper = async (paperId) => {
+  const startRecommendedPaper = async (paperId: string) => {
     setFetching(paperId);
     try {
       const { data } = await api.post("/library/fetch", { paper_id: paperId });
@@ -281,7 +292,7 @@ export default function SelfStudyPage() {
               {paper.fromSearch ? (
                 /* CORE search result */
                 <button
-                  onClick={() => handleFetchCore(paper.core_id, paper.title)}
+                  onClick={() => handleFetchCore(paper.core_id!, paper.title)}
                   disabled={fetching === paper.core_id}
                   className="btn-primary w-full text-sm disabled:opacity-50"
                 >
@@ -294,7 +305,7 @@ export default function SelfStudyPage() {
                     {paper.assignment.difficulty || "—"}
                   </span>
                   <button
-                    onClick={() => handleStartReading(paper.assignment)}
+                    onClick={() => handleStartReading(paper.assignment ?? null)}
                     className="btn-secondary w-full mt-2 text-sm"
                   >
                     {paper.assignment.status === "published" ? "Start Reading" : "Processing..."}

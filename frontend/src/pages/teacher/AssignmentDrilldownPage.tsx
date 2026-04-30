@@ -4,8 +4,41 @@ import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { ArrowLeft, ChevronDown, ChevronUp, Sparkles, RefreshCw } from "lucide-react";
 
-function StudentResponseCard({ studentId, studentName, assignmentId }) {
-  const [data, setData] = useState(null);
+interface CheckpointResponse {
+  section_index: number;
+  student_text: string;
+  ai_feedback?: string;
+}
+
+interface SoWhatResponse {
+  student_text: string;
+  ai_feedback?: string;
+}
+
+interface StudentResponseData {
+  checkpoints: CheckpointResponse[];
+  sowhat?: SoWhatResponse;
+}
+
+interface InsightSection {
+  title: string;
+  common_misconception: string;
+  commonly_grasped: string;
+  student_count: number;
+}
+
+interface InsightsData {
+  sections?: InsightSection[];
+  [key: string]: unknown;
+}
+
+interface StudentProgress {
+  student_id: string;
+  student_name: string;
+}
+
+function StudentResponseCard({ studentId, studentName, assignmentId }: { studentId: string; studentName: string; assignmentId: string | undefined }) {
+  const [data, setData] = useState<StudentResponseData | null>(null);
   const [open, setOpen] = useState(false);
 
   const load = async () => {
@@ -35,7 +68,7 @@ function StudentResponseCard({ studentId, studentName, assignmentId }) {
           {data.checkpoints.length === 0 && (
             <p className="text-[var(--color-text-secondary)] text-sm">No responses yet.</p>
           )}
-          {data.checkpoints.map((cp, i) => (
+          {data.checkpoints.map((cp: CheckpointResponse, i: number) => (
             <div key={i} className="text-sm">
               <p className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide mb-1">
                 Section {cp.section_index + 1} response
@@ -63,8 +96,8 @@ function StudentResponseCard({ studentId, studentName, assignmentId }) {
   );
 }
 
-function InsightsPanel({ assignmentId }) {
-  const [insights, setInsights] = useState(null);
+function InsightsPanel({ assignmentId }: { assignmentId: string | undefined }) {
+  const [insights, setInsights] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(false);
 
   const generate = async () => {
@@ -114,7 +147,7 @@ function InsightsPanel({ assignmentId }) {
 
       {insights && (
         <div className="space-y-4">
-          {insights.sections?.map((section, i) => (
+          {insights.sections?.map((section: InsightSection, i: number) => (
             <div key={i} className="border border-border rounded-lg p-4">
               <p className="text-[var(--color-text)] font-medium mb-3">{section.title}</p>
               <div className="grid grid-cols-2 gap-4">
@@ -151,7 +184,7 @@ function InsightsPanel({ assignmentId }) {
 export default function AssignmentDrilldownPage() {
   const { assignmentId } = useParams();
   const navigate = useNavigate();
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState<StudentProgress[]>([]);
 
   useEffect(() => {
     api.get(`/assignments/${assignmentId}`)
@@ -181,7 +214,7 @@ export default function AssignmentDrilldownPage() {
         {students.length === 0 && (
           <p className="text-[var(--color-text-secondary)] text-sm">No students have started this assignment yet.</p>
         )}
-        {students.map((s) => (
+        {students.map((s: StudentProgress) => (
           <StudentResponseCard
             key={s.student_id}
             studentId={s.student_id}

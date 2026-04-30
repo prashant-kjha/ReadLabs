@@ -22,7 +22,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
     initPreview, initSession, setCurrentSection, advanceSection,
     updateCpText, submitCheckpoint, skipCheckpoint,
     updateSoWhat, submitSoWhat, lookupJargon,
-    setSectionsCollapsed, setAiPanelWidth, setAiPanelVisible,
+    setSectionsCollapsed, setAiPanelVisible,
     setQuizAnswers, setQuizResults, setQuizGenerating, setQuizSubmitting,
     setQuizQuestions, cleanup,
   } = useReadingStore();
@@ -41,7 +41,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
   const canAdvance = previewMode || !!cp.ai_feedback || (optionalCheckpoints && cp.skipped);
   const isLastSection = currentSection === sections.length - 1;
   const showSoWhat = allSectionsComplete || previewMode;
-  const showQuiz = soWhat.ai_feedback || soWhat.skipped;
+  const showQuiz = !!(soWhat.ai_feedback || soWhat.skipped);
 
   if (loading) return <div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>;
   if (!readingGuide) return <div className="p-8 text-red-400">Assignment not found.</div>;
@@ -84,18 +84,16 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
           setCurrentSection={setCurrentSection}
           checkpoints={checkpoints}
           showSoWhat={showSoWhat}
-          soWhatDone={!!soWhat.ai_feedback}
           showQuiz={showQuiz}
           collapsed={sectionsCollapsed}
           setCollapsed={setSectionsCollapsed}
           previewMode={previewMode}
-          optionalCheckpoints={optionalCheckpoints}
         />
 
         <PdfViewer url={pdfUrl} />
 
         <AiGuidancePanel
-          section={section}
+          section={section!}
           currentSection={currentSection}
           sections={sections}
           checkpoint={cp}

@@ -4,7 +4,42 @@ import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 
-function ProgressBar({ value, max }) {
+interface Session {
+  assignment_id: string;
+  current_section_index: number;
+  status: string;
+}
+
+interface Student {
+  student_id: string;
+  student_name: string;
+  sessions: Session[];
+}
+
+interface GuideSection {
+  title?: string;
+  [key: string]: unknown;
+}
+
+interface ReadingGuide {
+  sections?: GuideSection[];
+  [key: string]: unknown;
+}
+
+interface Assignment {
+  id: string;
+  difficulty: string;
+  reading_guide?: ReadingGuide;
+  [key: string]: unknown;
+}
+
+interface DashboardData {
+  class?: { name: string };
+  students: Student[];
+  assignments: Assignment[];
+}
+
+function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div className="flex items-center gap-2">
@@ -22,7 +57,7 @@ function ProgressBar({ value, max }) {
 export default function TeacherDashboardPage() {
   const { classId } = useParams();
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
     api.get(`/dashboard/classes/${classId}/progress`)
@@ -34,11 +69,11 @@ export default function TeacherDashboardPage() {
 
   const { students, assignments } = data;
 
-  const totalSections = (asn) =>
+  const totalSections = (asn: Assignment) =>
     asn?.reading_guide?.sections?.length ?? 0;
 
-  const sessionFor = (student, asnId) =>
-    student.sessions.find((s) => s.assignment_id === asnId);
+  const sessionFor = (student: Student, asnId: string) =>
+    student.sessions.find((s: Session) => s.assignment_id === asnId);
 
   return (
     <div className="p-8 max-w-5xl">
@@ -61,7 +96,7 @@ export default function TeacherDashboardPage() {
         <p className="text-[var(--color-text-secondary)] text-sm mb-6">No published assignments yet.</p>
       )}
 
-      {assignments.map((asn) => (
+      {assignments.map((asn: Assignment) => (
         <div key={asn.id} className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[var(--color-text)] font-semibold">
@@ -89,7 +124,7 @@ export default function TeacherDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {students.map((student) => {
+                {students.map((student: Student) => {
                   const session = sessionFor(student, asn.id);
                   const completed = session?.current_section_index ?? 0;
                   const total = totalSections(asn);

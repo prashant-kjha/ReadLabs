@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -17,7 +17,6 @@ import {
   FileText,
   BrainCircuit,
   BarChart3,
-  Library,
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -30,7 +29,7 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const scrollToHow = (e) => {
+  const scrollToHow = (e: MouseEvent) => {
     e.preventDefault();
     document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
   };

@@ -3,8 +3,15 @@ import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { Upload, FileText } from "lucide-react";
 
+interface Paper {
+  id: string;
+  title: string;
+  text_length?: number;
+  figure_count?: number;
+}
+
 export default function PapersPage() {
-  const [papers, setPapers]     = useState([]);
+  const [papers, setPapers]     = useState<Paper[]>([]);
   const [uploading, setUploading] = useState(false);
   const [title, setTitle]       = useState("");
 
@@ -12,7 +19,7 @@ export default function PapersPage() {
     api.get("/papers/").then(({ data }) => setPapers(data)).catch(() => toast.error("Could not load papers"));
   }, []);
 
-  const handleUpload = async (e) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
@@ -20,14 +27,15 @@ export default function PapersPage() {
     form.append("file", file);
     form.append("title", title || file.name.replace(".pdf", ""));
     try {
-      const { data } = await api.post("/papers/upload", form, {
+      const { data } = await api.post<Paper>("/papers/upload", form, {
         headers: { "Content-Type": undefined },
       });
       setPapers((prev) => [data, ...prev]);
       setTitle("");
       toast.success(`Uploaded: ${data.title}`);
-    } catch (err) {
-      toast.error(err.message || "Upload failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      toast.error(message);
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -55,7 +63,7 @@ export default function PapersPage() {
             ? "bg-muted text-[var(--color-text-secondary)] cursor-not-allowed"
             : "btn-primary cursor-pointer"
         }`}>
-          {uploading ? "Processing\u2026" : "Choose PDF"}
+          {uploading ? "Processing…" : "Choose PDF"}
           <input
             type="file"
             accept=".pdf"
@@ -74,7 +82,7 @@ export default function PapersPage() {
             <p className="text-[var(--color-text-secondary)] text-sm">No papers yet. Upload one above.</p>
           </div>
         )}
-        {papers.map((paper) => (
+        {papers.map((paper: Paper) => (
           <div key={paper.id} className="card p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <FileText className="w-4 h-4 text-primary shrink-0" />

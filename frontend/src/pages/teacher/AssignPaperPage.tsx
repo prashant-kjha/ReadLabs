@@ -4,12 +4,22 @@ import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { FileText } from "lucide-react";
 
+interface Paper {
+  id: string;
+  title: string;
+}
+
+interface AssignmentCreated {
+  id: string;
+  [key: string]: unknown;
+}
+
 export default function AssignPaperPage() {
   const { classId } = useParams();
   const navigate = useNavigate();
-  const [papers, setPapers]       = useState([]);
+  const [papers, setPapers]       = useState<Paper[]>([]);
   const [loading, setLoading]     = useState(true);
-  const [selected, setSelected]   = useState(null);
+  const [selected, setSelected]   = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
@@ -20,14 +30,15 @@ export default function AssignPaperPage() {
     if (!selected) return;
     setAssigning(true);
     try {
-      const { data } = await api.post("/assignments/", {
+      const { data } = await api.post<AssignmentCreated>("/assignments/", {
         class_id: classId,
         paper_id: selected,
       });
       toast.success("Assignment created — Gemini is generating the reading guide");
       navigate(`/teacher/assignments/${data.id}/review`);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to create assignment");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create assignment";
+      toast.error(message);
       setAssigning(false);
     }
   };
@@ -55,7 +66,7 @@ export default function AssignPaperPage() {
             </p>
           </div>
         )}
-        {papers.map((paper) => (
+        {papers.map((paper: Paper) => (
           <button
             key={paper.id}
             onClick={() => setSelected(paper.id)}

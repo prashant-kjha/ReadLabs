@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -20,7 +20,7 @@ export default function AuthPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -33,8 +33,8 @@ export default function AuthPage() {
       const { data } = await api.post(endpoint, payload);
       login(data);
       navigate(data.role === "teacher" ? "/teacher/papers" : "/student/dashboard");
-    } catch (err) {
-      const message = err.response?.data?.error || err.message || "Something went wrong";
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
       setError(message);
       toast.error(message);
     } finally {
@@ -42,7 +42,7 @@ export default function AuthPage() {
     }
   };
 
-  const switchMode = (newMode) => {
+  const switchMode = (newMode: string) => {
     setMode(newMode);
     setError("");
   };

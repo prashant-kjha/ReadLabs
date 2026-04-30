@@ -57,7 +57,7 @@ api.interceptors.response.use(
             );
           }
           original.headers = {
-            ...original.headers,
+            ...(original.headers || {}),
             Authorization: `Bearer ${session.access_token}`,
           };
           return api(original);
