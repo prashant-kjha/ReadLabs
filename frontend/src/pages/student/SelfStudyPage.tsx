@@ -29,7 +29,9 @@ export default function SelfStudyPage() {
   useEffect(() => {
     loadPapers();
     loadCategories();
-    getRecommendations().then(setRecommendations).catch(() => {});
+    getRecommendations().then(setRecommendations).catch(() => {
+      // Recommendations are non-critical; fail silently
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
@@ -38,14 +40,18 @@ export default function SelfStudyPage() {
       const params = activeCategory !== "All" ? `?category=${activeCategory}` : "";
       const { data } = await api.get(`/library/browse${params}`);
       setPapers(data);
-    } catch {}
+    } catch {
+      toast.error("Could not load papers");
+    }
   };
 
   const loadCategories = async () => {
     try {
       const { data } = await api.get("/library/categories");
       if (data.length > 0) setCategories(["All", ...data]);
-    } catch {}
+    } catch {
+      toast.error("Could not load categories");
+    }
   };
 
   const handleSearch = async (e) => {
@@ -106,7 +112,9 @@ export default function SelfStudyPage() {
           navigate(`/student/read/${assignmentId}`);
           return;
         }
-      } catch {}
+      } catch {
+        // Polling — transient errors are expected, retry
+      }
       attempts++;
       if (attempts < 90) {
         setTimeout(poll, 2000);

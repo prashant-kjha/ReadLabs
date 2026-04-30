@@ -9,7 +9,7 @@ export default function PapersPage() {
   const [title, setTitle]       = useState("");
 
   useEffect(() => {
-    api.get("/papers/").then(({ data }) => setPapers(data)).catch(() => {});
+    api.get("/papers/").then(({ data }) => setPapers(data)).catch(() => toast.error("Could not load papers"));
   }, []);
 
   const handleUpload = async (e) => {

@@ -8,11 +8,12 @@ export default function AssignPaperPage() {
   const { classId } = useParams();
   const navigate = useNavigate();
   const [papers, setPapers]       = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [selected, setSelected]   = useState(null);
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
-    api.get("/papers/").then(({ data }) => setPapers(data)).catch(() => {});
+    api.get("/papers/").then(({ data }) => setPapers(data)).catch(() => toast.error("Could not load papers")).finally(() => setLoading(false));
   }, []);
 
   const handleAssign = async () => {
@@ -39,7 +40,8 @@ export default function AssignPaperPage() {
       </p>
 
       <div className="space-y-2 mb-6">
-        {papers.length === 0 && (
+        {loading && <p className="text-[var(--color-text-secondary)] text-sm">Loading papers...</p>}
+        {!loading && papers.length === 0 && (
           <div className="card p-8 text-center">
             <FileText className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
             <p className="text-[var(--color-text-secondary)] text-sm">

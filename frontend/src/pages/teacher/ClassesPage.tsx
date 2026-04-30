@@ -6,13 +6,14 @@ import { Users, Plus, ArrowRight, LayoutDashboard } from "lucide-react";
 
 export default function ClassesPage() {
   const [classes, setClasses]   = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [newName, setNewName]   = useState("");
   const [creating, setCreating] = useState(false);
-  const [selected, setSelected] = useState(null); // full class detail
+  const [selected, setSelected] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get("/classes/").then(({ data }) => setClasses(data)).catch(() => {});
+    api.get("/classes/").then(({ data }) => setClasses(data)).catch(() => toast.error("Could not load classes")).finally(() => setLoading(false));
   }, []);
 
   const handleCreate = async (e) => {
@@ -79,7 +80,8 @@ export default function ClassesPage() {
       <div className="grid grid-cols-2 gap-6">
         {/* Class list */}
         <div className="space-y-3">
-          {classes.length === 0 && (
+          {loading && <p className="text-[var(--color-text-secondary)] text-sm">Loading...</p>}
+          {!loading && classes.length === 0 && (
             <div className="card p-8 text-center">
               <Users className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
               <p className="text-[var(--color-text-secondary)] text-sm">No classes yet.</p>
