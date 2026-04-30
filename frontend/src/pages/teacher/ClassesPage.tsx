@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
+import { Users, Plus, ArrowRight, LayoutDashboard } from "lucide-react";
 
 export default function ClassesPage() {
   const [classes, setClasses]   = useState([]);
@@ -54,23 +55,24 @@ export default function ClassesPage() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-white mb-6">Classes</h1>
+      <h1 className="section-heading mb-6">Classes</h1>
 
       {/* Create class */}
-      <form onSubmit={handleCreate} className="bg-gray-900 rounded-xl p-6 mb-8 flex gap-3">
+      <form onSubmit={handleCreate} className="card p-6 mb-8 flex gap-3">
         <input
           type="text"
           placeholder="New class name (e.g. Biology 101)"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500"
+          className="input-field flex-1"
         />
         <button
           type="submit"
           disabled={creating || !newName.trim()}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-medium disabled:opacity-50 transition-colors"
+          className="btn-primary disabled:opacity-50 flex items-center gap-1.5"
         >
-          {creating ? "Creating…" : "Create"}
+          <Plus className="w-4 h-4" />
+          {creating ? "Creating..." : "Create"}
         </button>
       </form>
 
@@ -78,43 +80,46 @@ export default function ClassesPage() {
         {/* Class list */}
         <div className="space-y-3">
           {classes.length === 0 && (
-            <p className="text-gray-500 text-sm">No classes yet.</p>
+            <div className="card p-8 text-center">
+              <Users className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
+              <p className="text-[var(--color-text-secondary)] text-sm">No classes yet.</p>
+            </div>
           )}
           {classes.map((cls) => (
             <button
               key={cls.id}
               onClick={() => loadClass(cls.id)}
-              className={`w-full text-left bg-gray-900 rounded-xl p-4 transition-colors ${
-                selected?.id === cls.id ? "ring-2 ring-indigo-500" : "hover:bg-gray-800"
+              className={`card-hover w-full text-left p-4 ${
+                selected?.id === cls.id ? "ring-2 ring-primary" : ""
               }`}
             >
-              <p className="text-white font-medium">{cls.name}</p>
-              <p className="text-gray-500 text-xs mt-0.5 font-mono">Code: {cls.class_code}</p>
+              <p className="text-[var(--color-text)] font-medium">{cls.name}</p>
+              <p className="text-[var(--color-text-secondary)] text-xs mt-0.5 font-mono">Code: {cls.class_code}</p>
             </button>
           ))}
         </div>
 
         {/* Class detail */}
         {selected && (
-          <div className="bg-gray-900 rounded-xl p-5">
+          <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white font-semibold">{selected.name}</h2>
-              <span className="bg-gray-800 text-gray-300 font-mono text-sm px-3 py-1 rounded-lg">
+              <h2 className="text-[var(--color-text)] font-semibold">{selected.name}</h2>
+              <span className="bg-muted text-[var(--color-text)] font-mono text-sm px-3 py-1 rounded-lg">
                 {selected.class_code}
               </span>
             </div>
 
-            <p className="text-gray-400 text-xs mb-3">
+            <p className="text-[var(--color-text-secondary)] text-xs mb-3">
               {selected.students.length} student{selected.students.length !== 1 ? "s" : ""}
             </p>
 
             <div className="space-y-2">
               {selected.students.length === 0 && (
-                <p className="text-gray-500 text-sm">No students enrolled yet.</p>
+                <p className="text-[var(--color-text-secondary)] text-sm">No students enrolled yet.</p>
               )}
               {selected.students.map((s) => (
-                <div key={s.student_id} className="flex items-center justify-between">
-                  <span className="text-white text-sm">{s.student_name}</span>
+                <div key={s.student_id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                  <span className="text-[var(--color-text)] text-sm">{s.student_name}</span>
                   <button
                     onClick={() => removeStudent(selected.id, s.student_id)}
                     className="text-red-400 hover:text-red-300 text-xs transition-colors"
@@ -128,14 +133,16 @@ export default function ClassesPage() {
             <div className="mt-5 flex gap-2">
               <button
                 onClick={() => navigate(`/teacher/classes/${selected.id}/assign`)}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+                className="btn-secondary flex-1 flex items-center justify-center gap-1.5"
               >
+                <ArrowRight className="w-3.5 h-3.5" />
                 Assign Paper
               </button>
               <button
                 onClick={() => navigate(`/teacher/classes/${selected.id}/dashboard`)}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+                className="btn-primary flex-1 flex items-center justify-center gap-1.5"
               >
+                <LayoutDashboard className="w-3.5 h-3.5" />
                 Dashboard
               </button>
             </div>

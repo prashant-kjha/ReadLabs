@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
+import { Upload, FileText } from "lucide-react";
 
 export default function PapersPage() {
   const [papers, setPapers]     = useState([]);
@@ -35,21 +36,24 @@ export default function PapersPage() {
 
   return (
     <div className="p-8 max-w-3xl">
-      <h1 className="text-2xl font-bold text-white mb-6">Papers</h1>
+      <h1 className="section-heading mb-6">Papers</h1>
 
-      <div className="bg-gray-900 rounded-xl p-6 mb-8">
-        <h2 className="text-white font-medium mb-4">Upload a Paper</h2>
+      <div className="card p-6 mb-8">
+        <h2 className="text-[var(--color-text)] font-medium mb-4 flex items-center gap-2">
+          <Upload className="w-4 h-4 text-primary" />
+          Upload a Paper
+        </h2>
         <input
           type="text"
           placeholder="Paper title (optional)"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500"
+          className="input-field mb-3"
         />
         <label className={`block w-full text-center py-2.5 rounded-lg cursor-pointer font-medium transition-colors ${
           uploading
-            ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-            : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            ? "bg-muted text-[var(--color-text-secondary)] cursor-not-allowed"
+            : "btn-primary cursor-pointer"
         }`}>
           {uploading ? "Processing\u2026" : "Choose PDF"}
           <input
@@ -60,22 +64,28 @@ export default function PapersPage() {
             disabled={uploading}
           />
         </label>
-        <p className="text-gray-500 text-xs mt-2">Max 20 MB. Text and figures are extracted automatically.</p>
+        <p className="text-[var(--color-text-secondary)] text-xs mt-2">Max 20 MB. Text and figures are extracted automatically.</p>
       </div>
 
       <div className="space-y-3">
         {papers.length === 0 && (
-          <p className="text-gray-500 text-sm">No papers yet. Upload one above.</p>
+          <div className="card p-8 text-center">
+            <FileText className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
+            <p className="text-[var(--color-text-secondary)] text-sm">No papers yet. Upload one above.</p>
+          </div>
         )}
         {papers.map((paper) => (
-          <div key={paper.id} className="bg-gray-900 rounded-xl p-4 flex items-center justify-between">
-            <div>
-              <p className="text-white font-medium">{paper.title}</p>
-              {paper.text_length != null && (
-                <p className="text-gray-500 text-xs mt-0.5">
-                  {paper.text_length.toLocaleString()} chars &middot; {paper.figure_count ?? 0} figures
-                </p>
-              )}
+          <div key={paper.id} className="card p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="w-4 h-4 text-primary shrink-0" />
+              <div>
+                <p className="text-[var(--color-text)] font-medium">{paper.title}</p>
+                {paper.text_length != null && (
+                  <p className="text-[var(--color-text-secondary)] text-xs mt-0.5">
+                    {paper.text_length.toLocaleString()} chars &middot; {paper.figure_count ?? 0} figures
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         ))}

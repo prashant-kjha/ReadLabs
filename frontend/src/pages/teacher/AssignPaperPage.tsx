@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
+import { FileText } from "lucide-react";
 
 export default function AssignPaperPage() {
   const { classId } = useParams();
@@ -32,32 +33,36 @@ export default function AssignPaperPage() {
 
   return (
     <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-bold text-white mb-2">Assign a Paper</h1>
-      <p className="text-gray-400 text-sm mb-6">
+      <h1 className="section-heading mb-2">Assign a Paper</h1>
+      <p className="text-[var(--color-text-secondary)] text-sm mb-6">
         Select an uploaded paper. Gemini will generate the reading guide automatically.
       </p>
 
       <div className="space-y-2 mb-6">
         {papers.length === 0 && (
-          <p className="text-gray-500 text-sm">
-            No papers uploaded yet.{" "}
-            <button
-              onClick={() => navigate("/teacher/papers")}
-              className="text-indigo-400 hover:underline"
-            >
-              Upload one first.
-            </button>
-          </p>
+          <div className="card p-8 text-center">
+            <FileText className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
+            <p className="text-[var(--color-text-secondary)] text-sm">
+              No papers uploaded yet.{" "}
+              <button
+                onClick={() => navigate("/teacher/papers")}
+                className="text-primary hover:underline"
+              >
+                Upload one first.
+              </button>
+            </p>
+          </div>
         )}
         {papers.map((paper) => (
           <button
             key={paper.id}
             onClick={() => setSelected(paper.id)}
-            className={`w-full text-left bg-gray-900 rounded-xl p-4 transition-colors ${
-              selected === paper.id ? "ring-2 ring-indigo-500" : "hover:bg-gray-800"
+            className={`card-hover w-full text-left p-4 flex items-center gap-3 ${
+              selected === paper.id ? "ring-2 ring-primary" : ""
             }`}
           >
-            <p className="text-white font-medium">{paper.title}</p>
+            <FileText className="w-4 h-4 text-primary shrink-0" />
+            <p className="text-[var(--color-text)] font-medium">{paper.title}</p>
           </button>
         ))}
       </div>
@@ -65,9 +70,9 @@ export default function AssignPaperPage() {
       <button
         onClick={handleAssign}
         disabled={!selected || assigning}
-        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium disabled:opacity-50 transition-colors"
+        className="btn-primary disabled:opacity-50"
       >
-        {assigning ? "Creating…" : "Assign Paper"}
+        {assigning ? "Creating..." : "Assign Paper"}
       </button>
     </div>
   );

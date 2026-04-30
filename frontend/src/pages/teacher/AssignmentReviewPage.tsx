@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
+import { Eye, Save, Send } from "lucide-react";
 
 export default function AssignmentReviewPage() {
   const { assignmentId } = useParams();
@@ -73,14 +74,14 @@ export default function AssignmentReviewPage() {
     }
   };
 
-  if (!assignment) return <div className="p-8 text-gray-400">Loading…</div>;
+  if (!assignment) return <div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>;
 
   if (assignment.status === "processing") {
     return (
       <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="animate-spin w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full mb-4" />
-        <p className="text-white text-lg font-medium">Gemini is analyzing the paper…</p>
-        <p className="text-gray-400 text-sm mt-1">This takes 10–30 seconds. Don't close this tab.</p>
+        <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full mb-4" />
+        <p className="text-[var(--color-text)] text-lg font-medium">Gemini is analyzing the paper...</p>
+        <p className="text-[var(--color-text-secondary)] text-sm mt-1">This takes 10-30 seconds. Don't close this tab.</p>
       </div>
     );
   }
@@ -90,7 +91,7 @@ export default function AssignmentReviewPage() {
       <div className="p-8">
         <p className="text-red-400">Reading guide generation failed. Please delete and try again.</p>
         {guide?.generation_error && (
-          <p className="text-gray-500 text-xs mt-1">{guide.generation_error}</p>
+          <p className="text-[var(--color-text-secondary)] text-xs mt-1">{guide.generation_error}</p>
         )}
       </div>
     );
@@ -100,8 +101,8 @@ export default function AssignmentReviewPage() {
     <div className="p-8 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Review Reading Guide</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="section-heading">Review Reading Guide</h1>
+          <p className="section-subheading mt-0.5">
             Edit questions or add teacher notes, then publish.
           </p>
         </div>
@@ -109,7 +110,7 @@ export default function AssignmentReviewPage() {
           <select
             value={guide.difficulty}
             onChange={(e) => updateDifficulty(e.target.value)}
-            className="bg-gray-800 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="bg-muted text-[var(--color-text)] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary border border-border"
           >
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
@@ -118,22 +119,25 @@ export default function AssignmentReviewPage() {
           <button
             type="button"
             onClick={() => navigate(`/teacher/assignments/${assignmentId}/preview`)}
-            className="bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors"
+            className="btn-secondary text-sm flex items-center gap-1.5"
           >
+            <Eye className="w-3.5 h-3.5" />
             Preview as Student
           </button>
           <button
             onClick={() => handleSave(false)}
             disabled={saving}
-            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
+            className="btn-secondary disabled:opacity-50 flex items-center gap-1.5"
           >
+            <Save className="w-3.5 h-3.5" />
             Save Draft
           </button>
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50"
+            className="btn-primary disabled:opacity-50 flex items-center gap-1.5"
           >
+            <Send className="w-3.5 h-3.5" />
             Publish
           </button>
         </div>
@@ -141,14 +145,14 @@ export default function AssignmentReviewPage() {
 
       <div className="space-y-6">
         {guide.sections.map((section, sIdx) => (
-          <div key={sIdx} className="bg-gray-900 rounded-xl p-5">
-            <h2 className="text-white font-semibold text-lg mb-1">{section.title}</h2>
+          <div key={sIdx} className="card p-5">
+            <h2 className="text-[var(--color-text)] font-semibold text-lg mb-1">{section.title}</h2>
             {section.text && (
-              <p className="text-gray-500 text-xs italic mb-4 line-clamp-2">{section.text}</p>
+              <p className="text-[var(--color-text-secondary)] text-xs italic mb-4 line-clamp-2">{section.text}</p>
             )}
 
             <div className="mb-4">
-              <p className="text-gray-400 text-xs font-medium uppercase tracking-wide mb-2">
+              <p className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wide mb-2">
                 Guiding Questions
               </p>
               {section.guiding_questions.map((q, qIdx) => (
@@ -157,21 +161,21 @@ export default function AssignmentReviewPage() {
                   type="text"
                   value={q}
                   onChange={(e) => updateQuestion(sIdx, qIdx, e.target.value)}
-                  className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 text-sm mb-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input-field mb-1.5 text-sm"
                 />
               ))}
             </div>
 
             {section.key_terms?.length > 0 && (
               <div className="mb-4">
-                <p className="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1.5">
+                <p className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wide mb-1.5">
                   Key Terms
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {section.key_terms.map((term, tIdx) => (
                     <span
                       key={tIdx}
-                      className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded"
+                      className="badge bg-muted text-[var(--color-text)] text-xs"
                     >
                       {term}
                     </span>
@@ -181,15 +185,15 @@ export default function AssignmentReviewPage() {
             )}
 
             <div>
-              <p className="text-gray-400 text-xs font-medium uppercase tracking-wide mb-1.5">
+              <p className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wide mb-1.5">
                 Teacher Notes (optional — visible to students)
               </p>
               <textarea
                 value={section.teacher_notes || ""}
                 onChange={(e) => updateTeacherNotes(sIdx, e.target.value)}
-                placeholder="Add a note for students about this section…"
+                placeholder="Add a note for students about this section..."
                 rows={2}
-                className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-600"
+                className="input-field text-sm resize-none placeholder:text-[var(--color-text-secondary)]"
               />
             </div>
           </div>
