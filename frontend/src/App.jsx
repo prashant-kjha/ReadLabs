@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import Layout from "./components/Layout";
 import PapersPage from "./pages/teacher/PapersPage";
@@ -15,12 +17,20 @@ import ReadingPage from "./pages/student/ReadingPage";
 import SelfStudyPage from "./pages/student/SelfStudyPage";
 
 function AppRoutes() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
+
+  // Logged-in users skip landing/auth
   const defaultPath = role === "teacher" ? "/teacher/papers" : "/student/dashboard";
 
   return (
     <Routes>
-      <Route path="/auth" element={<AuthPage />} />
+      {/* Public landing page */}
+      <Route path="/" element={user ? <Navigate to={defaultPath} /> : <LandingPage />} />
+
+      {/* Auth */}
+      <Route path="/auth" element={user ? <Navigate to={defaultPath} /> : <AuthPage />} />
+
+      {/* Protected app routes */}
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           {/* Teacher routes */}
@@ -36,9 +46,9 @@ function AppRoutes() {
           <Route path="/student/dashboard" element={role === "student" ? <StudentDashboardPage /> : <Navigate to="/auth" />} />
           <Route path="/student/read/:assignmentId" element={role === "student" ? <ReadingPage previewMode={false} optionalCheckpoints={true} /> : <Navigate to="/auth" />} />
           <Route path="/student/self-study" element={role === "student" ? <SelfStudyPage /> : <Navigate to="/auth" />} />
-          <Route path="/" element={<Navigate to={defaultPath} />} />
         </Route>
       </Route>
+
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
@@ -46,11 +56,19 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Toaster position="top-right" />
-        <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              className: "!bg-surface !text-[var(--color-text)] !border-border !shadow-card",
+              duration: 3000,
+            }}
+          />
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

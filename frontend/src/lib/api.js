@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
@@ -13,6 +13,10 @@ api.interceptors.request.use(async (config) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
+  }
+  // Let browser set Content-Type with boundary for FormData
+  if (config.data instanceof FormData) {
+    config.headers.delete('Content-Type');
   }
   return config;
 });
@@ -51,7 +55,10 @@ api.interceptors.response.use(
         return Promise.reject(new Error("Session expired. Please log in again."));
       }
     }
-    const msg = err.response?.data?.detail || err.message || "An error occurred";
+    const rawDetail = err.response?.data?.detail;
+    const msg = rawDetail
+      ? (typeof rawDetail === "string" ? rawDetail : JSON.stringify(rawDetail))
+      : (err.message || "An error occurred");
     return Promise.reject(new Error(msg));
   }
 );
