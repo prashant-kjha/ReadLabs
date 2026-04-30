@@ -6,3 +6,21 @@ node_modules/
 build/
 .DS_Store
 *.log
+
+# Frontend
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude / tools
+.claude/
+.playwright-mcp/
+.superpowers/
+
+# Misc
+package-lock.json
+landing-*.png
