@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from supabase import create_client as _supabase_client
 from backend.db import get_db
 from backend.deps import require_teacher
 from backend.ai_provider import generate_reading_guide
@@ -19,14 +18,14 @@ def _one(data):
 
 async def _process_assignment(assignment_id: str, extracted_text: str, figure_count: int) -> None:
     """Background task: call Gemini and store reading guide + superpowers data."""
-    sb = _supabase_client(settings.supabase_url, settings.supabase_service_role_key)
+    db = get_db()
     try:
         full_result = await generate_reading_guide(extracted_text, figure_count)
 
         methodology_elements = full_result.pop("methodology_elements", [])
         critical_prompts = full_result.pop("critical_prompts", [])
 
-        sb.table("assignments").update({
+        await db.from_("assignments").update({
             "reading_guide": full_result,
             "difficulty": full_result.get("difficulty", "intermediate"),
             "status": "draft",
@@ -35,15 +34,15 @@ async def _process_assignment(assignment_id: str, extracted_text: str, figure_co
         if methodology_elements:
             for elem in methodology_elements:
                 elem["assignment_id"] = assignment_id
-            sb.table("methodology_elements").insert(methodology_elements).execute()
+            await db.from_("methodology_elements").insert(methodology_elements).execute()
 
         if critical_prompts:
             for prompt in critical_prompts:
                 prompt["assignment_id"] = assignment_id
-            sb.table("critical_prompts").insert(critical_prompts).execute()
+            await db.from_("critical_prompts").insert(critical_prompts).execute()
 
     except Exception as e:
-        sb.table("assignments").update({
+        await db.from_("assignments").update({
             "status": "draft",
             "reading_guide": {"sections": [], "generation_error": str(e)},
         }).eq("id", assignment_id).execute()

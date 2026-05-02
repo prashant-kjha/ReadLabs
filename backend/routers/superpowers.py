@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from typing import Optional
-from supabase import create_client as _supabase_client
 from backend.db import get_db
 from backend.deps import require_student
 from backend.rate_limit import limiter

@@ -1,9 +1,7 @@
 import uuid
-import asyncio
 import logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks, Request
-from supabase import create_client as _supabase_client
 from backend.db import get_db, storage_headers
 from backend.deps import require_student
 from backend.services.paper_service import extract_text_and_figures
@@ -26,14 +24,14 @@ async def _process_self_study(
     figure_count: int,
 ) -> None:
     """Background task: generate reading guide for self-study paper, auto-publish."""
-    sb = _supabase_client(settings.supabase_url, settings.supabase_service_role_key)
+    db = get_db()
     try:
         full_result = await generate_reading_guide(extracted_text, figure_count)
 
         methodology_elements = full_result.pop("methodology_elements", [])
         critical_prompts = full_result.pop("critical_prompts", [])
 
-        sb.table("assignments").update({
+        await db.from_("assignments").update({
             "reading_guide": full_result,
             "difficulty": full_result.get("difficulty", "intermediate"),
             "status": "published",
@@ -42,16 +40,16 @@ async def _process_self_study(
         if methodology_elements:
             for elem in methodology_elements:
                 elem["assignment_id"] = assignment_id
-            sb.table("methodology_elements").insert(methodology_elements).execute()
+            await db.from_("methodology_elements").insert(methodology_elements).execute()
 
         if critical_prompts:
             for prompt in critical_prompts:
                 prompt["assignment_id"] = assignment_id
-            sb.table("critical_prompts").insert(critical_prompts).execute()
+            await db.from_("critical_prompts").insert(critical_prompts).execute()
 
     except Exception as e:
         logger.error("Self-study guide generation failed: %s", e)
-        sb.table("assignments").update({
+        await db.from_("assignments").update({
             "status": "published",
             "reading_guide": {"sections": [], "generation_error": str(e)},
         }).eq("id", assignment_id).execute()

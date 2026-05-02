@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from backend.db import get_db
@@ -127,12 +126,9 @@ async def _run_checkpoint_feedback(
     guiding_questions: list[str],
     student_text: str,
 ) -> None:
-    from supabase import create_client as _sc
-    supa = _sc(settings.supabase_url, settings.supabase_service_role_key)
     feedback = await generate_checkpoint_feedback(section_title, guiding_questions, student_text)
-    await asyncio.to_thread(
-        lambda: supa.table("checkpoint_responses").update({"ai_feedback": feedback}).eq("id", checkpoint_id).execute()
-    )
+    db = get_db()
+    await db.from_("checkpoint_responses").update({"ai_feedback": feedback}).eq("id", checkpoint_id).execute()
 
 
 async def _run_sowhat_feedback(
@@ -142,12 +138,9 @@ async def _run_sowhat_feedback(
     difficulty: str,
     student_text: str,
 ) -> None:
-    from supabase import create_client as _sc
-    supa = _sc(settings.supabase_url, settings.supabase_service_role_key)
     feedback = await generate_sowhat_feedback(paper_title, section_titles, difficulty, student_text)
-    await asyncio.to_thread(
-        lambda: supa.table("sowhat_responses").update({"ai_feedback": feedback}).eq("id", sowhat_id).execute()
-    )
+    db = get_db()
+    await db.from_("sowhat_responses").update({"ai_feedback": feedback}).eq("id", sowhat_id).execute()
 
 
 async def _run_jargon_explanation(
@@ -155,12 +148,9 @@ async def _run_jargon_explanation(
     term: str,
     context_snippet: str,
 ) -> None:
-    from supabase import create_client as _sc
-    supa = _sc(settings.supabase_url, settings.supabase_service_role_key)
     explanation = await generate_jargon_explanation(term, context_snippet)
-    await asyncio.to_thread(
-        lambda: supa.table("jargon_lookups").update({"explanation": explanation}).eq("id", lookup_id).execute()
-    )
+    db = get_db()
+    await db.from_("jargon_lookups").update({"explanation": explanation}).eq("id", lookup_id).execute()
 
 
 # ── Checkpoint ────────────────────────────────────────────────────────────────
