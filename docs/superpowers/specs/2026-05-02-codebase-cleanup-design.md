@@ -140,23 +140,53 @@ On verify failure, call `_get_jwks(force_refresh=True)` and retry once before gi
 Replace `except (JWTError, JWKError, Exception)` with `except (JWTError, JWKError)` only. Bare `Exception` masks programming bugs as auth failures.
 
 **4c. Session-start race (`sessions.py:43-59`):**
-Replace insert-then-fallback-on-empty-data pattern with a true upsert. PostgREST returns the existing row on conflict when `Prefer: resolution=merge-duplicates,return=representation` is set, which the existing `QueryBuilder.upsert()` already does.
+The current code's flaw is treating *any* error as "duplicate, fall back to fetch." A real DB error (network, schema drift) gets silently swallowed and the user gets the wrong existing row — or worse, no row at all and a misleading 500.
 
+Do NOT switch to a naive `upsert` with `resolution=merge-duplicates`. That would write `current_section_index: 0` over an existing in-progress session and **wipe the student's reading progress on every page reload.**
+
+Correct fix is two parts:
+
+(i) Extend `db.py:Result` and `QueryBuilder.execute()` to surface the HTTP status code:
 ```python
-result = await db.from_("student_sessions").upsert({
+class Result:
+    def __init__(self, data, error, status_code: int = 0):
+        self.data = data
+        self.error = error
+        self.status_code = status_code
+```
+
+(ii) In `sessions.py:start_session`, only fall back to fetch when the error is specifically a unique-constraint violation (HTTP 409, PostgREST error `23505`):
+```python
+result = await db.from_("student_sessions").insert({
     "student_id": user["sub"],
     "assignment_id": body.assignment_id,
     "status": "in_progress",
     "current_section_index": 0,
-}, on_conflict="student_id,assignment_id").execute()
-session = result.data[0]
+}).execute()
+
+if result.data:
+    session = result.data[0]
+elif result.status_code == 409:
+    # Race condition or re-open — fetch existing, preserves progress
+    existing = await db.from_("student_sessions") \
+        .select("id, status, current_section_index") \
+        .eq("student_id", user["sub"]) \
+        .eq("assignment_id", body.assignment_id) \
+        .single().execute()
+    if not existing.data:
+        raise HTTPException(status_code=500, detail="Session conflict but row not found")
+    session = existing.data
+else:
+    raise HTTPException(status_code=500, detail=f"Failed to create session: {result.error}")
 ```
 
-Drops the cargo-culted `isinstance(result.data, list)` checks at lines 51 and 59.
+Drops the cargo-culted `isinstance(result.data, list)` checks at lines 51 and 59 — PostgREST always returns a list.
 
 **Tests:**
 - New `test_jwks_cache_refreshes_after_ttl` (monkeypatch time, assert refresh call count).
 - New `test_session_start_race_returns_same_session` (call POST /sessions/ concurrently with same student/assignment, assert same session_id).
+- New `test_session_restart_preserves_progress` (start session, advance to section 5, call POST /sessions/ again, assert `current_section_index` still 5 — guards against the upsert-clobber regression).
+- New `test_session_start_db_error_surfaces` (mock DB returning 500, assert endpoint returns 500 with detail, not silently fetching wrong row).
 - Existing `test_jwt_*` tests cover the scope-narrowed handler.
 
 ---
@@ -207,7 +237,7 @@ Drops the cargo-culted `isinstance(result.data, list)` checks at lines 51 and 59
 - `frontend/playwright.config.js` (add `mobile` and `tablet` projects)
 - `frontend/package.json` (add `@axe-core/playwright`)
 
-**Backend (Level 1) — ~12 new pytest cases:**
+**Backend (Level 1) — ~14 new pytest cases:**
 
 | Test | Asserts |
 |---|---|
@@ -216,6 +246,8 @@ Drops the cargo-culted `isinstance(result.data, list)` checks at lines 51 and 59
 | `test_rate_limit_jargon_429` | 61st POST in a minute gets 429 |
 | `test_rate_limit_per_ip_independent` | Different `X-Forwarded-For` IPs don't share counter |
 | `test_session_start_race_returns_same_session` | Concurrent POST with same student/assignment returns same id |
+| `test_session_restart_preserves_progress` | Re-opening assignment doesn't reset `current_section_index` |
+| `test_session_start_db_error_surfaces` | Non-409 DB error returns 500, not silent fallback |
 | `test_jargon_endpoint_rejects_empty_term` | Backend returns 422 if `term` is empty/whitespace |
 | `test_jwks_cache_refreshes_after_ttl` | After TTL, next request triggers refetch |
 | `test_jwks_cache_refreshes_on_verify_failure` | After failed verify, cache is invalidated |
@@ -287,7 +319,7 @@ Anti-pattern #8 in the original audit — backend uses service-role key, bypassi
 
 Before declaring complete, all must pass:
 
-1. `cd backend && pytest` — all existing 79 + ~12 new pytest cases green
+1. `cd backend && pytest` — all existing 79 + ~14 new pytest cases green
 2. `cd frontend && npx playwright test --project=desktop` — all existing 301 + ~10 new cases green
 3. `cd frontend && npx playwright test --project=desktop a11y.spec.js` — no serious/critical violations on tested pages
 4. `cd frontend && npx playwright test --project=mobile mobile-subset.spec.js` — runs (failures expected, recorded for user)
@@ -324,7 +356,8 @@ User then runs the manual smoke test in `AUDIT_2026-05-01.md` against their live
 |---|---|
 | Commit 1 changes background-task DB writes; if `db.from_().execute()` differs subtly from sync supabase client, feedback might not save | Pytest covers the helpers via mock. Worst case: revert single commit. |
 | Commit 4 JWKS TTL refresh race (two concurrent failures both refresh) | Acceptable — refresh is idempotent and cheap |
-| Commit 4 session-start upsert may behave differently than insert+fallback in edge cases (e.g. updates `current_section_index` to 0 when re-starting) | Add explicit test for "re-starting an existing session preserves progress" — and if upsert clobbers progress, switch to insert with `on_conflict="DO NOTHING"` instead |
+| Commit 4c session-start: must distinguish unique-constraint violation from real errors — naive upsert would wipe `current_section_index` on every reload | Use `Result.status_code == 409` gating, NOT upsert-merge-duplicates. Explicit test `test_session_restart_preserves_progress` guards against regression. |
+| Commit 4c adds `status_code` field to `Result` class — used by `db.py` consumers across the codebase | New field defaults to `0`; existing call sites that ignore it remain correct. Safe addition. |
 | Commit 5 response models tighten contracts; if a real response field is misspelled, tests fail at runtime | Models match what tests already assert. Each model gets a contract test. |
 | Mobile/a11y failures will be alarming | Expected — they become a punch list, not a regression |
 
