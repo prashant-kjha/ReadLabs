@@ -4,6 +4,7 @@ JWT verification uses Supabase's JWKS endpoint — no shared secret needed.
 Database access via db.py (direct HTTP, bypasses Supabase Python client key validation).
 """
 import logging
+import time
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError, ExpiredSignatureError
@@ -15,23 +16,26 @@ from backend.db import get_db
 logger = logging.getLogger(__name__)
 bearer_scheme = HTTPBearer(auto_error=False)
 
-_jwks_cache: dict | None = None
+_JWKS_TTL_SECONDS = 600  # 10 min
+_jwks_cache: tuple[dict, float] | None = None  # (jwks, fetched_at_monotonic)
 
 
-async def _get_jwks() -> dict:
+async def _get_jwks(force_refresh: bool = False) -> dict:
     global _jwks_cache
-    if _jwks_cache:
-        return _jwks_cache
+    now = time.monotonic()
+    if not force_refresh and _jwks_cache and (now - _jwks_cache[1]) < _JWKS_TTL_SECONDS:
+        return _jwks_cache[0]
     url = f"{get_settings().supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.get(url)
         r.raise_for_status()
-        _jwks_cache = r.json()
-        logger.info("JWKS fetched (%d keys)", len(_jwks_cache.get("keys", [])))
-    return _jwks_cache
+        data = r.json()
+        _jwks_cache = (data, now)
+        logger.info("JWKS fetched (%d keys)", len(data.get("keys", [])))
+    return data
 
 
-async def _verify_token(token: str) -> dict:
+async def _verify_token(token: str, _retried: bool = False) -> dict:
     jwks = await _get_jwks()
     last_error: Exception | None = None
     for key_data in jwks.get("keys", []):
@@ -43,10 +47,13 @@ async def _verify_token(token: str) -> dict:
             )
         except ExpiredSignatureError:
             raise
-        except (JWTError, JWKError, Exception) as e:
+        except (JWTError, JWKError) as e:
             last_error = e
-    global _jwks_cache
-    _jwks_cache = None
+    # No key worked. If we haven't already retried, force a JWKS refresh
+    # (in case Supabase rotated keys) and try once more.
+    if not _retried:
+        await _get_jwks(force_refresh=True)
+        return await _verify_token(token, _retried=True)
     raise JWTError(f"No key verified the token: {last_error}")
 
 

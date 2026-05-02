@@ -45,15 +45,20 @@ async def start_session(body: StartSessionRequest, user=Depends(require_student)
     }).execute()
 
     if result.data:
-        session = result.data[0] if isinstance(result.data, list) else result.data
-    else:
-        # Duplicate — fetch the existing row instead
+        session = result.data[0]
+    elif result.status_code == 409:
+        # Unique-constraint violation: re-opening assignment OR true race condition.
+        # Fetch the existing row to preserve current_section_index.
         existing = await db.from_("student_sessions") \
             .select("id, status, current_section_index") \
-            .eq("student_id", user["sub"]).eq("assignment_id", body.assignment_id).single().execute()
+            .eq("student_id", user["sub"]) \
+            .eq("assignment_id", body.assignment_id) \
+            .single().execute()
         if not existing.data:
-            raise HTTPException(status_code=500, detail="Failed to create session")
-        session = existing.data[0] if isinstance(existing.data, list) else existing.data
+            raise HTTPException(status_code=500, detail="Session conflict but row not found")
+        session = existing.data
+    else:
+        raise HTTPException(status_code=500, detail=f"Failed to create session: {result.error}")
 
     paper = await db.from_("papers").select("title") \
         .eq("id", assignment.data["paper_id"]).single().execute()

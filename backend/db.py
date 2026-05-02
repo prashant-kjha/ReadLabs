@@ -39,9 +39,10 @@ def _anon_headers() -> dict:
 
 
 class Result:
-    def __init__(self, data, error):
+    def __init__(self, data, error, status_code: int = 0):
         self.data = data
         self.error = error
+        self.status_code = status_code
 
 
 class QueryBuilder:
@@ -129,16 +130,16 @@ class QueryBuilder:
             if resp.status_code >= 400:
                 logger.error("PostgREST %s %s → %s: %s",
                              self._method, self._table, resp.status_code, resp.text[:300])
-                return Result(data=None, error=resp.text)
+                return Result(data=None, error=resp.text, status_code=resp.status_code)
 
             data = resp.json()
             if self._single:
                 data = data[0] if data else None
-            return Result(data=data, error=None)
+            return Result(data=data, error=None, status_code=resp.status_code)
 
         except Exception as e:
             logger.error("DB request failed on %s: %s", self._table, e)
-            return Result(data=None, error=str(e))
+            return Result(data=None, error=str(e), status_code=-1)
 
 
 class SupabaseDB:

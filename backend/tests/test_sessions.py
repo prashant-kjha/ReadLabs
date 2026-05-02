@@ -16,6 +16,11 @@ GUIDE = {
 
 
 def make_db(*return_values):
+    """Build a mock DB whose execute() returns successive values.
+
+    Each value can be either a plain data object (data=val, status_code=200)
+    or a tuple (data, status_code) for explicit status control.
+    """
     call_count = 0
     results = list(return_values)
 
@@ -23,7 +28,12 @@ def make_db(*return_values):
         nonlocal call_count
         val = results[call_count] if call_count < len(results) else results[-1]
         call_count += 1
-        return MagicMock(data=val)
+        if isinstance(val, tuple) and len(val) == 2:
+            data, status_code = val
+        else:
+            data = val
+            status_code = 200 if data is not None else -1
+        return MagicMock(data=data, status_code=status_code)
 
     db = MagicMock()
     for method in ["from_", "select", "insert", "update", "upsert", "eq", "in_", "single", "delete"]:
@@ -42,11 +52,10 @@ def test_start_session_creates_new_session():
     student = {"sub": "s-1"}
     assignment = {"id": "asn-1", "class_id": "cls-1", "paper_id": "p-1", "reading_guide": GUIDE, "difficulty": "intermediate", "status": "published"}
     enrollment = {"class_id": "cls-1"}
-    no_session = None
     new_session = [{"id": "sess-1", "status": "in_progress", "current_section_index": 0}]
     paper = {"title": "Test Paper"}
 
-    db = make_db(assignment, enrollment, no_session, new_session, paper)
+    db = make_db(assignment, enrollment, new_session, paper)
 
     app.dependency_overrides[require_student] = lambda: student
     app.dependency_overrides[get_db] = lambda: db
@@ -226,11 +235,10 @@ def test_keyterm_returns_generated():
 def test_start_session_self_study_skips_enrollment():
     student = {"sub": "s-1"}
     assignment = {"id": "asn-1", "class_id": None, "paper_id": "p-1", "reading_guide": None, "difficulty": "intermediate", "status": "published"}
-    no_session = None
     new_session = [{"id": "sess-1", "status": "in_progress", "current_section_index": 0}]
     paper = {"title": "Self-Study Paper"}
 
-    db = make_db(assignment, no_session, new_session, paper)
+    db = make_db(assignment, new_session, paper)
 
     app.dependency_overrides[require_student] = lambda: student
     app.dependency_overrides[get_db] = lambda: db
