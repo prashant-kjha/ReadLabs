@@ -2,7 +2,7 @@ import uuid
 import asyncio
 import logging
 import httpx
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks, Request
 from supabase import create_client as _supabase_client
 from backend.db import get_db, storage_headers
 from backend.deps import require_student
@@ -10,6 +10,7 @@ from backend.services.paper_service import extract_text_and_figures
 from backend.services.core_api import search_core, fetch_core_full_text
 from backend.ai_provider import generate_reading_guide
 from backend.config import get_settings
+from backend.rate_limit import limiter
 from backend.schemas.library import FetchCoreRequest
 
 logger = logging.getLogger(__name__)
@@ -57,11 +58,12 @@ async def _process_self_study(
 
 
 @router.post("/upload")
+@limiter.limit("10/hour")
 async def upload_paper(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     title: str = Form(default=""),
-    category: str = Form(default=""),
     user=Depends(require_student),
     db=Depends(get_db),
 ) -> dict:
@@ -156,11 +158,12 @@ async def browse_papers(
     user=Depends(require_student),
     db=Depends(get_db),
 ):
-    """Browse community library papers."""
-    query = db.from_("papers") \
-        .select("id, title, uploaded_by, created_at")
-
-    result = await query.order("created_at", desc=True) \
+    """Browse the current user's self-study papers.
+    Scoped to the caller — never expose other users' uploads."""
+    result = await db.from_("papers") \
+        .select("id, title, uploaded_by, created_at") \
+        .eq("uploaded_by", user["sub"]) \
+        .order("created_at", desc=True) \
         .limit(min(limit, 50)).execute()
 
     papers = result.data or []
@@ -185,7 +188,9 @@ async def browse_papers(
 
 
 @router.post("/fetch")
+@limiter.limit("20/hour")
 async def fetch_core_paper(
+    request: Request,
     body: FetchCoreRequest,
     background_tasks: BackgroundTasks,
     user=Depends(require_student),
@@ -218,12 +223,14 @@ async def fetch_core_paper(
             detail="Paper title doesn't match what was selected. Please search again or upload PDF directly.",
         )
 
-    # Insert paper
+    # Insert paper. core_id enables dedup on subsequent /library/fetch calls
+    # for the same CORE record.
     paper_result = await db.from_("papers").insert({
         "title": core_data["title"],
         "extracted_text": core_data["full_text"],
         "figures": [],
         "uploaded_by": user["sub"],
+        "core_id": core_data["core_id"],
     }).execute()
     if not paper_result.data:
         raise HTTPException(status_code=500, detail="Failed to create paper record")
@@ -255,7 +262,6 @@ async def fetch_core_paper(
     }
 
 
-@router.get("/categories")
-async def list_categories(user=Depends(require_student), db=Depends(get_db)):
-    """List all categories that have papers in the library."""
-    return []
+# /categories endpoint removed 2026-05-01: was a stub returning [] — the
+# `category` taxonomy was never implemented in the schema. Re-add this when
+# you add a category column and decide on the taxonomy.

@@ -1,11 +1,12 @@
 import uuid
 import logging
 import httpx
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from backend.db import get_db, storage_headers
 from backend.deps import require_teacher, require_student
 from backend.services.paper_service import extract_text_and_figures
 from backend.config import get_settings
+from backend.rate_limit import limiter
 from backend.schemas.papers import PaperUploadResponse
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,9 @@ async def _upload_to_storage(pdf_bytes: bytes, object_path: str) -> str:
 
 
 @router.post("/upload", response_model=PaperUploadResponse)
+@limiter.limit("10/hour")
 async def upload_paper(
+    request: Request,
     file: UploadFile = File(...),
     title: str = Form(default=""),
     user=Depends(require_teacher),
@@ -103,6 +106,23 @@ async def get_paper(paper_id: str, user=Depends(require_teacher), db=Depends(get
 @router.get("/{paper_id}/pdf-url")
 async def get_pdf_url(paper_id: str, user=Depends(require_student), db=Depends(get_db)):
     """Return a signed URL (1 h expiry) for the paper's PDF in Supabase Storage."""
+    # Authorization: student must either have uploaded this paper themselves
+    # (self-study) or have an active session for an assignment using it.
+    owned = await db.from_("papers").select("id") \
+        .eq("id", paper_id).eq("uploaded_by", user["sub"]).single().execute()
+    if not owned.data:
+        assignment_match = await db.from_("assignments").select("id") \
+            .eq("paper_id", paper_id).execute()
+        assignment_ids = [a["id"] for a in (assignment_match.data or [])]
+        authorized = False
+        if assignment_ids:
+            session = await db.from_("student_sessions").select("id") \
+                .eq("student_id", user["sub"]).in_("assignment_id", assignment_ids) \
+                .limit(1).execute()
+            authorized = bool(session.data)
+        if not authorized:
+            raise HTTPException(status_code=404, detail="Paper not found")
+
     result = await db.from_("papers") \
         .select("pdf_path") \
         .eq("id", paper_id) \

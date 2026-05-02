@@ -2,10 +2,8 @@ import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from "r
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
-import { getRecommendations } from "../../lib/superpowersApi";
+import { getRecommendations, type Recommendation } from "../../lib/superpowersApi";
 import { Upload, Search, BookOpen, X } from "lucide-react";
-
-const CATEGORIES = ["All", "Biology", "Computer Science", "Medicine", "Physics", "Chemistry", "Mathematics", "Engineering", "Psychology", "Economics"];
 
 interface LibraryPaper {
   id?: string;
@@ -13,7 +11,6 @@ interface LibraryPaper {
   title: string;
   authors?: string;
   year_published?: number;
-  category?: string;
   assignment?: { id: string; difficulty: string; status: string };
   fromSearch?: boolean;
 }
@@ -28,40 +25,26 @@ export default function SelfStudyPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [papers, setPapers] = useState<LibraryPaper[]>([]);
-  const [categories, setCategories] = useState(CATEGORIES);
-  const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<LibraryPaper[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [fetching, setFetching] = useState<string | null>(null);
-  const [recommendations, setRecommendations] = useState<{ paper: { id: string; title: string; authors?: string; category?: string }; reason: string }[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
   useEffect(() => {
     loadPapers();
-    loadCategories();
     getRecommendations().then(setRecommendations).catch(() => {
       // Recommendations are non-critical; fail silently
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategory]);
+  }, []);
 
   const loadPapers = async () => {
     try {
-      const params = activeCategory !== "All" ? `?category=${activeCategory}` : "";
-      const { data } = await api.get(`/library/browse${params}`);
+      const { data } = await api.get("/library/browse");
       setPapers(data);
     } catch {
       toast.error("Could not load papers");
-    }
-  };
-
-  const loadCategories = async () => {
-    try {
-      const { data } = await api.get("/library/categories");
-      if (data.length > 0) setCategories(["All", ...data]);
-    } catch {
-      toast.error("Could not load categories");
     }
   };
 
@@ -87,7 +70,6 @@ export default function SelfStudyPage() {
     const form = new FormData();
     form.append("file", file);
     form.append("title", file.name.replace(".pdf", "").replace(/_/g, " "));
-    form.append("category", activeCategory !== "All" ? activeCategory : "");
     try {
       const { data } = await api.post("/library/upload", form);
       toast.success("Paper uploaded! Generating reading guide...");
@@ -153,11 +135,13 @@ export default function SelfStudyPage() {
 
   const displayPapers = searchResults !== null ? searchResults.map((r) => ({ ...r, fromSearch: true })) : papers;
 
-  const startRecommendedPaper = async (paperId: string) => {
-    setFetching(paperId);
+  const startRecommendedPaper = async (assignmentId: string) => {
+    setFetching(assignmentId);
     try {
-      const { data } = await api.post("/library/fetch", { paper_id: paperId });
-      pollAndNavigate(data.assignment_id);
+      // The recommendation already points at an existing self-study assignment;
+      // we just need to start a reading session for it.
+      await api.post("/sessions/", { assignment_id: assignmentId });
+      navigate(`/student/read/${assignmentId}`);
     } catch {
       toast.error("Could not start paper");
     } finally {
@@ -171,22 +155,17 @@ export default function SelfStudyPage() {
       <div className="mb-6">
         <h2 className="section-subheading mb-3">Recommended for You</h2>
         <div className="flex gap-3 overflow-x-auto pb-1">
-          {recommendations.map(({ paper, reason }) => (
-            <div key={paper.id} className="card p-4 shrink-0 w-64 flex flex-col">
+          {recommendations.map(({ paper, assignment_id, reason }) => (
+            <div key={assignment_id} className="card p-4 shrink-0 w-64 flex flex-col">
               <div className="flex items-start gap-2 mb-1">
                 <BookOpen className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[var(--color-text)] text-sm font-medium leading-snug">{paper.title}</p>
               </div>
-              {paper.authors && <p className="text-[var(--color-text-secondary)] text-xs mb-1">{paper.authors}</p>}
-              {paper.category && (
-                <span className="badge bg-primary-light text-primary text-xs self-start mb-2">
-                  {paper.category}
-                </span>
-              )}
               <p className="text-[var(--color-text-secondary)] text-xs italic mb-3 flex-1">{reason}</p>
-              <button onClick={() => startRecommendedPaper(paper.id)}
-                className="btn-primary text-xs">
-                Start Reading
+              <button onClick={() => startRecommendedPaper(assignment_id)}
+                disabled={fetching === assignment_id}
+                className="btn-primary text-xs disabled:opacity-50">
+                {fetching === assignment_id ? "Starting..." : "Start Reading"}
               </button>
             </div>
           ))}
@@ -249,25 +228,6 @@ export default function SelfStudyPage() {
         )}
       </form>
 
-      {/* Category tabs */}
-      {!searchResults && (
-        <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`badge whitespace-nowrap text-xs transition-colors ${
-                activeCategory === cat
-                  ? "bg-primary text-white"
-                  : "bg-muted text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-muted/80"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Results */}
       {displayPapers.length === 0 ? (
         <div className="card p-8 text-center">
@@ -282,9 +242,6 @@ export default function SelfStudyPage() {
             <div key={paper.id || paper.core_id} className="card-hover p-4">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-[var(--color-text)] font-medium text-sm leading-tight flex-1">{paper.title}</h3>
-                {paper.category && (
-                  <span className="badge bg-muted text-[var(--color-text)] text-xs ml-2 shrink-0">{paper.category}</span>
-                )}
               </div>
               {paper.authors && <p className="text-[var(--color-text-secondary)] text-xs mb-1">{paper.authors}</p>}
               {paper.year_published && <p className="text-[var(--color-text-secondary)] text-xs mb-2">{paper.year_published}</p>}

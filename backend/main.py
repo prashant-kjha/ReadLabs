@@ -2,11 +2,18 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from backend.rate_limit import limiter
 from backend.routers import auth, papers, classes, assignments, enrollment, sessions, dashboard, library, superpowers
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="ReadLabAI API")
+
+# Rate limiting — applied per-endpoint via @limiter.limit decorators.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

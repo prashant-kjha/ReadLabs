@@ -122,15 +122,22 @@ async def get_insights(assignment_id: str, user=Depends(require_teacher), db=Dep
     sections = asn.data["reading_guide"].get("sections", [])
     section_insights = []
 
-    for idx, section in enumerate(sections):
-        responses_result = await db.from_("checkpoint_responses") \
-            .select("student_text") \
-            .eq("section_index", idx).execute()
+    # Scope responses to sessions for THIS assignment only.
+    # checkpoint_responses lacks assignment_id, so we filter via session_id IN (sessions for this assignment).
+    sessions_for_assignment = await db.from_("student_sessions").select("id") \
+        .eq("assignment_id", assignment_id).execute()
+    session_ids = [s["id"] for s in (sessions_for_assignment.data or [])]
 
-        # Filter to responses for sessions belonging to this assignment
-        # (Since checkpoint_responses don't have assignment_id directly,
-        # we get all with the right section_index and rely on session filtering)
-        response_texts = [r["student_text"] for r in (responses_result.data or [])]
+    for idx, section in enumerate(sections):
+        if not session_ids:
+            response_texts: list[str] = []
+        else:
+            responses_result = await db.from_("checkpoint_responses") \
+                .select("student_text, session_id") \
+                .eq("section_index", idx) \
+                .in_("session_id", session_ids) \
+                .execute()
+            response_texts = [r["student_text"] for r in (responses_result.data or [])]
 
         if len(response_texts) < 2:
             section_insights.append({

@@ -1,19 +1,17 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 import httpx
 from backend.config import get_settings
 from backend.db import get_db
 from backend.deps import get_current_user
-from backend.schemas.auth import SignupRequest, SigninRequest, AuthResponse, MeResponse
+from backend.rate_limit import limiter
+from backend.schemas.auth import (
+    SignupRequest, SigninRequest, AuthResponse, MeResponse, SignupResponse,
+)
 
 router = APIRouter()
 settings = get_settings()
 
 AUTH_URL = f"{settings.supabase_url}/auth/v1"
-ADMIN_HEADERS = {
-    "apikey": settings.supabase_service_role_key,
-    "Authorization": f"Bearer {settings.supabase_service_role_key}",
-    "Content-Type": "application/json",
-}
 ANON_HEADERS = {
     "apikey": settings.supabase_anon_key,
     "Authorization": f"Bearer {settings.supabase_anon_key}",
@@ -21,49 +19,51 @@ ANON_HEADERS = {
 }
 
 
-@router.post("/signup", response_model=AuthResponse)
-async def signup(body: SignupRequest, db=Depends(get_db)):
+@router.post("/signup", response_model=SignupResponse)
+@limiter.limit("5/hour")
+async def signup(request: Request, body: SignupRequest, db=Depends(get_db)):
+    """
+    Create a new student account. Email confirmation is required before sign-in.
+    Role is hardcoded to "student" — teacher accounts must be provisioned manually.
+    """
     async with httpx.AsyncClient(timeout=15) as client:
-        # Create user with email already confirmed (admin API)
+        # Use the public signup endpoint so Supabase sends a confirmation email.
         r = await client.post(
-            f"{AUTH_URL}/admin/users",
-            headers=ADMIN_HEADERS,
-            json={"email": body.email, "password": body.password, "email_confirm": True},
+            f"{AUTH_URL}/signup",
+            headers=ANON_HEADERS,
+            json={
+                "email": body.email,
+                "password": body.password,
+                "data": {"full_name": body.name},
+            },
         )
     if r.status_code >= 400:
-        detail = r.json().get("msg") or r.json().get("message") or r.text
+        body_json = r.json() if r.content else {}
+        detail = body_json.get("msg") or body_json.get("message") or r.text
         raise HTTPException(status_code=400, detail=detail)
 
-    user_id = r.json()["id"]
+    payload = r.json()
+    # Supabase /signup returns either {"user": {...}, "session": null} (confirmation
+    # required) or top-level user fields. Handle both.
+    user = payload.get("user") or payload
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=500, detail="Signup succeeded but no user id returned")
 
+    # Always create the profile as a student. The DB still uses the service-role
+    # key (RLS bypass), so this is the *only* gate preventing privilege escalation.
     await db.from_("user_profiles").insert({
         "user_id": user_id,
         "name": body.name,
-        "role": body.role,
+        "role": "student",
     }).execute()
 
-    # Sign in to get tokens
-    async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.post(
-            f"{AUTH_URL}/token?grant_type=password",
-            headers=ANON_HEADERS,
-            json={"email": body.email, "password": body.password},
-        )
-    if r.status_code >= 400:
-        raise HTTPException(status_code=400, detail="Account created but sign-in failed")
-
-    tokens = r.json()
-    return {
-        "access_token": tokens["access_token"],
-        "refresh_token": tokens["refresh_token"],
-        "user_id": user_id,
-        "name": body.name,
-        "role": body.role,
-    }
+    return {"user_id": user_id, "email_confirmation_required": True}
 
 
 @router.post("/signin", response_model=AuthResponse)
-async def signin(body: SigninRequest, db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def signin(request: Request, body: SigninRequest, db=Depends(get_db)):
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.post(
             f"{AUTH_URL}/token?grant_type=password",
@@ -71,6 +71,11 @@ async def signin(body: SigninRequest, db=Depends(get_db)):
             json={"email": body.email, "password": body.password},
         )
     if r.status_code >= 400:
+        # Surface the email-not-confirmed case so the UI can prompt the user.
+        body_json = r.json() if r.content else {}
+        err_code = body_json.get("error_code") or body_json.get("error") or ""
+        if err_code == "email_not_confirmed":
+            raise HTTPException(status_code=401, detail="Email not confirmed. Check your inbox for a confirmation link.")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     tokens = r.json()

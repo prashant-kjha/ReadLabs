@@ -1,9 +1,10 @@
 import asyncio
 import logging
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from backend.db import get_db
 from backend.deps import require_student, require_teacher
 from backend.config import get_settings
+from backend.rate_limit import limiter
 from backend.ai_provider import generate_checkpoint_feedback, generate_sowhat_feedback, generate_jargon_explanation
 from backend.schemas.sessions import (
     StartSessionRequest, ProgressRequest, CheckpointRequest,
@@ -165,7 +166,9 @@ async def _run_jargon_explanation(
 # ── Checkpoint ────────────────────────────────────────────────────────────────
 
 @router.post("/{session_id}/checkpoint")
+@limiter.limit("30/minute")
 async def submit_checkpoint(
+    request: Request,
     session_id: str,
     body: CheckpointRequest,
     background_tasks: BackgroundTasks,
@@ -207,7 +210,9 @@ async def submit_checkpoint(
 # ── So What? ─────────────────────────────────────────────────────────────────
 
 @router.post("/{session_id}/sowhat")
+@limiter.limit("20/minute")
 async def submit_sowhat(
+    request: Request,
     session_id: str,
     body: SoWhatRequest,
     background_tasks: BackgroundTasks,
@@ -297,7 +302,9 @@ async def preview_keyterm(body: PreviewKeyTermRequest, user=Depends(require_teac
 # ── Jargon lookup (ad-hoc, async) ────────────────────────────────────────────
 
 @router.post("/{session_id}/jargon")
+@limiter.limit("60/minute")
 async def lookup_jargon(
+    request: Request,
     session_id: str,
     body: JargonRequest,
     user=Depends(require_student),
@@ -340,7 +347,9 @@ async def lookup_jargon(
 # ── Key term lookup (cached, near-synchronous) ────────────────────────────────
 
 @router.post("/{session_id}/keyterm")
+@limiter.limit("60/minute")
 async def lookup_keyterm(
+    request: Request,
     session_id: str,
     body: KeyTermRequest,
     user=Depends(require_student),

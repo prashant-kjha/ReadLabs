@@ -142,36 +142,92 @@ def test_get_pdf_url_requires_auth():
     assert response.status_code == 401
 
 
-def test_get_pdf_url_returns_signed_url():
-    """Authenticated student should receive a signed URL for a paper's PDF."""
+def test_get_pdf_url_returns_signed_url_when_student_has_session():
+    """Authenticated student with a session for the paper's assignment receives a signed URL.
+
+    Auth flow added in 2026-05-01 security review:
+      1. owned check  (paper.uploaded_by == student?) → no
+      2. assignment lookup by paper_id → [asn-1]
+      3. session lookup (student has session for asn-1?) → yes
+      4. paper.pdf_path lookup
+      5. POST to /storage/v1/object/sign → signed URL
+    """
     mock_student = {"sub": "student-uuid-123"}
 
+    # Sequence of execute() return values for the 4 DB queries:
+    db_results = [
+        MagicMock(data=None),  # not owner
+        MagicMock(data=[{"id": "asn-1"}]),  # one assignment uses this paper
+        MagicMock(data=[{"id": "sess-1"}]),  # student has a session for it
+        MagicMock(data={"pdf_path": "papers/teacher-uuid-999/abc-123.pdf"}),
+    ]
+    call_count = [0]
+
+    async def mock_execute():
+        idx = call_count[0]
+        call_count[0] += 1
+        return db_results[idx]
+
     mock_db = MagicMock()
-    mock_db.from_ = MagicMock(return_value=mock_db)
-    mock_db.select = MagicMock(return_value=mock_db)
-    mock_db.eq = MagicMock(return_value=mock_db)
-    mock_db.single = MagicMock(return_value=mock_db)
-    mock_db.execute = AsyncMock(return_value=MagicMock(
-        data={"pdf_path": "papers/teacher-uuid-999/abc-123.pdf"}
-    ))
+    for attr in ["from_", "select", "eq", "in_", "single", "limit", "order"]:
+        setattr(mock_db, attr, MagicMock(return_value=mock_db))
+    mock_db.execute = mock_execute
 
-    mock_signed = {"signedURL": "/storage/v1/object/sign/papers/teacher-uuid-999/abc-123.pdf?token=xyz"}
+    # Mock the httpx POST to Supabase Storage's signing endpoint
+    storage_resp = MagicMock()
+    storage_resp.status_code = 200
+    storage_resp.json.return_value = {
+        "signedURL": "/object/sign/papers/teacher-uuid-999/abc-123.pdf?token=xyz",
+    }
 
-    with patch("backend.routers.papers._get_storage_client") as mock_get_client:
-        mock_client = MagicMock()
-        mock_client.storage.from_("papers").create_signed_url.return_value = mock_signed
-        mock_get_client.return_value = mock_client
+    storage_ctx = AsyncMock()
+    storage_ctx.post = AsyncMock(return_value=storage_resp)
+    storage_ctx.__aenter__ = AsyncMock(return_value=storage_ctx)
+    storage_ctx.__aexit__ = AsyncMock(return_value=False)
 
-        app.dependency_overrides[_require_student] = lambda: mock_student
-        app.dependency_overrides[_get_db] = lambda: mock_db
-        try:
+    app.dependency_overrides[_require_student] = lambda: mock_student
+    app.dependency_overrides[_get_db] = lambda: mock_db
+    try:
+        with patch("backend.routers.papers.httpx.AsyncClient", return_value=storage_ctx):
             response = api_client.get("/api/v1/papers/paper-uuid-1/pdf-url")
-        finally:
-            app.dependency_overrides.pop(_require_student, None)
-            app.dependency_overrides.pop(_get_db, None)
+    finally:
+        app.dependency_overrides.pop(_require_student, None)
+        app.dependency_overrides.pop(_get_db, None)
 
     assert response.status_code == 200
     body = response.json()
     assert "url" in body
     assert "teacher-uuid-999/abc-123.pdf" in body["url"]
     assert "token=xyz" in body["url"]
+
+
+def test_get_pdf_url_rejects_student_without_access():
+    """Student with no ownership and no session for an assignment using the paper
+    must get 404 — they cannot enumerate papers by ID."""
+    mock_student = {"sub": "outsider-uuid"}
+
+    db_results = [
+        MagicMock(data=None),         # not owner
+        MagicMock(data=[]),           # no assignments use this paper
+    ]
+    call_count = [0]
+
+    async def mock_execute():
+        idx = call_count[0]
+        call_count[0] += 1
+        return db_results[idx]
+
+    mock_db = MagicMock()
+    for attr in ["from_", "select", "eq", "in_", "single", "limit", "order"]:
+        setattr(mock_db, attr, MagicMock(return_value=mock_db))
+    mock_db.execute = mock_execute
+
+    app.dependency_overrides[_require_student] = lambda: mock_student
+    app.dependency_overrides[_get_db] = lambda: mock_db
+    try:
+        response = api_client.get("/api/v1/papers/paper-uuid-1/pdf-url")
+    finally:
+        app.dependency_overrides.pop(_require_student, None)
+        app.dependency_overrides.pop(_get_db, None)
+
+    assert response.status_code == 404

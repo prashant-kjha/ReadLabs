@@ -94,8 +94,15 @@ def test_get_insights_triggers_generation_when_missing():
     # upsert result
     inserted = MagicMock(data={"insights": {"sections": []}, "generated_at": "2026-01-01"})
 
+    # Sequence of execute() return values:
+    #   1. asn lookup → asn_data
+    #   2. cls (teacher's class) lookup → cls_data
+    #   3. cached insights lookup → None (no cache, trigger generation)
+    #   4. sessions_for_assignment → [{"id": "sess-1"}, {"id": "sess-2"}]   (added 2026-05-01)
+    #   5. responses for section 0 → responses
+    sessions_for_assignment = [{"id": "sess-1"}, {"id": "sess-2"}]
     call_count = [0]
-    results = [asn_data, cls_data, None, responses]
+    results = [asn_data, cls_data, None, sessions_for_assignment, responses]
 
     async def mock_execute():
         idx = call_count[0]

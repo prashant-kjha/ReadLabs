@@ -25,9 +25,29 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        # NOTE: kept "ignore" so leftover unrelated env vars (e.g. REACT_APP_*
+        # from a previous CRA setup) don't break startup. The production-required
+        # secret check below catches the most important misconfiguration class
+        # (missing required keys); raising on extras is a future hardening.
         extra = "ignore"
+
+
+# Secrets that MUST be set for the app to function correctly. Listed explicitly
+# so a misconfigured deployment fails at startup, not on the first auth request.
+_REQUIRED_FOR_PRODUCTION = (
+    "supabase_url",
+    "supabase_anon_key",
+    "supabase_service_role_key",
+)
 
 
 @lru_cache()
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.environment == "production":
+        missing = [name for name in _REQUIRED_FOR_PRODUCTION if not getattr(s, name)]
+        if missing:
+            raise RuntimeError(
+                f"Missing required production env vars: {', '.join(missing)}"
+            )
+    return s

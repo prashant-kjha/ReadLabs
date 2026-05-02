@@ -44,7 +44,7 @@ interface AiGuidancePanelProps {
   quizSubmitting: boolean;
   setQuizSubmitting: (v: boolean) => void;
   currentAssignmentId: string | null;
-  lookupJargon: () => Promise<void>;
+  lookupJargon: (term: string) => Promise<void>;
   jargonExplanation: string | null;
   jargonPending: boolean;
   previewMode: boolean;
@@ -158,7 +158,7 @@ function SectionContent({ section, currentSection, currentAssignmentId, checkpoi
   submitCheckpoint: () => Promise<void>; skipCheckpoint: () => Promise<void>;
   canAdvance: boolean; advanceSection: () => Promise<void>; isLastSection: boolean;
   showSoWhat: boolean; previewMode: boolean; optionalCheckpoints: boolean;
-  lookupJargon: () => Promise<void>; jargonExplanation: string | null; jargonPending: boolean;
+  lookupJargon: (term: string) => Promise<void>; jargonExplanation: string | null; jargonPending: boolean;
 }) {
   const [criticalPrompt, setCriticalPrompt] = useState<CriticalPrompt | null>(null);
   const [criticalPromptOpen, setCriticalPromptOpen] = useState(false);
@@ -173,7 +173,10 @@ function SectionContent({ section, currentSection, currentAssignmentId, checkpoi
     } catch {}
   };
 
-  const handleJargonLookup = () => { if (jargonTerm.trim()) lookupJargon(); };
+  const handleJargonLookup = () => {
+    const term = jargonTerm.trim();
+    if (term) lookupJargon(term);
+  };
 
   if (!section) return null;
 

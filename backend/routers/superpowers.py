@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from typing import Optional
 from supabase import create_client as _supabase_client
 from backend.db import get_db
 from backend.deps import require_student
+from backend.rate_limit import limiter
 from backend.ai_provider import (
     generate_annotation_socratic_prompt,
     generate_quiz_questions,
@@ -114,7 +115,9 @@ async def delete_annotation(annotation_id: str, user=Depends(require_student), d
 
 
 @router.post("/annotations/{annotation_id}/ai-prompt")
+@limiter.limit("60/minute")
 async def get_annotation_ai_prompt(
+    request: Request,
     annotation_id: str, user=Depends(require_student), db=Depends(get_db),
 ):
     annotation = await db.from_("annotations").select("session_id, highlight_text, section_index") \
@@ -187,7 +190,8 @@ async def get_quiz(assignment_id: str, user=Depends(require_student), db=Depends
 
 
 @router.post("/quiz/{assignment_id}/generate")
-async def generate_quiz(assignment_id: str, user=Depends(require_student), db=Depends(get_db)):
+@limiter.limit("10/hour")
+async def generate_quiz(request: Request, assignment_id: str, user=Depends(require_student), db=Depends(get_db)):
     session = await db.from_("student_sessions").select("id") \
         .eq("assignment_id", assignment_id).eq("student_id", user["sub"]).single().execute()
     if not session.data:
@@ -219,7 +223,8 @@ async def generate_quiz(assignment_id: str, user=Depends(require_student), db=De
 
 
 @router.post("/quiz/attempt")
-async def submit_quiz_attempt(body: QuizAttemptRequest, user=Depends(require_student), db=Depends(get_db)):
+@limiter.limit("30/hour")
+async def submit_quiz_attempt(request: Request, body: QuizAttemptRequest, user=Depends(require_student), db=Depends(get_db)):
     session = await db.from_("student_sessions").select("id") \
         .eq("assignment_id", body.assignment_id).eq("student_id", user["sub"]).single().execute()
     if not session.data:
@@ -359,47 +364,47 @@ async def add_xp(body: XpRequest, user=Depends(require_student), db=Depends(get_
 
 @router.get("/recommendations")
 async def get_recommendations(user=Depends(require_student), db=Depends(get_db)):
+    """Recommend self-study papers the user has uploaded but not yet started reading.
+
+    Uses only columns that exist in the current schema. A "self-study" paper is
+    one whose assignment has class_id IS NULL (the convention set by /library/upload
+    and /library/fetch). To preserve privacy, we only recommend papers the *current*
+    user uploaded — we don't expose other users' uploads.
+    """
+    # Assignments the student has already started a session for (any status)
     sessions = await db.from_("student_sessions").select("assignment_id") \
-        .eq("student_id", user["sub"]).eq("status", "completed").execute()
+        .eq("student_id", user["sub"]).execute()
+    started_assignment_ids = {s["assignment_id"] for s in (sessions.data or [])}
 
-    completed_assignment_ids = [s["assignment_id"] for s in (sessions.data or [])]
+    # Papers the current user uploaded
+    user_papers = await db.from_("papers").select("id, title") \
+        .eq("uploaded_by", user["sub"]).execute()
+    paper_map = {p["id"]: p for p in (user_papers.data or [])}
+    if not paper_map:
+        return []
 
-    if not completed_assignment_ids:
-        newest = await db.from_("papers").select("id, title, authors, year_published, category") \
-            .eq("is_self_study", True).execute()
-        papers = (newest.data or [])[:3]
-        return [{"paper": p, "reason": "Start your reading journey"} for p in papers]
+    # Self-study assignments (class_id IS NULL) for those papers, published only
+    assignments = await db.from_("assignments") \
+        .select("id, paper_id, status, created_at") \
+        .in_("paper_id", list(paper_map.keys())) \
+        .is_("class_id", "null") \
+        .eq("status", "published") \
+        .order("created_at", desc=True) \
+        .execute()
 
-    completed_papers = await db.from_("assignments").select("paper_id") \
-        .in_("id", completed_assignment_ids).execute()
-    completed_paper_ids = [r["paper_id"] for r in (completed_papers.data or [])]
+    candidates = [
+        a for a in (assignments.data or [])
+        if a["id"] not in started_assignment_ids and a["paper_id"] in paper_map
+    ][:3]
 
-    completed_paper_details = await db.from_("papers").select("id, category") \
-        .in_("id", completed_paper_ids).execute()
-    categories = list({p["category"] for p in (completed_paper_details.data or []) if p.get("category")})
-
-    all_library = await db.from_("papers").select("id, title, authors, year_published, category") \
-        .eq("is_self_study", True).execute()
-
-    unread = [
-        p for p in (all_library.data or [])
-        if p["id"] not in completed_paper_ids
-        and p.get("category") in categories
+    return [
+        {
+            "paper": {
+                "id": paper_map[a["paper_id"]]["id"],
+                "title": paper_map[a["paper_id"]]["title"],
+            },
+            "assignment_id": a["id"],
+            "reason": "You haven't started reading this yet",
+        }
+        for a in candidates
     ]
-
-    recommendations = unread[:3]
-    result = []
-    for paper in recommendations:
-        cat = paper.get("category", "this topic")
-        result.append({
-            "paper": paper,
-            "reason": f"Builds on your reading in {cat}",
-        })
-
-    if len(result) < 3:
-        fallback = [p for p in (all_library.data or [])
-                     if p["id"] not in completed_paper_ids and p not in unread]
-        for paper in fallback[:3 - len(result)]:
-            result.append({"paper": paper, "reason": "Expand your reading"})
-
-    return result[:3]

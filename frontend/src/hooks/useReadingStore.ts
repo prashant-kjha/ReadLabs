@@ -66,7 +66,7 @@ interface ReadingState {
   skipCheckpoint: (optionalCheckpoints: boolean) => Promise<void>;
   updateSoWhat: (val: string | Partial<SoWhatState>) => void;
   submitSoWhat: (previewMode: boolean) => Promise<void>;
-  lookupJargon: (previewMode: boolean) => Promise<void>;
+  lookupJargon: (previewMode: boolean, term: string) => Promise<void>;
   setSectionsCollapsed: (collapsed: boolean) => void;
   setAiPanelWidth: (width: number) => void;
   setAiPanelVisible: (visible: boolean) => void;
@@ -301,7 +301,9 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
     }
   },
 
-  lookupJargon: async (previewMode) => {
+  lookupJargon: async (previewMode, term) => {
+    const trimmedTerm = (term || "").trim();
+    if (!trimmedTerm) return;
     const { currentSection, readingGuide, sessionId } = get();
     const section = readingGuide!.sections[currentSection];
     const context = section?.text?.slice(0, 500) || "";
@@ -309,7 +311,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
 
     const endpoint = previewMode ? "/sessions/preview/jargon" : `/sessions/${sessionId}/jargon`;
     try {
-      const { data } = await api.post(endpoint, { term: "", context_snippet: context });
+      const { data } = await api.post(endpoint, { term: trimmedTerm, context_snippet: context });
       if (data.explanation) {
         set({ jargonExplanation: data.explanation, jargonPending: false });
       } else {

@@ -1,4 +1,4 @@
-import random
+import secrets
 import string
 from fastapi import APIRouter, HTTPException, Depends
 from backend.db import get_db
@@ -7,9 +7,11 @@ from backend.schemas.classes import CreateClassRequest
 
 router = APIRouter()
 
+_CODE_ALPHABET = string.ascii_uppercase + string.digits
+
 
 def _make_code(length: int = 6) -> str:
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
+    return "".join(secrets.choice(_CODE_ALPHABET) for _ in range(length))
 
 
 @router.post("/")

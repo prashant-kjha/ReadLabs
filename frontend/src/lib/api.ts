@@ -81,8 +81,10 @@ api.interceptors.response.use(
 // ── Auth ────────────────────────────────────────────────────────────────────
 
 export const authApi = {
-  signup: (data: { email: string; password: string; name: string; role: "teacher" | "student" }) =>
-    api.post<AuthResponse>("/auth/signup", data).then((r) => r.data),
+  signup: (data: { email: string; password: string; name: string }) =>
+    api
+      .post<{ user_id: string; email_confirmation_required: boolean }>("/auth/signup", data)
+      .then((r) => r.data),
   signin: (data: { email: string; password: string }) =>
     api.post<AuthResponse>("/auth/signin", data).then((r) => r.data),
   me: () =>

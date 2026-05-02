@@ -53,5 +53,11 @@ export const addXp = (action: string) =>
 
 // ── Recommendations ───────────────────────────────────────────────────────
 
+export interface Recommendation {
+  paper: { id: string; title: string };
+  assignment_id: string;
+  reason: string;
+}
+
 export const getRecommendations = () =>
-  api.get("/superpowers/recommendations").then((r) => r.data);
+  api.get<Recommendation[]>("/superpowers/recommendations").then((r) => r.data);

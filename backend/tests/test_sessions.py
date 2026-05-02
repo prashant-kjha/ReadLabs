@@ -153,25 +153,31 @@ def test_submit_sowhat_returns_pending():
     assert r.json()["feedback_pending"] is True
 
 
-def test_jargon_lookup_returns_pending():
+def test_jargon_lookup_returns_explanation_synchronously():
+    """Jargon lookup is synchronous — it generates and returns the explanation
+    in the same request, so feedback_pending is always False."""
     student = {"sub": "s-1"}
     session = {"id": "sess-1", "assignment_id": "asn-1"}
     no_existing = None
-    inserted = [{"id": "jargon-1", "term": "rct", "explanation": None}]
+    inserted = [{"id": "jargon-1", "term": "rct", "explanation": "Randomized controlled trial."}]
 
     db = make_db(session, no_existing, inserted)
 
     app.dependency_overrides[require_student] = lambda: student
     app.dependency_overrides[get_db] = lambda: db
     try:
-        with patch("backend.routers.sessions._run_jargon_explanation", new=AsyncMock()):
+        with patch("backend.routers.sessions.generate_jargon_explanation",
+                   new_callable=AsyncMock, return_value="Randomized controlled trial."):
             r = client.post("/api/v1/sessions/sess-1/jargon",
                             json={"term": "RCT", "context_snippet": "...RCT was used..."})
     finally:
         app.dependency_overrides.clear()
 
     assert r.status_code == 200
-    assert r.json()["feedback_pending"] is True
+    body = r.json()
+    assert body["feedback_pending"] is False
+    assert body["term"] == "RCT"
+    assert "Randomized" in body["explanation"]
 
 
 def test_keyterm_returns_cached():

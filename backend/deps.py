@@ -39,7 +39,7 @@ async def _verify_token(token: str) -> dict:
         try:
             return jwt.decode(
                 token, key_data,
-                algorithms=["RS256", "ES256", "HS256"],
+                algorithms=["RS256", "ES256"],
                 options={"verify_aud": False},
             )
         except ExpiredSignatureError:

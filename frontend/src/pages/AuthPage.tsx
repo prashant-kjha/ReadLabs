@@ -7,16 +7,15 @@ import {
   BookOpen,
   Brain,
   Trophy,
-  GraduationCap,
   AlertCircle,
 } from "lucide-react";
 
 export default function AuthPage() {
   const [mode, setMode] = useState("signin");
-  const [role, setRole] = useState("teacher");
   const [form, setForm] = useState({ email: "", password: "", name: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -25,14 +24,22 @@ export default function AuthPage() {
     setError("");
     setLoading(true);
     try {
-      const endpoint = mode === "signup" ? "/auth/signup" : "/auth/signin";
-      const payload = mode === "signup"
-        ? { ...form, role }
-        : { email: form.email, password: form.password };
-
-      const { data } = await api.post(endpoint, payload);
-      login(data);
-      navigate(data.role === "teacher" ? "/teacher/papers" : "/student/dashboard");
+      if (mode === "signup") {
+        await api.post("/auth/signup", {
+          email: form.email,
+          password: form.password,
+          name: form.name,
+        });
+        setSignupSuccess(true);
+        toast.success("Account created. Check your email to confirm.");
+      } else {
+        const { data } = await api.post("/auth/signin", {
+          email: form.email,
+          password: form.password,
+        });
+        login(data);
+        navigate(data.role === "teacher" ? "/teacher/papers" : "/student/dashboard");
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
       setError(message);
@@ -45,6 +52,7 @@ export default function AuthPage() {
   const switchMode = (newMode: string) => {
     setMode(newMode);
     setError("");
+    setSignupSuccess(false);
   };
 
   return (
@@ -129,49 +137,25 @@ export default function AuthPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Role Selection (signup only) */}
-              {mode === "signup" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRole("teacher")}
-                    className={`card p-4 text-center transition-all cursor-pointer ${
-                      role === "teacher"
-                        ? "ring-2 ring-primary bg-primary/5"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <GraduationCap className={`h-8 w-8 mx-auto mb-2 ${
-                      role === "teacher" ? "text-primary" : "text-[var(--color-text-secondary)]"
-                    }`} />
-                    <span className={`text-sm font-medium ${
-                      role === "teacher" ? "text-primary" : "text-[var(--color-text-secondary)]"
-                    }`}>
-                      Teacher
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole("student")}
-                    className={`card p-4 text-center transition-all cursor-pointer ${
-                      role === "student"
-                        ? "ring-2 ring-primary bg-primary/5"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <BookOpen className={`h-8 w-8 mx-auto mb-2 ${
-                      role === "student" ? "text-primary" : "text-[var(--color-text-secondary)]"
-                    }`} />
-                    <span className={`text-sm font-medium ${
-                      role === "student" ? "text-primary" : "text-[var(--color-text-secondary)]"
-                    }`}>
-                      Student
-                    </span>
-                  </button>
+            {signupSuccess && mode === "signup" ? (
+              <div className="space-y-4">
+                <div className="rounded-lg bg-primary/10 p-4 text-sm text-[var(--color-text)]">
+                  <p className="font-medium mb-1">Check your email</p>
+                  <p className="text-[var(--color-text-secondary)]">
+                    We sent a confirmation link to <span className="font-medium">{form.email}</span>.
+                    Click it to activate your account, then log in below.
+                  </p>
                 </div>
-              )}
-
+                <button
+                  type="button"
+                  onClick={() => switchMode("signin")}
+                  className="btn-primary w-full"
+                >
+                  Go to Log In
+                </button>
+              </div>
+            ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name Field (signup only) */}
               {mode === "signup" && (
                 <div>
@@ -239,6 +223,7 @@ export default function AuthPage() {
                 {loading ? "Loading..." : mode === "signin" ? "Log In" : "Create Account"}
               </button>
             </form>
+            )}
 
             {/* Toggle Mode Link */}
             <p className="text-center text-sm text-[var(--color-text-secondary)] mt-5">

@@ -117,7 +117,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
           quizSubmitting={quizSubmitting}
           setQuizSubmitting={setQuizSubmitting}
           currentAssignmentId={currentAssignmentId}
-          lookupJargon={() => lookupJargon(previewMode)}
+          lookupJargon={(term: string) => lookupJargon(previewMode, term)}
           jargonExplanation={jargonExplanation}
           jargonPending={jargonPending}
           previewMode={previewMode}
