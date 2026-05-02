@@ -2,11 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from backend.db import get_db
 from backend.deps import require_teacher
 from backend.ai_provider import generate_reading_guide
-from backend.config import get_settings
 from backend.schemas.assignments import CreateAssignmentRequest, UpdateAssignmentRequest
 
 router = APIRouter()
-settings = get_settings()
 
 
 def _one(data):

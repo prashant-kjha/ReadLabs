@@ -13,7 +13,6 @@ from backend.config import get_settings
 from backend.db import get_db
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 bearer_scheme = HTTPBearer(auto_error=False)
 
 _jwks_cache: dict | None = None
@@ -23,7 +22,7 @@ async def _get_jwks() -> dict:
     global _jwks_cache
     if _jwks_cache:
         return _jwks_cache
-    url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+    url = f"{get_settings().supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
     async with httpx.AsyncClient(timeout=10) as client:
         r = await client.get(url)
         r.raise_for_status()

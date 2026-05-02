@@ -11,14 +11,13 @@ from backend.schemas.papers import PaperUploadResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-settings = get_settings()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
 
 
 async def _upload_to_storage(pdf_bytes: bytes, object_path: str) -> str:
     """Upload to Supabase Storage via httpx (no supabase-py dependency)."""
-    url = f"{settings.supabase_url}/storage/v1/object/papers/{object_path}"
+    url = f"{get_settings().supabase_url}/storage/v1/object/papers/{object_path}"
     headers = {**storage_headers(), "Content-Type": "application/pdf"}
     async with httpx.AsyncClient(timeout=60) as c:
         r = await c.post(url, headers=headers, content=pdf_bytes)
@@ -137,7 +136,7 @@ async def get_pdf_url(paper_id: str, user=Depends(require_student), db=Depends(g
     logger.info("pdf-url: generating signed URL for paper %s, path=%s", paper_id, object_path[:40])
 
     try:
-        url = f"{settings.supabase_url}/storage/v1/object/sign/papers/{object_path}"
+        url = f"{get_settings().supabase_url}/storage/v1/object/sign/papers/{object_path}"
         headers = {**storage_headers(), "Content-Type": "application/json"}
         async with httpx.AsyncClient(timeout=15) as c:
             r = await c.post(url, headers=headers, json={"expiresIn": "3600"})
@@ -145,7 +144,7 @@ async def get_pdf_url(paper_id: str, user=Depends(require_student), db=Depends(g
             logger.error("Signed URL failed: %s %s", r.status_code, r.text[:200])
             raise HTTPException(status_code=500, detail="Failed to generate PDF URL")
         signed_path = r.json()["signedURL"]
-        signed_url = f"{settings.supabase_url}/storage/v1{signed_path}"
+        signed_url = f"{get_settings().supabase_url}/storage/v1{signed_path}"
         logger.info("pdf-url: success, URL length=%d", len(signed_url))
         return {"url": signed_url}
     except HTTPException:

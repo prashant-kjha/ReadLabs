@@ -2,7 +2,6 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from backend.db import get_db
 from backend.deps import require_student, require_teacher
-from backend.config import get_settings
 from backend.rate_limit import limiter
 from backend.ai_provider import generate_checkpoint_feedback, generate_sowhat_feedback, generate_jargon_explanation
 from backend.schemas.sessions import (
@@ -14,7 +13,6 @@ from backend.schemas.sessions import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-settings = get_settings()
 
 
 # ── Core session endpoints ────────────────────────────────────────────────────

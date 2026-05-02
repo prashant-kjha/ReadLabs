@@ -13,7 +13,6 @@ from backend.schemas.library import FetchCoreRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-settings = get_settings()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
 
@@ -81,7 +80,7 @@ async def upload_paper(
 
     # Upload to Supabase Storage via httpx
     object_path = f"self-study/{user['sub']}/{uuid.uuid4()}.pdf"
-    storage_url = f"{settings.supabase_url}/storage/v1/object/papers/{object_path}"
+    storage_url = f"{get_settings().supabase_url}/storage/v1/object/papers/{object_path}"
     upload_headers = {**storage_headers(), "Content-Type": "application/pdf"}
     async with httpx.AsyncClient(timeout=60) as c:
         r = await c.post(storage_url, headers=upload_headers, content=pdf_bytes)

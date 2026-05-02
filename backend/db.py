@@ -9,25 +9,31 @@ import httpx
 from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
-POSTGREST = f"{settings.supabase_url}/rest/v1"
-AUTH_URL  = f"{settings.supabase_url}/auth/v1"
+
+def _postgrest_url() -> str:
+    return f"{get_settings().supabase_url}/rest/v1"
+
+
+def _auth_url() -> str:
+    return f"{get_settings().supabase_url}/auth/v1"
 
 
 def _admin_headers() -> dict:
+    s = get_settings()
     return {
-        "apikey": settings.supabase_service_role_key,
-        "Authorization": f"Bearer {settings.supabase_service_role_key}",
+        "apikey": s.supabase_service_role_key,
+        "Authorization": f"Bearer {s.supabase_service_role_key}",
         "Content-Type": "application/json",
         "Prefer": "return=representation",
     }
 
 
 def _anon_headers() -> dict:
+    s = get_settings()
     return {
-        "apikey": settings.supabase_anon_key,
-        "Authorization": f"Bearer {settings.supabase_anon_key}",
+        "apikey": s.supabase_anon_key,
+        "Authorization": f"Bearer {s.supabase_anon_key}",
         "Content-Type": "application/json",
     }
 
@@ -110,7 +116,7 @@ class QueryBuilder:
         return self
 
     async def execute(self) -> Result:
-        url = f"{POSTGREST}/{self._table}"
+        url = f"{_postgrest_url()}/{self._table}"
         try:
             client = get_shared_client()
             resp = await client.request(
@@ -148,7 +154,7 @@ class SupabaseDB:
     async def sign_up(self, email: str, password: str, full_name: str = "") -> dict:
         async with httpx.AsyncClient(timeout=15) as c:
             r = await c.post(
-                f"{AUTH_URL}/signup",
+                f"{_auth_url()}/signup",
                 headers=_anon_headers(),
                 json={"email": email, "password": password,
                       "data": {"full_name": full_name}},
@@ -158,7 +164,7 @@ class SupabaseDB:
     async def sign_in(self, email: str, password: str) -> dict:
         async with httpx.AsyncClient(timeout=15) as c:
             r = await c.post(
-                f"{AUTH_URL}/token?grant_type=password",
+                f"{_auth_url()}/token?grant_type=password",
                 headers=_anon_headers(),
                 json={"email": email, "password": password},
             )
@@ -166,17 +172,18 @@ class SupabaseDB:
 
     async def upload_file(self, bucket: str, path: str, content: bytes,
                           content_type: str = "application/pdf") -> str | None:
-        url = f"{settings.supabase_url}/storage/v1/object/{bucket}/{path}"
+        s = get_settings()
+        url = f"{s.supabase_url}/storage/v1/object/{bucket}/{path}"
         headers = {
-            "apikey": settings.supabase_service_role_key,
-            "Authorization": f"Bearer {settings.supabase_service_role_key}",
+            "apikey": s.supabase_service_role_key,
+            "Authorization": f"Bearer {s.supabase_service_role_key}",
             "Content-Type": content_type,
         }
         try:
             async with httpx.AsyncClient(timeout=60) as c:
                 r = await c.post(url, headers=headers, content=content)
             if r.status_code in (200, 201):
-                return f"{settings.supabase_url}/storage/v1/object/public/{bucket}/{path}"
+                return f"{s.supabase_url}/storage/v1/object/public/{bucket}/{path}"
         except Exception as e:
             logger.warning("Storage upload failed: %s", e)
         return None
@@ -209,7 +216,8 @@ def get_anon_db() -> SupabaseDB:
 
 
 def storage_headers() -> dict:
+    s = get_settings()
     return {
-        "apikey": settings.supabase_service_role_key,
-        "Authorization": f"Bearer {settings.supabase_service_role_key}",
+        "apikey": s.supabase_service_role_key,
+        "Authorization": f"Bearer {s.supabase_service_role_key}",
     }

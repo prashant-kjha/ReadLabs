@@ -9,14 +9,19 @@ from backend.schemas.auth import (
 )
 
 router = APIRouter()
-settings = get_settings()
 
-AUTH_URL = f"{settings.supabase_url}/auth/v1"
-ANON_HEADERS = {
-    "apikey": settings.supabase_anon_key,
-    "Authorization": f"Bearer {settings.supabase_anon_key}",
-    "Content-Type": "application/json",
-}
+
+def _auth_url() -> str:
+    return f"{get_settings().supabase_url}/auth/v1"
+
+
+def _anon_headers() -> dict:
+    s = get_settings()
+    return {
+        "apikey": s.supabase_anon_key,
+        "Authorization": f"Bearer {s.supabase_anon_key}",
+        "Content-Type": "application/json",
+    }
 
 
 @router.post("/signup", response_model=SignupResponse)
@@ -29,8 +34,8 @@ async def signup(request: Request, body: SignupRequest, db=Depends(get_db)):
     async with httpx.AsyncClient(timeout=15) as client:
         # Use the public signup endpoint so Supabase sends a confirmation email.
         r = await client.post(
-            f"{AUTH_URL}/signup",
-            headers=ANON_HEADERS,
+            f"{_auth_url()}/signup",
+            headers=_anon_headers(),
             json={
                 "email": body.email,
                 "password": body.password,
@@ -66,8 +71,8 @@ async def signup(request: Request, body: SignupRequest, db=Depends(get_db)):
 async def signin(request: Request, body: SigninRequest, db=Depends(get_db)):
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.post(
-            f"{AUTH_URL}/token?grant_type=password",
-            headers=ANON_HEADERS,
+            f"{_auth_url()}/token?grant_type=password",
+            headers=_anon_headers(),
             json={"email": body.email, "password": body.password},
         )
     if r.status_code >= 400:

@@ -9,14 +9,12 @@ from backend.ai_provider import (
     generate_quiz_questions,
     grade_short_answer,
 )
-from backend.config import get_settings
 from backend.schemas.superpowers import (
     CreateAnnotationRequest, UpdateAnnotationRequest,
     XpRequest, QuizAttemptRequest,
 )
 
 router = APIRouter()
-settings = get_settings()
 
 UTC = timezone.utc
 

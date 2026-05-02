@@ -3,7 +3,6 @@ import httpx
 from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
 CORE_SEARCH_URL = "https://api.core.ac.uk/v3/search/works"
 CORE_RECORD_URL = "https://api.core.ac.uk/v3/data-records"
@@ -33,7 +32,7 @@ async def search_core(query: str, limit: int = 20) -> list[dict]:
     Search CORE API for open-access papers matching query.
     Filters results by title relevance before returning.
     """
-    headers = {"Authorization": f"Bearer {settings.core_api_key}"}
+    headers = {"Authorization": f"Bearer {get_settings().core_api_key}"}
     params = {"q": query, "limit": limit, "offset": 0}
 
     async with httpx.AsyncClient(timeout=15) as client:
@@ -72,7 +71,7 @@ async def fetch_core_full_text(core_id: str, expected_title: str) -> dict | None
     Verifies fetched title matches expected_title before returning.
     Returns dict with title, authors, year, full_text or None if verification fails.
     """
-    headers = {"Authorization": f"Bearer {settings.core_api_key}"}
+    headers = {"Authorization": f"Bearer {get_settings().core_api_key}"}
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(f"{CORE_RECORD_URL}/{core_id}", headers=headers)
