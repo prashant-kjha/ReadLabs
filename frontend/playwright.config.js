@@ -11,7 +11,7 @@ module.exports = defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3001',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -21,11 +21,22 @@ module.exports = defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /mobile-subset\.spec\.js$/,
+    },
+    {
+      name: 'mobile',
+      use: { ...devices['iPhone SE'] },
+      testMatch: /mobile-subset\.spec\.js$/,
+    },
+    {
+      name: 'tablet',
+      use: { ...devices['iPad'] },
+      testMatch: /mobile-subset\.spec\.js$/,
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    port: 3000,
+    command: 'npm run dev -- --port 3001',
+    port: 3001,
     reuseExistingServer: true,
     timeout: 60000,
   },

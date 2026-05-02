@@ -44,6 +44,7 @@ export default function SectionsSidebar({
           onClick={() => setCollapsed(false)}
           className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] mb-2"
           title="Expand sections"
+          aria-label="Expand sections"
         >
           →
         </button>
@@ -101,7 +102,7 @@ export default function SectionsSidebar({
     <div className="w-52 shrink-0 bg-surface border-r border-border flex flex-col">
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
         <span className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider">Sections</span>
-        <button onClick={() => setCollapsed(true)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm">←</button>
+        <button onClick={() => setCollapsed(true)} aria-label="Collapse sections" className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm">←</button>
       </div>
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
         {sections.map((s, i) => {

@@ -156,7 +156,7 @@ export default function SelfStudyPage() {
         <h2 className="section-subheading mb-3">Recommended for You</h2>
         <div className="flex gap-3 overflow-x-auto pb-1">
           {recommendations.map(({ paper, assignment_id, reason }) => (
-            <div key={assignment_id} className="card p-4 shrink-0 w-64 flex flex-col">
+            <div key={assignment_id} className="card p-4 shrink-0 w-64 flex flex-col" data-testid="recommendation-card">
               <div className="flex items-start gap-2 mb-1">
                 <BookOpen className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[var(--color-text)] text-sm font-medium leading-snug">{paper.title}</p>
@@ -164,6 +164,7 @@ export default function SelfStudyPage() {
               <p className="text-[var(--color-text-secondary)] text-xs italic mb-3 flex-1">{reason}</p>
               <button onClick={() => startRecommendedPaper(assignment_id)}
                 disabled={fetching === assignment_id}
+                data-testid="recommendation-start-button"
                 className="btn-primary text-xs disabled:opacity-50">
                 {fetching === assignment_id ? "Starting..." : "Start Reading"}
               </button>
@@ -191,6 +192,8 @@ export default function SelfStudyPage() {
           type="file"
           accept=".pdf"
           className="hidden"
+          aria-hidden="true"
+          tabIndex={-1}
           onChange={handleUpload}
         />
       </div>
@@ -207,6 +210,7 @@ export default function SelfStudyPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search open-access papers..."
             className="input-field pl-9"
+            aria-label="Search open-access papers"
           />
         </div>
         <button

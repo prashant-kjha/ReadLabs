@@ -251,9 +251,9 @@ function SectionContent({ section, currentSection, currentAssignmentId, checkpoi
         <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">Look up a term</p>
         <div className="flex gap-2">
           <input type="text" placeholder="Enter term..." value={jargonTerm} onChange={(e) => setJargonTerm(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleJargonLookup(); }} className="input-field flex-1" />
+            onKeyDown={(e) => { if (e.key === "Enter") handleJargonLookup(); }} className="input-field flex-1" data-testid="jargon-input" />
           <button onClick={handleJargonLookup} disabled={!jargonTerm.trim()}
-            className="btn-secondary text-sm flex items-center gap-1 disabled:opacity-50"><Search className="w-3.5 h-3.5" /></button>
+            className="btn-secondary text-sm flex items-center gap-1 disabled:opacity-50" data-testid="jargon-lookup-button" aria-label="Look up term"><Search className="w-3.5 h-3.5" /></button>
         </div>
         {jargonPending && (
           <div className="mt-2 flex items-center gap-2 text-[var(--color-text-secondary)] text-sm">

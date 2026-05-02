@@ -164,6 +164,7 @@ export default function AuthPage() {
                   </label>
                   <input
                     id="name"
+                    name="name"
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -181,6 +182,7 @@ export default function AuthPage() {
                 </label>
                 <input
                   id="email"
+                  name="email"
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -197,6 +199,7 @@ export default function AuthPage() {
                 </label>
                 <input
                   id="password"
+                  name="password"
                   type="password"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}

@@ -62,6 +62,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setSectionsCollapsed(!sectionsCollapsed)}
+            data-testid="sections-toggle"
             className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-xs border border-border rounded px-2 py-1 transition-colors flex items-center gap-1"
           >
             <PanelLeftClose className="w-3 h-3" />
