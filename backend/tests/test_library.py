@@ -67,15 +67,23 @@ def test_library_upload_creates_paper_and_assignment():
         setattr(db, attr, MagicMock(return_value=db))
     db.execute = mock_execute
 
+    # Mock the Supabase Storage POST so we don't try to hit a real URL.
+    fake_storage_response = MagicMock(status_code=200, text="")
+    fake_client = MagicMock()
+    fake_client.__aenter__ = AsyncMock(return_value=fake_client)
+    fake_client.__aexit__ = AsyncMock(return_value=None)
+    fake_client.post = AsyncMock(return_value=fake_storage_response)
+
     app.dependency_overrides[require_student] = lambda: student
     app.dependency_overrides[get_db] = lambda: db
     try:
         with patch("backend.routers.library._process_self_study"), \
-             patch("asyncio.to_thread"):
+             patch("asyncio.to_thread"), \
+             patch("backend.routers.library.httpx.AsyncClient", return_value=fake_client):
             response = client.post(
                 "/api/v1/library/upload",
                 files={"file": ("paper.pdf", pdf_bytes, "application/pdf")},
-                data={"title": "Test Paper", "category": "Computer Science"},
+                data={"title": "Test Paper"},
             )
     finally:
         app.dependency_overrides.clear()
