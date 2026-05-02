@@ -2,11 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from backend.db import get_db
 from backend.deps import require_teacher
 from backend.ai_provider import generate_class_insights
+from backend.schemas.dashboard import (
+    ClassProgressResponse,
+    StudentResponsesResponse,
+    AssignmentInsightsResponse,
+)
 
 router = APIRouter()
 
 
-@router.get("/classes/{class_id}/progress")
+@router.get("/classes/{class_id}/progress", response_model=ClassProgressResponse, response_model_by_alias=True)
 async def get_class_progress(class_id: str, user=Depends(require_teacher), db=Depends(get_db)):
     """
     Return all students in the class and their progress on each published assignment.
@@ -54,7 +59,7 @@ async def get_class_progress(class_id: str, user=Depends(require_teacher), db=De
     }
 
 
-@router.get("/assignments/{assignment_id}/students/{student_id}/responses")
+@router.get("/assignments/{assignment_id}/students/{student_id}/responses", response_model=StudentResponsesResponse)
 async def get_student_responses(
     assignment_id: str,
     student_id: str,
@@ -95,7 +100,7 @@ async def get_student_responses(
     }
 
 
-@router.get("/assignments/{assignment_id}/insights")
+@router.get("/assignments/{assignment_id}/insights", response_model=AssignmentInsightsResponse)
 async def get_insights(assignment_id: str, user=Depends(require_teacher), db=Depends(get_db)):
     """
     Return class-wide insights for this assignment.

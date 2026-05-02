@@ -9,6 +9,9 @@ from backend.schemas.sessions import (
     SoWhatRequest, JargonRequest, KeyTermRequest,
     PreviewCheckpointRequest, PreviewSoWhatRequest,
     PreviewJargonRequest, PreviewKeyTermRequest,
+    SessionStartResponse, SessionListItem, SessionDetailResponse,
+    CheckpointPendingResponse, SoWhatPendingResponse,
+    JargonResponse, KeyTermResponse, ProgressUpdateResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -17,7 +20,7 @@ router = APIRouter()
 
 # ── Core session endpoints ────────────────────────────────────────────────────
 
-@router.post("/")
+@router.post("/", response_model=SessionStartResponse)
 async def start_session(body: StartSessionRequest, user=Depends(require_student), db=Depends(get_db)):
     assignment = await db.from_("assignments") \
         .select("id, class_id, paper_id, reading_guide, difficulty, status") \
@@ -75,7 +78,7 @@ async def start_session(body: StartSessionRequest, user=Depends(require_student)
     }
 
 
-@router.get("/")
+@router.get("/", response_model=list[SessionListItem])
 async def list_sessions(user=Depends(require_student), db=Depends(get_db)):
     result = await db.from_("student_sessions") \
         .select("id, assignment_id, status, current_section_index") \
@@ -83,7 +86,7 @@ async def list_sessions(user=Depends(require_student), db=Depends(get_db)):
     return result.data or []
 
 
-@router.get("/{session_id}")
+@router.get("/{session_id}", response_model=SessionDetailResponse)
 async def get_session(session_id: str, user=Depends(require_student), db=Depends(get_db)):
     session = await db.from_("student_sessions") \
         .select("id, assignment_id, status, current_section_index") \
@@ -111,7 +114,7 @@ async def get_session(session_id: str, user=Depends(require_student), db=Depends
     }
 
 
-@router.patch("/{session_id}/progress")
+@router.patch("/{session_id}/progress", response_model=ProgressUpdateResponse)
 async def update_progress(session_id: str, body: ProgressRequest, user=Depends(require_student), db=Depends(get_db)):
     result = await db.from_("student_sessions") \
         .update({"current_section_index": body.current_section_index}) \
@@ -158,7 +161,7 @@ async def _run_jargon_explanation(
 
 # ── Checkpoint ────────────────────────────────────────────────────────────────
 
-@router.post("/{session_id}/checkpoint")
+@router.post("/{session_id}/checkpoint", response_model=CheckpointPendingResponse)
 @limiter.limit("30/minute")
 async def submit_checkpoint(
     request: Request,
@@ -202,7 +205,7 @@ async def submit_checkpoint(
 
 # ── So What? ─────────────────────────────────────────────────────────────────
 
-@router.post("/{session_id}/sowhat")
+@router.post("/{session_id}/sowhat", response_model=SoWhatPendingResponse)
 @limiter.limit("20/minute")
 async def submit_sowhat(
     request: Request,
@@ -294,7 +297,7 @@ async def preview_keyterm(body: PreviewKeyTermRequest, user=Depends(require_teac
 
 # ── Jargon lookup (ad-hoc, async) ────────────────────────────────────────────
 
-@router.post("/{session_id}/jargon")
+@router.post("/{session_id}/jargon", response_model=JargonResponse)
 @limiter.limit("60/minute")
 async def lookup_jargon(
     request: Request,
@@ -339,7 +342,7 @@ async def lookup_jargon(
 
 # ── Key term lookup (cached, near-synchronous) ────────────────────────────────
 
-@router.post("/{session_id}/keyterm")
+@router.post("/{session_id}/keyterm", response_model=KeyTermResponse)
 @limiter.limit("60/minute")
 async def lookup_keyterm(
     request: Request,

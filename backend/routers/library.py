@@ -9,7 +9,13 @@ from backend.services.core_api import search_core, fetch_core_full_text
 from backend.ai_provider import generate_reading_guide
 from backend.config import get_settings
 from backend.rate_limit import limiter
-from backend.schemas.library import FetchCoreRequest
+from backend.schemas.library import (
+    FetchCoreRequest,
+    LibraryUploadResponse,
+    LibraryStatusResponse,
+    LibraryPaperResponse,
+    CoreSearchResult,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -54,7 +60,7 @@ async def _process_self_study(
         }).eq("id", assignment_id).execute()
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=LibraryUploadResponse)
 @limiter.limit("10/hour")
 async def upload_paper(
     request: Request,
@@ -63,7 +69,7 @@ async def upload_paper(
     title: str = Form(default=""),
     user=Depends(require_student),
     db=Depends(get_db),
-) -> dict:
+):
     """Student uploads a PDF for self-study. Auto-generates reading guide."""
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are accepted")
@@ -127,8 +133,8 @@ async def upload_paper(
     }
 
 
-@router.get("/status/{assignment_id}")
-async def get_status(assignment_id: str, user=Depends(require_student), db=Depends(get_db)) -> dict:
+@router.get("/status/{assignment_id}", response_model=LibraryStatusResponse)
+async def get_status(assignment_id: str, user=Depends(require_student), db=Depends(get_db)):
     """Poll reading guide generation status."""
     result = await db.from_("assignments") \
         .select("id, status, reading_guide, difficulty") \
@@ -138,7 +144,7 @@ async def get_status(assignment_id: str, user=Depends(require_student), db=Depen
     return result.data
 
 
-@router.get("/search")
+@router.get("/search", response_model=list[CoreSearchResult])
 async def search_papers(q: str = "", user=Depends(require_student)):
     """Search CORE API for open-access papers. Results are title-verified."""
     if not q.strip():
@@ -147,7 +153,7 @@ async def search_papers(q: str = "", user=Depends(require_student)):
     return results
 
 
-@router.get("/browse")
+@router.get("/browse", response_model=list[LibraryPaperResponse])
 async def browse_papers(
     category: str = "",
     limit: int = 20,

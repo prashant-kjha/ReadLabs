@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
-from typing import Optional
 from backend.db import get_db
 from backend.deps import require_student
 from backend.rate_limit import limiter
@@ -12,6 +11,9 @@ from backend.ai_provider import (
 from backend.schemas.superpowers import (
     CreateAnnotationRequest, UpdateAnnotationRequest,
     XpRequest, QuizAttemptRequest,
+    ReadingStatsResponse, XpResultResponse,
+    QuizQuestionResponse, QuizAttemptResponse,
+    RecommendationResponse,
 )
 
 router = APIRouter()
@@ -174,7 +176,7 @@ async def get_critical_prompt(
 
 # ── Quiz ─────────────────────────────────────────────────────────────────────
 
-@router.get("/quiz/{assignment_id}")
+@router.get("/quiz/{assignment_id}", response_model=list[QuizQuestionResponse])
 async def get_quiz(assignment_id: str, user=Depends(require_student), db=Depends(get_db)):
     session = await db.from_("student_sessions").select("id") \
         .eq("assignment_id", assignment_id).eq("student_id", user["sub"]).single().execute()
@@ -219,7 +221,7 @@ async def generate_quiz(request: Request, assignment_id: str, user=Depends(requi
     return result.data or []
 
 
-@router.post("/quiz/attempt")
+@router.post("/quiz/attempt", response_model=QuizAttemptResponse)
 @limiter.limit("30/hour")
 async def submit_quiz_attempt(request: Request, body: QuizAttemptRequest, user=Depends(require_student), db=Depends(get_db)):
     session = await db.from_("student_sessions").select("id") \
@@ -275,7 +277,7 @@ async def submit_quiz_attempt(request: Request, body: QuizAttemptRequest, user=D
 
 # ── Reading Stats ──────────────────────────────────────────────────────────────
 
-@router.get("/stats")
+@router.get("/stats", response_model=ReadingStatsResponse)
 async def get_stats(user=Depends(require_student), db=Depends(get_db)):
     result = await db.from_("reading_stats").select("*") \
         .eq("student_id", user["sub"]).single().execute()
@@ -289,7 +291,7 @@ async def get_stats(user=Depends(require_student), db=Depends(get_db)):
     return result.data
 
 
-@router.post("/stats/xp")
+@router.post("/stats/xp", response_model=XpResultResponse)
 async def add_xp(body: XpRequest, user=Depends(require_student), db=Depends(get_db)):
     if body.action not in XP_BY_ACTION:
         raise HTTPException(status_code=400, detail=f"Unknown action: {body.action}")
@@ -359,7 +361,7 @@ async def add_xp(body: XpRequest, user=Depends(require_student), db=Depends(get_
 
 # ── Recommendations ────────────────────────────────────────────────────────────
 
-@router.get("/recommendations")
+@router.get("/recommendations", response_model=list[RecommendationResponse])
 async def get_recommendations(user=Depends(require_student), db=Depends(get_db)):
     """Recommend self-study papers the user has uploaded but not yet started reading.
 

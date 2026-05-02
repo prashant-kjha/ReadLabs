@@ -66,7 +66,7 @@ def test_get_student_responses_returns_checkpoints():
     ]
     sowhat_data = None
 
-    db = make_db(asn_data, cls_data, session_data, checkpoints, [])
+    db = make_db(asn_data, cls_data, session_data, checkpoints, None)
 
     app.dependency_overrides[require_teacher] = lambda: teacher
     app.dependency_overrides[get_db] = lambda: db
