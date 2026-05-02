@@ -249,3 +249,73 @@ def test_start_session_self_study_skips_enrollment():
 
     assert r.status_code == 200
     assert r.json()["session_id"] == "sess-1"
+
+
+# ── Session-start race / regression tests (added 2026-05-02) ───────────────
+
+
+def test_session_start_returns_existing_on_409():
+    """
+    When a session already exists, the insert returns status 409 and we
+    fall back to fetching the existing row, preserving current_section_index.
+    """
+    student = {"sub": "student-uuid-1"}
+    assignment = {
+        "id": "asn-1",
+        "class_id": "class-1",
+        "paper_id": "paper-1",
+        "reading_guide": {"sections": []},
+        "difficulty": "intermediate",
+        "status": "published",
+    }
+    enrollment = {"class_id": "class-1"}
+    paper = {"title": "Test Paper"}
+    existing_session = {"id": "existing-sess-uuid", "status": "in_progress", "current_section_index": 5}
+
+    # Sequence of execute results for start_session:
+    # 1. assignment lookup → assignment
+    # 2. enrollment lookup → enrollment
+    # 3. INSERT into student_sessions → 409 (returns None data, status_code=409)
+    # 4. SELECT existing session → existing_session
+    # 5. paper title lookup → paper
+    db = make_db(assignment, enrollment, (None, 409), existing_session, paper)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        response = client.post("/api/v1/sessions/", json={"assignment_id": "asn-1"})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["session_id"] == "existing-sess-uuid"
+    # CRITICAL regression guard: progress must be preserved
+    assert body["current_section_index"] == 5
+
+
+def test_session_start_db_error_returns_500_not_silent_fetch():
+    """Non-409 DB error must surface as 500, not silently fetch wrong row."""
+    student = {"sub": "student-uuid-1"}
+    assignment = {
+        "id": "asn-1",
+        "class_id": "class-1",
+        "paper_id": "paper-1",
+        "reading_guide": {"sections": []},
+        "difficulty": "intermediate",
+        "status": "published",
+    }
+    enrollment = {"class_id": "class-1"}
+
+    # Insert returns 503 (server error) — must NOT fall back to fetch
+    db = make_db(assignment, enrollment, (None, 503))
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        response = client.post("/api/v1/sessions/", json={"assignment_id": "asn-1"})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 500
+    assert "Failed to create session" in response.json()["detail"]
