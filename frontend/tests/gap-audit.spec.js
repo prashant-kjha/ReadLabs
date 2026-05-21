@@ -143,37 +143,40 @@ test.describe('Auth Page - Decorative Panel', () => {
 test.describe('Landing Page - Browser Mockup', () => {
   test('shows URL bar in browser mockup', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('readlab.ai / paper / nature-2024-cell-biology')).toBeVisible();
+    await expect(page.getByText('readlab.ai / student / read / neural-networks-biology')).toBeVisible();
   });
 
-  test('shows section progress indicator', async ({ page }) => {
+  test('shows sections sidebar with Introduction', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Section 1 of 6')).toBeVisible();
-    await expect(page.getByText('33%')).toBeVisible();
+    const urlBar = page.getByText('readlab.ai / student / read / neural-networks-biology');
+    const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
+    await expect(mockup.getByText('Sections', { exact: true })).toBeVisible();
+    await expect(mockup.getByText('Introduction')).toBeVisible();
   });
 
-  test('shows reading level pills in mockup', async ({ page }) => {
+  test('shows structure guide pills in mockup', async ({ page }) => {
     await page.goto('/');
-    // High School pill should be active (bg-primary)
-    await expect(page.locator('.bg-primary.text-white.rounded-full', { hasText: 'High School' })).toBeVisible();
+    const urlBar = page.getByText('readlab.ai / student / read / neural-networks-biology');
+    const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
+    await expect(mockup.getByText('Structure Guide')).toBeVisible();
+    await expect(mockup.getByText('2I')).toBeVisible();
   });
 
-  test('shows guiding question box in mockup', async ({ page }) => {
+  test('shows AI guidance panel with guiding questions in mockup', async ({ page }) => {
     await page.goto('/');
-    // The mockup browser window contains "Guiding Question" text
-    // Use the URL bar text to scope to the mockup, then find the guiding question label
-    const urlBarText = page.getByText('readlab.ai / paper / nature-2024-cell-biology');
-    // The Guiding Question is in the same parent mockup component
-    const mockupParent = urlBarText.locator('..').locator('..');
-    await expect(mockupParent.getByText('Guiding Question')).toBeVisible();
+    const urlBar = page.getByText('readlab.ai / student / read / neural-networks-biology');
+    const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
+    await expect(mockup.getByText('AI Guidance')).toBeVisible();
+    await expect(mockup.getByText('Guiding Questions')).toBeVisible();
   });
 
   test('shows traffic light dots in mockup title bar', async ({ page }) => {
     await page.goto('/');
-    // Three colored dots
-    await expect(page.locator('.bg-red-400.rounded-full')).toBeVisible();
-    await expect(page.locator('.bg-amber-400.rounded-full')).toBeVisible();
-    await expect(page.locator('.bg-emerald-400.rounded-full')).toBeVisible();
+    const urlBar = page.getByText('readlab.ai / student / read / neural-networks-biology');
+    const titleBar = urlBar.locator('xpath=parent::div');
+    await expect(titleBar.locator('.bg-red-400')).toBeVisible();
+    await expect(titleBar.locator('.bg-amber-400')).toBeVisible();
+    await expect(titleBar.locator('.bg-emerald-400')).toBeVisible();
   });
 });
 
@@ -413,7 +416,7 @@ test.describe('Student - Reading Page Quiz E2E', () => {
             current_section_index: 0,
             reading_guide: {
               sections: [
-                { title: 'Intro', text: 'text', guiding_questions: ['Q?'], section_type: 'Introduction', key_terms: [], simplifications: {} },
+                { title: 'Intro', text: 'text', guiding_questions: ['Q?'], section_type: 'Introduction', key_terms: [] },
               ],
             },
             checkpoints: [
@@ -450,9 +453,6 @@ test.describe('Student - Reading Page Quiz E2E', () => {
       }
       if (url.includes('/superpowers/stats')) {
         return route.fulfill({ json: { level: 1, xp: 0, current_streak: 0 } });
-      }
-      if (url.includes('/superpowers/annotations')) {
-        return route.fulfill({ json: [] });
       }
       if (url.includes('/superpowers/xp')) {
         return route.fulfill({ json: { xp_added: 10 } });
@@ -500,18 +500,13 @@ test.describe('Student - Reading Page Quiz E2E', () => {
 
   test('quiz shows Generating... state while loading', async ({ page }) => {
     setupQuizSession(page);
-    // Override quiz generation to delay
-    await page.route('**/api/v1/superpowers/**/quiz*', async (route) => {
-      if (route.request().url().includes('/generate')) {
-        await new Promise((r) => setTimeout(r, 2000));
-        return route.fulfill({
-          json: [{ id: 'q1', question_text: 'Q?', question_type: 'short_answer' }],
-        });
-      }
-      if (route.request().method() === 'GET') {
-        return route.fulfill({ json: [] });
-      }
-      return route.fulfill({ json: [] });
+    // Override the /generate route to delay the response so the loading state is observable.
+    // Pattern must match the actual generate URL: /api/v1/superpowers/quiz/<id>/generate
+    await page.route('**/superpowers/quiz/**/generate', async (route) => {
+      await new Promise((r) => setTimeout(r, 2000));
+      return route.fulfill({
+        json: [{ id: 'q1', question_text: 'Q?', question_type: 'short_answer' }],
+      });
     });
 
     await loginAsStudent(page);
@@ -567,8 +562,8 @@ test.describe('Student - Reading Page Advance Links', () => {
             current_section_index: 0,
             reading_guide: {
               sections: [
-                { title: 'Intro', text: 'text', guiding_questions: ['Q?'], section_type: 'Introduction', key_terms: [], simplifications: {} },
-                { title: 'Methods', text: 'text2', guiding_questions: ['Q2?'], section_type: 'Methods', key_terms: [], simplifications: {} },
+                { title: 'Intro', text: 'text', guiding_questions: ['Q?'], section_type: 'Introduction', key_terms: [] },
+                { title: 'Methods', text: 'text2', guiding_questions: ['Q2?'], section_type: 'Methods', key_terms: [] },
               ],
             },
             checkpoints: [
@@ -601,9 +596,9 @@ test.describe('Student - Reading Page Advance Links', () => {
             current_section_index: 2,
             reading_guide: {
               sections: [
-                { title: 'Intro', text: 't', guiding_questions: [], section_type: 'Introduction', key_terms: [], simplifications: {} },
-                { title: 'Methods', text: 't', guiding_questions: [], section_type: 'Methods', key_terms: [], simplifications: {} },
-                { title: 'Results', text: 't', guiding_questions: [], section_type: 'Results', key_terms: [], simplifications: {} },
+                { title: 'Intro', text: 't', guiding_questions: [], section_type: 'Introduction', key_terms: [] },
+                { title: 'Methods', text: 't', guiding_questions: [], section_type: 'Methods', key_terms: [] },
+                { title: 'Results', text: 't', guiding_questions: [], section_type: 'Results', key_terms: [] },
               ],
             },
             checkpoints: [
@@ -657,7 +652,7 @@ test.describe('Student - Reading Page Pending Polling', () => {
             current_section_index: 0,
             reading_guide: {
               sections: [
-                { title: 'Intro', text: 'This paper explores neural networks.', guiding_questions: ['Q?'], section_type: 'Introduction', key_terms: [], simplifications: {} },
+                { title: 'Intro', text: 'This paper explores neural networks.', guiding_questions: ['Q?'], section_type: 'Introduction', key_terms: [] },
               ],
             },
             checkpoints: [],
@@ -686,9 +681,6 @@ test.describe('Student - Reading Page Pending Polling', () => {
       const url = route.request().url();
       if (url.includes('/superpowers/xp')) {
         return route.fulfill({ json: { xp_added: 10 } });
-      }
-      if (url.includes('/superpowers/annotations')) {
-        return route.fulfill({ json: [] });
       }
       if (url.includes('/superpowers/stats')) {
         return route.fulfill({ json: { level: 1, xp: 0, current_streak: 0 } });

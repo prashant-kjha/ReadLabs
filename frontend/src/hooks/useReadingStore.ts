@@ -134,7 +134,12 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   quizGenerating: false,
   quizSubmitting: false,
   sectionsCollapsed: localStorage.getItem("readlab_sections_collapsed") === "true",
-  aiPanelWidth: parseInt(localStorage.getItem("readlab_ai_panel_width") || "340", 10),
+  aiPanelWidth: (() => {
+    const stored = localStorage.getItem("readlab_ai_panel_width");
+    if (stored) return parseInt(stored, 10);
+    localStorage.setItem("readlab_ai_panel_width", "340");
+    return 340;
+  })(),
   aiPanelVisible: true,
   _pollIntervalId: null,
 

@@ -35,16 +35,16 @@ test.describe('Landing Page', () => {
 
   test('displays the features grid with 6 features', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Guided Reading' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'ELI5 Mode' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Annotations & Highlights' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Checkpoints' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jargon Lookup' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Comprehension Quizzes' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Streaks & XP' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Methodology Decoder' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Critical Thinking' })).toBeVisible();
   });
 
   test('shows For Teachers and For Students sections', async ({ page }) => {
-    await expect(page.getByText('For Teachers')).toBeVisible();
-    await expect(page.getByText('For Students')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'For Teachers' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'For Students' })).toBeVisible();
   });
 
   test('displays testimonials section', async ({ page }) => {

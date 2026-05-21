@@ -23,11 +23,11 @@ test.describe('Landing Page - Extended', () => {
   test('each feature card has a description', async ({ page }) => {
     const descriptions = [
       'Section-by-section guiding questions tell you what to look for before you read.',
-      'Toggle between Original, Undergrad, High School, and ELI5 text levels.',
-      'Highlight text, categorize by importance, and get AI Socratic prompts.',
-      'Multiple choice + short answer quizzes graded by AI after reading.',
+      'Write responses at each section and get instant AI feedback on your understanding.',
+      'Look up any scientific term and get a plain-language explanation instantly.',
+      'Multiple choice and short answer quizzes graded by AI after reading.',
+      'Targeted prompts that push you to analyze, evaluate, and think deeper about each section.',
       'Earn XP for every section, checkpoint, and quiz. Build your reading streak.',
-      'Understand study designs, sample sizes, and statistical tests in plain language.',
     ];
     for (const desc of descriptions) {
       await expect(page.getByText(desc)).toBeVisible();
@@ -42,20 +42,21 @@ test.describe('Landing Page - Extended', () => {
   });
 
   test('teacher section has 4 checklist items', async ({ page }) => {
+    const forTeachers = page.getByRole('heading', { name: 'For Teachers' }).locator('xpath=ancestor::div[contains(@class, "card-hover")]');
     const teacherChecks = [
       'Upload papers and assign them to your classes',
       'Review student responses and reading progress',
       'Get class-wide insights and analytics',
-      'Customize reading levels for different groups',
+      'Manage classes with join codes and student rosters',
     ];
     for (const item of teacherChecks) {
-      await expect(page.getByText(item)).toBeVisible();
+      await expect(forTeachers.getByText(item)).toBeVisible();
     }
   });
 
   test('student section has 4 checklist items', async ({ page }) => {
     const studentChecks = [
-      'Self-study library with hundreds of papers',
+      'Self-study library with open-access research papers',
       'Guided reading with AI-powered assistance',
       'Interactive quizzes to test understanding',
       'Earn XP and build your reading streak',
@@ -83,7 +84,7 @@ test.describe('Landing Page - Extended', () => {
 
   test('how it works shows step descriptions', async ({ page }) => {
     await expect(page.getByText('Paste a URL or upload a PDF')).toBeVisible();
-    await expect(page.getByText('Guiding questions, reading levels, and quizzes')).toBeVisible();
+    await expect(page.getByText('Guiding questions, checkpoints, and quizzes')).toBeVisible();
     await expect(page.getByText('Work through each section with AI prompts')).toBeVisible();
   });
 });
