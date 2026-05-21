@@ -152,7 +152,12 @@ export default function Layout() {
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 top-14 z-40 md:hidden">
+        <div
+          className="fixed inset-0 top-14 z-40 md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+        >
           <div className="absolute inset-0 bg-surface/95 backdrop-blur-sm border-b border-border" />
           <nav className="relative p-4 space-y-1">
             {links.map(({ to, label, icon: Icon }) => (
@@ -189,8 +194,8 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="pt-14">
+      {/* Main Content (made inert while the mobile menu overlay is open) */}
+      <main className="pt-14" inert={mobileMenuOpen}>
         <Outlet />
       </main>
     </div>
