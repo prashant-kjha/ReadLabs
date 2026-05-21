@@ -20,7 +20,6 @@ async def _process_assignment(assignment_id: str, extracted_text: str, figure_co
     try:
         full_result = await generate_reading_guide(extracted_text, figure_count)
 
-        methodology_elements = full_result.pop("methodology_elements", [])
         critical_prompts = full_result.pop("critical_prompts", [])
 
         await db.from_("assignments").update({
@@ -28,11 +27,6 @@ async def _process_assignment(assignment_id: str, extracted_text: str, figure_co
             "difficulty": full_result.get("difficulty", "intermediate"),
             "status": "draft",
         }).eq("id", assignment_id).execute()
-
-        if methodology_elements:
-            for elem in methodology_elements:
-                elem["assignment_id"] = assignment_id
-            await db.from_("methodology_elements").insert(methodology_elements).execute()
 
         if critical_prompts:
             for prompt in critical_prompts:

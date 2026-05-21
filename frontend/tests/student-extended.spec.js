@@ -1,7 +1,7 @@
 /**
  * ReadLabAI - Student Extended Tests
  * Tests empty/loading states, join flow, category switching, self-study features,
- * Reading Page: preview mode, So What?, quiz flow, annotations, jargon, methodology,
+ * Reading Page: preview mode, So What?, quiz flow, jargon,
  * skip/advance, structure coach, locked sections, layout persistence.
  */
 const { test, expect } = require('@playwright/test');
@@ -384,8 +384,8 @@ test.describe('Student - Reading Page So What? Section', () => {
             reading_guide: {
               difficulty: 'intermediate',
               sections: [
-                { title: 'Introduction', section_type: 'Introduction', text: 'Intro text', guiding_questions: ['Q1?'], key_terms: [], teacher_notes: '', simplifications: {} },
-                { title: 'Methods', section_type: 'Methods', text: 'Methods text', guiding_questions: ['Q2?'], key_terms: [], teacher_notes: '', simplifications: {} },
+                { title: 'Introduction', section_type: 'Introduction', text: 'Intro text', guiding_questions: ['Q1?'], key_terms: [], teacher_notes: '' },
+                { title: 'Methods', section_type: 'Methods', text: 'Methods text', guiding_questions: ['Q2?'], key_terms: [], teacher_notes: '' },
               ],
             },
             checkpoints: [
@@ -455,7 +455,7 @@ test.describe('Student - Reading Page Quiz Section', () => {
             reading_guide: {
               difficulty: 'intermediate',
               sections: [
-                { title: 'Introduction', section_type: 'Introduction', text: 'Intro text', guiding_questions: ['Q1?'], key_terms: [], teacher_notes: '', simplifications: {} },
+                { title: 'Introduction', section_type: 'Introduction', text: 'Intro text', guiding_questions: ['Q1?'], key_terms: [], teacher_notes: '' },
               ],
             },
             checkpoints: [
@@ -537,8 +537,8 @@ test.describe('Student - Reading Page AI Feedback', () => {
             reading_guide: {
               difficulty: 'intermediate',
               sections: [
-                { title: 'Introduction', section_type: 'Introduction', text: 'Intro', guiding_questions: ['Q?'], key_terms: [], teacher_notes: '', simplifications: {} },
-                { title: 'Methods', section_type: 'Methods', text: 'Methods', guiding_questions: ['Q2?'], key_terms: [], teacher_notes: '', simplifications: {} },
+                { title: 'Introduction', section_type: 'Introduction', text: 'Intro', guiding_questions: ['Q?'], key_terms: [], teacher_notes: '' },
+                { title: 'Methods', section_type: 'Methods', text: 'Methods', guiding_questions: ['Q2?'], key_terms: [], teacher_notes: '' },
               ],
             },
             checkpoints: [
@@ -579,9 +579,9 @@ test.describe('Student - Reading Page Section Navigation Flow', () => {
             reading_guide: {
               difficulty: 'intermediate',
               sections: [
-                { title: 'Introduction', section_type: 'Introduction', text: 'This paper explores the intersection of neural networks and biological systems.', guiding_questions: ['What is the main research question?', 'Why is this topic important?'], key_terms: ['neural network'], teacher_notes: '', simplifications: {} },
-                { title: 'Methods', section_type: 'Methods', text: 'We employed a mixed-methods approach.', guiding_questions: ['What methodology was used?'], key_terms: ['mixed-methods'], teacher_notes: '', simplifications: {} },
-                { title: 'Results', section_type: 'Results', text: 'Our findings show improvements.', guiding_questions: ['What were the key findings?'], key_terms: ['accuracy'], teacher_notes: '', simplifications: {} },
+                { title: 'Introduction', section_type: 'Introduction', text: 'This paper explores the intersection of neural networks and biological systems.', guiding_questions: ['What is the main research question?', 'Why is this topic important?'], key_terms: ['neural network'], teacher_notes: '' },
+                { title: 'Methods', section_type: 'Methods', text: 'We employed a mixed-methods approach.', guiding_questions: ['What methodology was used?'], key_terms: ['mixed-methods'], teacher_notes: '' },
+                { title: 'Results', section_type: 'Results', text: 'Our findings show improvements.', guiding_questions: ['What were the key findings?'], key_terms: ['accuracy'], teacher_notes: '' },
               ],
             },
             checkpoints: [

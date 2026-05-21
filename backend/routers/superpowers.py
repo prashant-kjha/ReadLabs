@@ -1,15 +1,13 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
+from fastapi import APIRouter, HTTPException, Depends, Request
 from backend.db import get_db
 from backend.deps import require_student
 from backend.rate_limit import limiter
 from backend.ai_provider import (
-    generate_annotation_socratic_prompt,
     generate_quiz_questions,
     grade_short_answer,
 )
 from backend.schemas.superpowers import (
-    CreateAnnotationRequest, UpdateAnnotationRequest,
     XpRequest, QuizAttemptRequest,
     ReadingStatsResponse, XpResultResponse,
     QuizQuestionResponse, QuizAttemptResponse,
@@ -40,121 +38,6 @@ def compute_level(xp: int) -> int:
         if xp >= threshold:
             level = i + 1
     return level
-
-
-# ── Annotations ───────────────────────────────────────────────────────────────
-
-@router.get("/annotations/{session_id}")
-async def list_annotations(session_id: str, user=Depends(require_student), db=Depends(get_db)):
-    session = await db.from_("student_sessions").select("id") \
-        .eq("id", session_id).eq("student_id", user["sub"]).single().execute()
-    if not session.data:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    result = await db.from_("annotations").select("*") \
-        .eq("session_id", session_id).execute()
-    return result.data or []
-
-
-@router.post("/annotations")
-async def create_annotation(body: CreateAnnotationRequest, user=Depends(require_student), db=Depends(get_db)):
-    session = await db.from_("student_sessions").select("id") \
-        .eq("id", body.session_id).eq("student_id", user["sub"]).single().execute()
-    if not session.data:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    result = await db.from_("annotations").insert({
-        "session_id": body.session_id,
-        "section_index": body.section_index,
-        "start_char": body.start_char,
-        "end_char": body.end_char,
-        "highlight_text": body.highlight_text,
-        "color": body.color,
-        "category": body.category,
-    }).execute()
-    if not result.data:
-        raise HTTPException(status_code=500, detail="Failed to save annotation")
-    return result.data[0]
-
-
-@router.patch("/annotations/{annotation_id}")
-async def update_annotation(
-    annotation_id: str, body: UpdateAnnotationRequest,
-    user=Depends(require_student), db=Depends(get_db),
-):
-    annotation = await db.from_("annotations").select("session_id") \
-        .eq("id", annotation_id).single().execute()
-    if not annotation.data:
-        raise HTTPException(status_code=404, detail="Annotation not found")
-
-    session = await db.from_("student_sessions").select("id") \
-        .eq("id", annotation.data["session_id"]).eq("student_id", user["sub"]).single().execute()
-    if not session.data:
-        raise HTTPException(status_code=403, detail="Not your annotation")
-
-    updates = {k: v for k, v in body.dict().items() if v is not None}
-    await db.from_("annotations").update(updates).eq("id", annotation_id).execute()
-    return {"ok": True}
-
-
-@router.delete("/annotations/{annotation_id}")
-async def delete_annotation(annotation_id: str, user=Depends(require_student), db=Depends(get_db)):
-    annotation = await db.from_("annotations").select("session_id") \
-        .eq("id", annotation_id).single().execute()
-    if not annotation.data:
-        raise HTTPException(status_code=404, detail="Annotation not found")
-
-    session = await db.from_("student_sessions").select("id") \
-        .eq("id", annotation.data["session_id"]).eq("student_id", user["sub"]).single().execute()
-    if not session.data:
-        raise HTTPException(status_code=403, detail="Not your annotation")
-
-    await db.from_("annotations").delete().eq("id", annotation_id).execute()
-    return {"ok": True}
-
-
-@router.post("/annotations/{annotation_id}/ai-prompt")
-@limiter.limit("60/minute")
-async def get_annotation_ai_prompt(
-    request: Request,
-    annotation_id: str, user=Depends(require_student), db=Depends(get_db),
-):
-    annotation = await db.from_("annotations").select("session_id, highlight_text, section_index") \
-        .eq("id", annotation_id).single().execute()
-    if not annotation.data:
-        raise HTTPException(status_code=404, detail="Annotation not found")
-
-    ann = annotation.data
-    session = await db.from_("student_sessions").select("id, assignment_id") \
-        .eq("id", ann["session_id"]).eq("student_id", user["sub"]).single().execute()
-    if not session.data:
-        raise HTTPException(status_code=403, detail="Not your annotation")
-
-    assignment = await db.from_("assignments").select("reading_guide") \
-        .eq("id", session.data["assignment_id"]).single().execute()
-    sections = assignment.data["reading_guide"]["sections"]
-    section_title = sections[ann["section_index"]]["title"] if ann["section_index"] < len(sections) else "Unknown"
-
-    prompt = await generate_annotation_socratic_prompt(ann["highlight_text"], section_title)
-    await db.from_("annotations").update({"ai_prompt_shown": True}).eq("id", annotation_id).execute()
-    return {"prompt": prompt}
-
-
-# ── Methodology ───────────────────────────────────────────────────────────────
-
-@router.get("/methodology/{assignment_id}/{section_index}")
-async def get_methodology_elements(
-    assignment_id: str, section_index: int,
-    user=Depends(require_student), db=Depends(get_db),
-):
-    session = await db.from_("student_sessions").select("id") \
-        .eq("assignment_id", assignment_id).eq("student_id", user["sub"]).single().execute()
-    if not session.data:
-        raise HTTPException(status_code=403, detail="No session for this assignment")
-
-    result = await db.from_("methodology_elements").select("*") \
-        .eq("assignment_id", assignment_id).eq("section_index", section_index).execute()
-    return result.data or []
 
 
 # ── Critical Prompts ──────────────────────────────────────────────────────────

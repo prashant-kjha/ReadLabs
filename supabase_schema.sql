@@ -228,58 +228,6 @@ CREATE POLICY "Students read own self-study assignments" ON assignments
     )
   );
 
--- ── Superpowers: Annotations ──────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS annotations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id uuid NOT NULL REFERENCES student_sessions(id) ON DELETE CASCADE,
-  section_index integer NOT NULL,
-  start_char integer NOT NULL,
-  end_char integer NOT NULL,
-  highlight_text text NOT NULL,
-  note_text text,
-  color text DEFAULT '#3B82F9',
-  category text DEFAULT 'important'
-    CHECK (category IN ('important', 'confusion', 'question', 'idea')),
-  ai_prompt_shown boolean DEFAULT false,
-  created_at timestamptz DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_annotations_session ON annotations(session_id, section_index);
-
-ALTER TABLE annotations ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Students manage own annotations" ON annotations
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM student_sessions
-            WHERE student_sessions.id = annotations.session_id
-              AND student_sessions.student_id = auth.uid())
-  );
-
--- ── Superpowers: Methodology Elements ────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS methodology_elements (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  assignment_id uuid NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
-  section_index integer NOT NULL,
-  element_type text NOT NULL
-    CHECK (element_type IN (
-      'study_design', 'sample_size', 'statistical_test', 'control',
-      'effect_size', 'limitation', 'assumption', 'variable', 'finding', 'key_result'
-    )),
-  label text NOT NULL,
-  description text NOT NULL,
-  explanation text NOT NULL,
-  follow_up_questions jsonb DEFAULT '[]',
-  difficulty text DEFAULT 'intermediate'
-    CHECK (difficulty IN ('beginner', 'intermediate', 'advanced'))
-);
-
-ALTER TABLE methodology_elements ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Students read methodology for own sessions" ON methodology_elements
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM student_sessions
-            WHERE student_sessions.assignment_id = methodology_elements.assignment_id
-              AND student_sessions.student_id = auth.uid())
-  );
-
 -- ── Superpowers: Critical Prompts ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS critical_prompts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

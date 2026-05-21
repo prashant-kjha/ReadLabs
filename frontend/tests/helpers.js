@@ -92,11 +92,6 @@ function mockTeacherApiRoutes(page) {
           ],
           key_terms: ['neural network', 'biological systems', 'deep learning'],
           teacher_notes: '',
-          simplifications: {
-            undergrad: 'This research examines how neural networks apply to biology.',
-            high_school: 'This study looks at how computer brain models help understand living things.',
-            eli5: 'Scientists use computer programs that work like brains to study animals and plants.',
-          },
         },
         {
           title: 'Methods',
@@ -105,7 +100,6 @@ function mockTeacherApiRoutes(page) {
           guiding_questions: ['What methodology was used?'],
           key_terms: ['mixed-methods', 'quantitative analysis'],
           teacher_notes: '',
-          simplifications: {},
         },
         {
           title: 'Results',
@@ -114,7 +108,6 @@ function mockTeacherApiRoutes(page) {
           guiding_questions: ['What were the key findings?'],
           key_terms: ['accuracy', 'model performance'],
           teacher_notes: '',
-          simplifications: {},
         },
       ],
     },
@@ -222,11 +215,6 @@ function mockStudentApiRoutes(page) {
           guiding_questions: ['What is the main research question?', 'Why is this topic important?'],
           key_terms: ['neural network', 'biological systems', 'deep learning'],
           teacher_notes: '',
-          simplifications: {
-            undergrad: 'This research examines how neural networks apply to biology.',
-            high_school: 'This study looks at how computer brain models help understand living things.',
-            eli5: 'Scientists use computer programs that work like brains to study animals and plants.',
-          },
         },
         {
           title: 'Methods',
@@ -235,7 +223,6 @@ function mockStudentApiRoutes(page) {
           guiding_questions: ['What methodology was used?'],
           key_terms: ['mixed-methods', 'quantitative analysis'],
           teacher_notes: '',
-          simplifications: {},
         },
         {
           title: 'Results',
@@ -244,7 +231,6 @@ function mockStudentApiRoutes(page) {
           guiding_questions: ['What were the key findings?'],
           key_terms: ['accuracy', 'model performance'],
           teacher_notes: '',
-          simplifications: {},
         },
       ],
     },
@@ -340,21 +326,6 @@ function mockStudentApiRoutes(page) {
     }
     if (url.includes('/superpowers/critical-prompt')) {
       return route.fulfill({ json: { prompt_text: 'Consider whether the sample size is adequate.', prompt_type: 'methodology' } });
-    }
-    if (url.includes('/superpowers/methodology')) {
-      return route.fulfill({
-        json: [
-          { id: 'me1', element_type: 'study_design', label: 'Mixed-Methods', description: 'Combines quantitative and qualitative approaches', explanation: 'Detailed: This approach triangulates findings...', follow_up_questions: ['Why might mixed-methods be preferred here?'] },
-        ],
-      });
-    }
-    if (url.includes('/superpowers/annotations') && route.request().method() === 'GET') {
-      return route.fulfill({ json: [] });
-    }
-    if (url.includes('/superpowers/annotations') && route.request().method() === 'POST') {
-      return route.fulfill({
-        json: { id: 'ann1', session_id: 'sess1', section_index: 0, start_char: 0, end_char: 10, highlight_text: 'neural net', color: '#FBBF24', category: 'important' },
-      });
     }
     if (url.includes('/superpowers/quiz') && route.request().method() === 'GET') {
       return route.fulfill({ json: [] });

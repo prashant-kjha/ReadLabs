@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 from backend.main import app
 from backend.deps import require_student, get_db
@@ -31,43 +30,6 @@ def test_superpowers_routes_exist():
     assert any("/superpowers" in r for r in routes), f"No superpowers routes found"
 
 
-def test_list_annotations_requires_student():
-    app.dependency_overrides.clear()
-    r = TestClient(app).get("/api/v1/superpowers/annotations/sess-1")
-    assert r.status_code == 401
-
-
-def test_list_annotations_returns_list():
-    session = {"id": "sess-1"}
-    annotations = [{"id": "ann-1", "highlight_text": "X", "category": "important"}]
-    db = make_db(session, annotations)
-    app.dependency_overrides[require_student] = lambda: STUDENT
-    app.dependency_overrides[get_db] = lambda: db
-    try:
-        r = TestClient(app).get("/api/v1/superpowers/annotations/sess-1")
-    finally:
-        app.dependency_overrides.clear()
-    assert r.status_code == 200
-    assert r.json()[0]["highlight_text"] == "X"
-
-
-def test_create_annotation_returns_created():
-    session = {"id": "sess-1"}
-    new_ann = [{"id": "ann-2", "highlight_text": "Y", "category": "question"}]
-    db = make_db(session, new_ann)
-    app.dependency_overrides[require_student] = lambda: STUDENT
-    app.dependency_overrides[get_db] = lambda: db
-    try:
-        r = TestClient(app).post("/api/v1/superpowers/annotations", json={
-            "session_id": "sess-1", "section_index": 0,
-            "start_char": 10, "end_char": 20, "highlight_text": "Y",
-        })
-    finally:
-        app.dependency_overrides.clear()
-    assert r.status_code == 200
-    assert r.json()["id"] == "ann-2"
-
-
 def test_get_stats_returns_defaults_for_new_student():
     db = make_db(None)
     app.dependency_overrides[require_student] = lambda: STUDENT
@@ -91,31 +53,6 @@ def test_add_xp_rejects_unknown_action():
     finally:
         app.dependency_overrides.clear()
     assert r.status_code == 400
-
-
-def test_get_methodology_requires_session():
-    db = make_db(None)
-    app.dependency_overrides[require_student] = lambda: STUDENT
-    app.dependency_overrides[get_db] = lambda: db
-    try:
-        r = TestClient(app).get("/api/v1/superpowers/methodology/assign-1/0")
-    finally:
-        app.dependency_overrides.clear()
-    assert r.status_code == 403
-
-
-def test_get_methodology_returns_elements():
-    session = {"id": "sess-1"}
-    elements = [{"id": "elem-1", "element_type": "study_design", "label": "RCT"}]
-    db = make_db(session, elements)
-    app.dependency_overrides[require_student] = lambda: STUDENT
-    app.dependency_overrides[get_db] = lambda: db
-    try:
-        r = TestClient(app).get("/api/v1/superpowers/methodology/assign-1/1")
-    finally:
-        app.dependency_overrides.clear()
-    assert r.status_code == 200
-    assert r.json()[0]["element_type"] == "study_design"
 
 
 def test_get_quiz_returns_empty_when_not_generated():

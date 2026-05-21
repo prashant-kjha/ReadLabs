@@ -1,29 +1,3 @@
-export interface Annotation {
-  id: string;
-  session_id: string;
-  section_index: number;
-  start_char: number;
-  end_char: number;
-  highlight_text: string;
-  note_text: string | null;
-  color: string;
-  category: "important" | "confusion" | "question" | "idea";
-  ai_prompt_shown: boolean;
-  created_at: string;
-}
-
-export interface MethodologyElement {
-  id: string;
-  assignment_id: string;
-  section_index: number;
-  element_type: string;
-  label: string;
-  description: string;
-  explanation: string;
-  follow_up_questions: string[];
-  difficulty: string;
-}
-
 export interface CriticalPrompt {
   id: string;
   assignment_id: string;

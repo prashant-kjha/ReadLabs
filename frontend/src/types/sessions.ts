@@ -5,11 +5,6 @@ export interface Section {
   key_terms: string[];
   teacher_notes: string;
   section_type: string;
-  simplifications: {
-    undergrad: string;
-    high_school: string;
-    eli5: string;
-  };
 }
 
 export interface ReadingGuide {
