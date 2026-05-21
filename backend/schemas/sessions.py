@@ -1,4 +1,14 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
+
+
+# Length limits exist to cap the size of inputs we forward to the AI provider
+# (which we pay for per-token) and to reject obvious abuse before it consumes
+# bandwidth. Values are generous compared to typical UI usage.
+
+_STUDENT_TEXT_MAX = 5000
+_CONTEXT_SNIPPET_MAX = 2000
+_TERM_MAX = 200
+_TITLE_MAX = 500
 
 
 class StartSessionRequest(BaseModel):
@@ -11,45 +21,45 @@ class ProgressRequest(BaseModel):
 
 class CheckpointRequest(BaseModel):
     section_index: int
-    student_text: str
+    student_text: str = Field(max_length=_STUDENT_TEXT_MAX)
 
 
 class SoWhatRequest(BaseModel):
-    student_text: str
+    student_text: str = Field(max_length=_STUDENT_TEXT_MAX)
 
 
 class JargonRequest(BaseModel):
-    term: str
-    context_snippet: str
+    term: str = Field(max_length=_TERM_MAX)
+    context_snippet: str = Field(max_length=_CONTEXT_SNIPPET_MAX)
 
 
 class KeyTermRequest(BaseModel):
-    term: str
-    context_snippet: str
+    term: str = Field(max_length=_TERM_MAX)
+    context_snippet: str = Field(max_length=_CONTEXT_SNIPPET_MAX)
 
 
 class PreviewCheckpointRequest(BaseModel):
-    section_title: str
-    guiding_questions: list[str]
-    student_text: str
+    section_title: str = Field(max_length=_TITLE_MAX)
+    guiding_questions: list[str] = Field(max_length=20)
+    student_text: str = Field(max_length=_STUDENT_TEXT_MAX)
 
 
 class PreviewSoWhatRequest(BaseModel):
-    paper_title: str
-    section_titles: list[str]
-    difficulty: str
-    student_text: str
+    paper_title: str = Field(max_length=_TITLE_MAX)
+    section_titles: list[str] = Field(max_length=50)
+    difficulty: str = Field(max_length=50)
+    student_text: str = Field(max_length=_STUDENT_TEXT_MAX)
 
 
 class PreviewJargonRequest(BaseModel):
-    term: str
-    context_snippet: str
+    term: str = Field(max_length=_TERM_MAX)
+    context_snippet: str = Field(max_length=_CONTEXT_SNIPPET_MAX)
 
 
 class PreviewKeyTermRequest(BaseModel):
     assignment_id: str
-    term: str
-    context_snippet: str
+    term: str = Field(max_length=_TERM_MAX)
+    context_snippet: str = Field(max_length=_CONTEXT_SNIPPET_MAX)
 
 
 # ── Response models ──────────────────────────────────────────────────────────

@@ -250,9 +250,11 @@ async def submit_sowhat(
 
 
 # ── Preview endpoints (teacher, stateless) — must be before /{session_id}/jargon ──
+# Rate-limited because each call hits the Gemini API and bills against our key.
 
 @router.post("/preview/checkpoint")
-async def preview_checkpoint(body: PreviewCheckpointRequest, user=Depends(require_teacher)):
+@limiter.limit("30/hour")
+async def preview_checkpoint(request: Request, body: PreviewCheckpointRequest, user=Depends(require_teacher)):
     feedback = await generate_checkpoint_feedback(
         section_title=body.section_title,
         guiding_questions=body.guiding_questions,
@@ -262,7 +264,8 @@ async def preview_checkpoint(body: PreviewCheckpointRequest, user=Depends(requir
 
 
 @router.post("/preview/sowhat")
-async def preview_sowhat(body: PreviewSoWhatRequest, user=Depends(require_teacher)):
+@limiter.limit("30/hour")
+async def preview_sowhat(request: Request, body: PreviewSoWhatRequest, user=Depends(require_teacher)):
     feedback = await generate_sowhat_feedback(
         paper_title=body.paper_title,
         section_titles=body.section_titles,
@@ -273,13 +276,15 @@ async def preview_sowhat(body: PreviewSoWhatRequest, user=Depends(require_teache
 
 
 @router.post("/preview/jargon")
-async def preview_jargon(body: PreviewJargonRequest, user=Depends(require_teacher)):
+@limiter.limit("60/hour")
+async def preview_jargon(request: Request, body: PreviewJargonRequest, user=Depends(require_teacher)):
     explanation = await generate_jargon_explanation(body.term, body.context_snippet)
     return {"term": body.term, "explanation": explanation}
 
 
 @router.post("/preview/keyterm")
-async def preview_keyterm(body: PreviewKeyTermRequest, user=Depends(require_teacher), db=Depends(get_db)):
+@limiter.limit("60/hour")
+async def preview_keyterm(request: Request, body: PreviewKeyTermRequest, user=Depends(require_teacher), db=Depends(get_db)):
     cached = await db.from_("key_term_definitions").select("explanation") \
         .eq("assignment_id", body.assignment_id).eq("term", body.term.lower()).single().execute()
     if cached.data:

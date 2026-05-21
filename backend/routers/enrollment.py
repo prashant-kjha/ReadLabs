@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from backend.db import get_db
 from backend.deps import require_student
+from backend.rate_limit import limiter
 
 router = APIRouter()
 
@@ -11,7 +12,8 @@ class JoinRequest(BaseModel):
 
 
 @router.post("/join")
-async def join_class(body: JoinRequest, user=Depends(require_student), db=Depends(get_db)):
+@limiter.limit("20/minute")
+async def join_class(request: Request, body: JoinRequest, user=Depends(require_student), db=Depends(get_db)):
     # Look up class by code (case-insensitive)
     cls = await db.from_("classes").select("id, name, teacher_id") \
         .eq("class_code", body.class_code.upper()).single().execute()

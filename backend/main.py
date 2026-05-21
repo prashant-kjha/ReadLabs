@@ -2,8 +2,10 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+from backend.config import get_settings
 from backend.rate_limit import limiter
 from backend.routers import auth, papers, classes, assignments, enrollment, sessions, dashboard, library, superpowers
 
@@ -11,13 +13,43 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="ReadLabAI API")
 
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Attach defense-in-depth response headers to every API response.
+
+    These are mostly belt-and-suspenders for an API that returns JSON (the
+    XSS / clickjacking attack surface is the frontend), but they cost nothing
+    and harden the API against being framed or sniffed in unusual ways.
+    HSTS only fires in production so dev (http://) isn't broken.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if get_settings().environment == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 # Rate limiting — applied per-endpoint via @limiter.limit decorators.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# CORS — comma-separated ALLOWED_ORIGINS env var overrides the default localhost
+# dev origin. Production deployments MUST set this to their real frontend origin(s).
+_origins_setting = get_settings().allowed_origins.strip()
+_allowed_origins = (
+    [o.strip() for o in _origins_setting.split(",") if o.strip()]
+    if _origins_setting
+    else ["http://localhost:3000"]
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

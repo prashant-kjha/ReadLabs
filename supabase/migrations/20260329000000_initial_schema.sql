@@ -1,5 +1,4 @@
 -- ReadLabAI Initial Schema Migration
--- Generated from live Supabase project: ydivnjfvshxcllnnkwzz
 -- Captures all tables, indexes, functions, triggers, and RLS policies
 
 -- ============================================================
