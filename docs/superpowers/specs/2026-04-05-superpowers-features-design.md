@@ -5,7 +5,7 @@
 
 ## Overview
 
-Eight features that transform ReadLabAI from a reading assignment tool into a comprehensive research paper learning platform. Features work in both self-study and classroom modes. Designed for incremental implementation on top of the existing Plans 1–4 + self-study mode architecture.
+Eight features that transform ReadLabs from a reading assignment tool into a comprehensive research paper learning platform. Features work in both self-study and classroom modes. Designed for incremental implementation on top of the existing Plans 1–4 + self-study mode architecture.
 
 **Key Decision:** Build into existing flow — no new pages. All features render inside `ReadingPage.jsx` as panels, overlays, and sidebar additions. Minimize AI calls by pre-computing during reading guide generation and caching aggressively.
 

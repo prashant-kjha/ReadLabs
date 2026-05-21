@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Student Extended Tests
+ * ReadLabs - Student Extended Tests
  * Tests empty/loading states, join flow, category switching, self-study features,
  * Reading Page: preview mode, So What?, quiz flow, jargon,
  * skip/advance, structure coach, locked sections, layout persistence.

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-Step-by-step instructions to deploy ReadLabAI for free using:
+Step-by-step instructions to deploy ReadLabs for free using:
 
 - **Frontend** → Cloudflare Pages
 - **Backend** → Google Cloud Run
@@ -34,14 +34,14 @@ Install locally:
 
 ```bash
 # From the repo root
-git remote add origin https://github.com/<your-username>/readlabai.git
+git remote add origin https://github.com/<your-username>/readlabs.git
 git push -u origin main
 ```
 
 If using GitHub CLI:
 
 ```bash
-gh repo create readlabai --public --source=. --remote=origin --push
+gh repo create readlabs --public --source=. --remote=origin --push
 ```
 
 ---
@@ -49,7 +49,7 @@ gh repo create readlabai --public --source=. --remote=origin --push
 ## Part 2 — Create the production Supabase project
 
 1. Go to https://supabase.com/dashboard → **New project**
-2. Name: `readlabai-prod`, generate a strong DB password (save it in a password manager)
+2. Name: `readlabs-prod`, generate a strong DB password (save it in a password manager)
 3. Region: pick the one closest to your users
 4. Plan: **Free**
 5. Wait ~2 minutes for provisioning
@@ -92,7 +92,7 @@ plenty for a demo.
 ## Part 4 — Deploy the frontend to Cloudflare Pages
 
 1. Cloudflare dashboard → **Workers & Pages** → **Create application** → **Pages** → **Connect to Git**
-2. Authorize GitHub, pick your `readlabai` repo
+2. Authorize GitHub, pick your `readlabs` repo
 3. Build configuration:
    - **Production branch**: `main`
    - **Framework preset**: `Vite`
@@ -105,7 +105,7 @@ plenty for a demo.
    - `VITE_API_URL` = `https://placeholder.run.app` (you'll update this in Part 6 once Cloud Run is live)
 5. **Save and Deploy**
 
-After ~2 minutes you'll get a URL like `readlabai-abc.pages.dev`.
+After ~2 minutes you'll get a URL like `readlabs-abc.pages.dev`.
 **Write this down** — you'll need it for backend CORS in Part 6.
 
 Go back to Supabase → Authentication → URL Configuration and update Site URL +
@@ -122,14 +122,14 @@ Redirect URLs with this real Pages URL.
 gcloud auth login
 
 # Create the project (the ID must be globally unique; pick something with your name)
-gcloud projects create readlabai-prod-<your-suffix> --name="ReadLabAI"
-gcloud config set project readlabai-prod-<your-suffix>
+gcloud projects create readlabs-prod-<your-suffix> --name="ReadLabs"
+gcloud config set project readlabs-prod-<your-suffix>
 
 # Link a billing account (required even for free-tier services)
 # Find your billing account ID:
 gcloud billing accounts list
 # Then:
-gcloud billing projects link readlabai-prod-<your-suffix> --billing-account=<billing-account-id>
+gcloud billing projects link readlabs-prod-<your-suffix> --billing-account=<billing-account-id>
 
 # Enable the APIs we'll use
 gcloud services enable \
@@ -146,10 +146,10 @@ gcloud services enable \
 export REGION=us-central1
 export PROJECT_ID=$(gcloud config get-value project)
 
-gcloud artifacts repositories create readlabai \
+gcloud artifacts repositories create readlabs \
     --repository-format=docker \
     --location=$REGION \
-    --description="ReadLabAI container images"
+    --description="ReadLabs container images"
 ```
 
 ### 5.3 — Store secrets in Secret Manager
@@ -167,10 +167,10 @@ printf "YOUR_CORE_API_KEY_OR_EMPTY"      | gcloud secrets create core-api-key   
 This is the identity the *running container* uses to access Secret Manager.
 
 ```bash
-gcloud iam service-accounts create readlabai-runtime \
-    --display-name="ReadLabAI Cloud Run runtime"
+gcloud iam service-accounts create readlabs-runtime \
+    --display-name="ReadLabs Cloud Run runtime"
 
-export RUNTIME_SA="readlabai-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
+export RUNTIME_SA="readlabs-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # Grant access to each secret
 for SECRET in supabase-service-role-key supabase-anon-key gemini-api-key core-api-key; do
@@ -187,7 +187,7 @@ JSON in GitHub secrets — Actions gets a short-lived token at deploy time.
 
 ```bash
 export GITHUB_USER=<your-github-username>
-export GITHUB_REPO=readlabai
+export GITHUB_REPO=readlabs
 
 # Create the deploy service account
 gcloud iam service-accounts create gh-deployer \
@@ -238,12 +238,12 @@ one manual deploy with a placeholder image.
 # Build and push from your laptop (one time)
 gcloud auth configure-docker ${REGION}-docker.pkg.dev
 
-IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/readlabai/readlabai-api:bootstrap"
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/readlabs/readlabs-api:bootstrap"
 docker build -t $IMAGE ./backend
 docker push $IMAGE
 
 # Deploy — secrets get attached via --update-secrets
-gcloud run deploy readlabai-api \
+gcloud run deploy readlabs-api \
     --image $IMAGE \
     --region $REGION \
     --platform managed \
@@ -255,7 +255,7 @@ gcloud run deploy readlabai-api \
     --update-secrets "SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest,SUPABASE_ANON_KEY=supabase-anon-key:latest,GEMINI_API_KEY=gemini-api-key:latest,CORE_API_KEY=core-api-key:latest"
 ```
 
-Cloud Run prints the service URL — looks like `https://readlabai-api-<hash>-uc.a.run.app`. **Write it down.**
+Cloud Run prints the service URL — looks like `https://readlabs-api-<hash>-uc.a.run.app`. **Write it down.**
 
 ---
 
@@ -269,7 +269,7 @@ Test it: open `https://<your-app>.pages.dev`, sign up, upload a paper. Watch
 Cloud Run logs in real time:
 
 ```bash
-gcloud run services logs tail readlabai-api --region=$REGION
+gcloud run services logs tail readlabs-api --region=$REGION
 ```
 
 ---
@@ -311,7 +311,7 @@ Test it by editing any file under `backend/` and pushing to `main`. The
 ## Troubleshooting
 
 **Cloud Run deploy fails with "Container failed to start"**
-→ `gcloud run services logs read readlabai-api --region=$REGION --limit=50` — usually a missing env var or secret.
+→ `gcloud run services logs read readlabs-api --region=$REGION --limit=50` — usually a missing env var or secret.
 
 **Frontend gets CORS errors**
 → `ALLOWED_ORIGINS` env var on Cloud Run must exactly match the Pages origin (including https://, no trailing slash). Redeploy after changing it.
@@ -329,10 +329,10 @@ Test it by editing any file under `backend/` and pushing to `main`. The
 When you're ready:
 
 1. Buy a domain (Cloudflare Registrar sells at cost).
-2. **Frontend**: Cloudflare Pages → Custom domains → Add `readlabai.com`. DNS auto-configures if the domain is on Cloudflare.
-3. **Backend**: Cloud Run → your service → Custom Domains → Add `api.readlabai.com`. Cloud Run gives you a CNAME target; add it in Cloudflare DNS.
+2. **Frontend**: Cloudflare Pages → Custom domains → Add `readlabs.com`. DNS auto-configures if the domain is on Cloudflare.
+3. **Backend**: Cloud Run → your service → Custom Domains → Add `api.readlabs.com`. Cloud Run gives you a CNAME target; add it in Cloudflare DNS.
 4. Update env vars:
-   - Cloudflare Pages: `VITE_API_URL=https://api.readlabai.com`
-   - Cloud Run: `ALLOWED_ORIGINS=https://readlabai.com`
+   - Cloudflare Pages: `VITE_API_URL=https://api.readlabs.com`
+   - Cloud Run: `ALLOWED_ORIGINS=https://readlabs.com`
 5. Update Supabase Auth Site URL + Redirect URLs to the new domain.
 6. Redeploy both. ~5 minutes of work.

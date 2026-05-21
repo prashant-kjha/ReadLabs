@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add 8 learning-enhancement features (annotations, ELI5, structure coach, critical prompts, methodology decoder, quiz, streaks, recommendations) to ReadLabAI, all rendered inside existing pages with minimal new AI cost.
+**Goal:** Add 8 learning-enhancement features (annotations, ELI5, structure coach, critical prompts, methodology decoder, quiz, streaks, recommendations) to ReadLabs, all rendered inside existing pages with minimal new AI cost.
 
 **Architecture:** Extend `generate_reading_guide` to embed `section_type` and `simplifications` into the reading guide JSON (zero extra runtime AI calls), save `methodology_elements` and `critical_prompts` to new tables in the same background task, then add a `superpowers` router for annotations, quiz generation, stats, and recommendations. Frontend renders all new features as inline components inside `ReadingPage.jsx`.
 
@@ -256,7 +256,7 @@ async def test_generate_reading_guide_includes_superpowers_fields():
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
-cd C:\Users\prash\ReadLabAI && python -m pytest backend/tests/test_ai_provider.py::test_generate_reading_guide_includes_superpowers_fields -v
+cd C:\Users\prash\ReadLabs && python -m pytest backend/tests/test_ai_provider.py::test_generate_reading_guide_includes_superpowers_fields -v
 ```
 
 Expected: FAIL (section has no `section_type` key)
@@ -2601,7 +2601,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-gray-950 flex">
       <aside className="w-52 bg-gray-900 flex flex-col p-4 shrink-0">
-        <div className="text-white font-bold text-base mb-8 px-2">ReadLabAI</div>
+        <div className="text-white font-bold text-base mb-8 px-2">ReadLabs</div>
         <nav className="flex-1 space-y-0.5">
           {links.map(({ to, label }) => (
             <NavLink

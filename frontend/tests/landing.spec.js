@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Landing Page Tests
+ * ReadLabs - Landing Page Tests
  * Tests the public landing page: content, navigation, responsiveness.
  */
 const { test, expect } = require('@playwright/test');
@@ -14,8 +14,8 @@ test.describe('Landing Page', () => {
     await expect(page.getByText('Like a Pro')).toBeVisible();
   });
 
-  test('shows the ReadLabAI branding in navbar', async ({ page }) => {
-    const brand = page.getByText('ReadLabAI').first();
+  test('shows the ReadLabs branding in navbar', async ({ page }) => {
+    const brand = page.getByText('ReadLabs').first();
     await expect(brand).toBeVisible();
   });
 
@@ -60,7 +60,7 @@ test.describe('Landing Page', () => {
 
   test('shows footer with copyright', async ({ page }) => {
     const year = new Date().getFullYear();
-    await expect(page.getByText(`© ${year} ReadLabAI`)).toBeVisible();
+    await expect(page.getByText(`© ${year} ReadLabs`)).toBeVisible();
   });
 
   test('navigates to auth page when Get Started is clicked', async ({ page }) => {

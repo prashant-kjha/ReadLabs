@@ -1,10 +1,10 @@
-# ReadLabAI — Plan 1: Foundation, Auth & Paper Ingestion
+# ReadLabs — Plan 1: Foundation, Auth & Paper Ingestion
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stand up a new ReadLabAI project with working auth (teacher/student roles), PDF upload, and text + figure extraction. At the end of this plan, a teacher can sign up, upload a PDF, and see extracted text and figures. The classroom features (assignments, reading journey, dashboard) come in Plans 2–4.
+**Goal:** Stand up a new ReadLabs project with working auth (teacher/student roles), PDF upload, and text + figure extraction. At the end of this plan, a teacher can sign up, upload a PDF, and see extracted text and figures. The classroom features (assignments, reading journey, dashboard) come in Plans 2–4.
 
-**Architecture:** New repo. FastAPI backend + React frontend + Supabase. Backend infrastructure modules copied from PaperPulse (`C:\Users\prash\paperpulse\`) where noted. Full Supabase schema written upfront for all ReadLabAI tables — easier to migrate once than repeatedly.
+**Architecture:** New repo. FastAPI backend + React frontend + Supabase. Backend infrastructure modules copied from PaperPulse (`C:\Users\prash\paperpulse\`) where noted. Full Supabase schema written upfront for all ReadLabs tables — easier to migrate once than repeatedly.
 
 **Tech Stack:** FastAPI 0.115, Python 3.11+, React 19, Tailwind CSS 3, Supabase (PostgreSQL + Auth + Storage), PyMuPDF (fitz), httpx, pytest
 
@@ -22,7 +22,7 @@
 ## File Map
 
 ```
-C:\Users\prash\readlabai\
+C:\Users\prash\readlabs\
 ├── supabase_schema.sql
 ├── .env
 ├── .env.example
@@ -69,7 +69,7 @@ C:\Users\prash\readlabai\
 ### Task 1: Initialize Project
 
 **Files:**
-- Create: `C:\Users\prash\readlabai\` (all directories)
+- Create: `C:\Users\prash\readlabs\` (all directories)
 - Create: `backend\requirements.txt`
 - Create: `backend\requirements-test.txt`
 - Create: `.env.example`
@@ -79,11 +79,11 @@ C:\Users\prash\readlabai\
 - [ ] **Step 1: Create directory structure**
 
 ```bash
-mkdir -p C:/Users/prash/readlabai/backend/routers
-mkdir -p C:/Users/prash/readlabai/backend/services
-mkdir -p C:/Users/prash/readlabai/backend/tests
-mkdir -p C:/Users/prash/readlabai/frontend
-cd C:/Users/prash/readlabai
+mkdir -p C:/Users/prash/readlabs/backend/routers
+mkdir -p C:/Users/prash/readlabs/backend/services
+mkdir -p C:/Users/prash/readlabs/backend/tests
+mkdir -p C:/Users/prash/readlabs/frontend
+cd C:/Users/prash/readlabs
 git init
 touch backend/routers/__init__.py
 touch backend/services/__init__.py
@@ -92,8 +92,8 @@ touch backend/services/__init__.py
 - [ ] **Step 2: Copy unchanged backend modules from PaperPulse**
 
 ```bash
-cp C:/Users/prash/paperpulse/backend/config.py C:/Users/prash/readlabai/backend/config.py
-cp C:/Users/prash/paperpulse/backend/db.py C:/Users/prash/readlabai/backend/db.py
+cp C:/Users/prash/paperpulse/backend/config.py C:/Users/prash/readlabs/backend/config.py
+cp C:/Users/prash/paperpulse/backend/db.py C:/Users/prash/readlabs/backend/db.py
 ```
 
 - [ ] **Step 3: Create `backend/requirements.txt`**
@@ -155,7 +155,7 @@ build/
 - [ ] **Step 8: Initialize frontend**
 
 ```bash
-cd C:/Users/prash/readlabai/frontend
+cd C:/Users/prash/readlabs/frontend
 npx create-react-app . --template cra-template
 npm install axios@1.13.6 @supabase/supabase-js@2.100.1 react-router-dom@6.30.3 react-hot-toast@2.6.0
 npx tailwindcss init
@@ -186,21 +186,21 @@ Replace `frontend/src/index.css` contents with:
 - [ ] **Step 10: Copy unchanged frontend modules from PaperPulse**
 
 ```bash
-mkdir -p C:/Users/prash/readlabai/frontend/src/lib
-mkdir -p C:/Users/prash/readlabai/frontend/src/context
-mkdir -p C:/Users/prash/readlabai/frontend/src/components
-mkdir -p C:/Users/prash/readlabai/frontend/src/pages/teacher
-mkdir -p C:/Users/prash/readlabai/frontend/src/pages/student
+mkdir -p C:/Users/prash/readlabs/frontend/src/lib
+mkdir -p C:/Users/prash/readlabs/frontend/src/context
+mkdir -p C:/Users/prash/readlabs/frontend/src/components
+mkdir -p C:/Users/prash/readlabs/frontend/src/pages/teacher
+mkdir -p C:/Users/prash/readlabs/frontend/src/pages/student
 
-cp C:/Users/prash/paperpulse/frontend/src/lib/api.js C:/Users/prash/readlabai/frontend/src/lib/api.js
-cp C:/Users/prash/paperpulse/frontend/src/lib/supabase.js C:/Users/prash/readlabai/frontend/src/lib/supabase.js
-cp C:/Users/prash/paperpulse/frontend/src/components/ProtectedRoute.jsx C:/Users/prash/readlabai/frontend/src/components/ProtectedRoute.jsx
+cp C:/Users/prash/paperpulse/frontend/src/lib/api.js C:/Users/prash/readlabs/frontend/src/lib/api.js
+cp C:/Users/prash/paperpulse/frontend/src/lib/supabase.js C:/Users/prash/readlabs/frontend/src/lib/supabase.js
+cp C:/Users/prash/paperpulse/frontend/src/components/ProtectedRoute.jsx C:/Users/prash/readlabs/frontend/src/components/ProtectedRoute.jsx
 ```
 
 - [ ] **Step 11: Install Python dependencies**
 
 ```bash
-cd C:/Users/prash/readlabai
+cd C:/Users/prash/readlabs
 pip install -r backend/requirements.txt
 ```
 
@@ -209,9 +209,9 @@ Expected: All packages install with no errors.
 - [ ] **Step 12: Commit**
 
 ```bash
-cd C:/Users/prash/readlabai
+cd C:/Users/prash/readlabs
 git add .
-git commit -m "feat: initialize ReadLabAI project structure"
+git commit -m "feat: initialize ReadLabs project structure"
 ```
 
 ---
@@ -435,9 +435,9 @@ Expected: All statements succeed with no errors. If a table already exists error
 - [ ] **Step 3: Commit**
 
 ```bash
-cd C:/Users/prash/readlabai
+cd C:/Users/prash/readlabs
 git add supabase_schema.sql
-git commit -m "feat: add full ReadLabAI Supabase schema"
+git commit -m "feat: add full ReadLabs Supabase schema"
 ```
 
 ---
@@ -452,7 +452,7 @@ git commit -m "feat: add full ReadLabAI Supabase schema"
 - [ ] **Step 1: Copy `deps.py` from PaperPulse**
 
 ```bash
-cp C:/Users/prash/paperpulse/backend/deps.py C:/Users/prash/readlabai/backend/deps.py
+cp C:/Users/prash/paperpulse/backend/deps.py C:/Users/prash/readlabs/backend/deps.py
 ```
 
 - [ ] **Step 2: Append role-checking helpers to `backend/deps.py`**
@@ -481,7 +481,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.routers import auth, papers
 
-app = FastAPI(title="ReadLabAI API")
+app = FastAPI(title="ReadLabs API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -526,7 +526,7 @@ def mock_student():
 - [ ] **Step 5: Verify health endpoint starts**
 
 ```bash
-cd C:/Users/prash/readlabai
+cd C:/Users/prash/readlabs
 uvicorn backend.main:app --reload
 ```
 
@@ -625,7 +625,7 @@ def test_signup_accepts_teacher_role():
 - [ ] **Step 2: Run tests to confirm they fail**
 
 ```bash
-cd C:/Users/prash/readlabai
+cd C:/Users/prash/readlabs
 pytest backend/tests/test_auth.py -v
 ```
 
@@ -1190,7 +1190,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="bg-gray-900 rounded-xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-white mb-2">ReadLabAI</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">ReadLabs</h1>
         <p className="text-gray-400 text-sm mb-6">
           {mode === "signin" ? "Sign in to your account" : "Create your account"}
         </p>
@@ -1294,7 +1294,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-gray-950 flex">
       <aside className="w-52 bg-gray-900 flex flex-col p-4 shrink-0">
-        <div className="text-white font-bold text-base mb-8 px-2">ReadLabAI</div>
+        <div className="text-white font-bold text-base mb-8 px-2">ReadLabs</div>
         <nav className="flex-1 space-y-0.5">
           {links.map(({ to, label }) => (
             <NavLink
@@ -1377,7 +1377,7 @@ export default function App() {
 - [ ] **Step 5: Start the frontend and verify auth flow manually**
 
 ```bash
-cd C:/Users/prash/readlabai/frontend
+cd C:/Users/prash/readlabs/frontend
 npm start
 ```
 
@@ -1392,7 +1392,7 @@ Open `http://localhost:3000`. Check:
 - [ ] **Step 6: Commit**
 
 ```bash
-cd C:/Users/prash/readlabai
+cd C:/Users/prash/readlabs
 git add frontend/src/
 git commit -m "feat: add frontend auth with role-based routing"
 ```
@@ -1512,11 +1512,11 @@ Start both servers:
 
 ```bash
 # Terminal 1
-cd C:/Users/prash/readlabai
+cd C:/Users/prash/readlabs
 uvicorn backend.main:app --reload
 
 # Terminal 2
-cd C:/Users/prash/readlabai/frontend
+cd C:/Users/prash/readlabs/frontend
 npm start
 ```
 
@@ -1528,7 +1528,7 @@ Sign in as a teacher. Upload a PDF. Expected:
 - [ ] **Step 4: Run all backend tests one final time**
 
 ```bash
-cd C:/Users/prash/readlabai
+cd C:/Users/prash/readlabs
 pytest backend/tests/ -v
 ```
 

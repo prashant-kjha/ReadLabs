@@ -1,4 +1,4 @@
-# ReadLabAI — Planning Notes
+# ReadLabs — Planning Notes
 **Date:** 2026-03-29
 **Purpose:** Personal reference capturing the full planning discussion, decisions made, and the reasoning behind them.
 
@@ -6,9 +6,9 @@
 
 ## The Idea
 
-**PaperPulse gives people the fish. ReadLabAI teaches them to fish.**
+**PaperPulse gives people the fish. ReadLabs teaches them to fish.**
 
-Most students hit a research paper and either give up at the abstract or read it linearly like a novel — both are wrong. There's a skill to reading papers that nobody explicitly teaches. Professors assume students absorb it through osmosis, and most never do. ReadLabAI makes that invisible skill visible and practicable.
+Most students hit a research paper and either give up at the abstract or read it linearly like a novel — both are wrong. There's a skill to reading papers that nobody explicitly teaches. Professors assume students absorb it through osmosis, and most never do. ReadLabs makes that invisible skill visible and practicable.
 
 The key distinction: the AI never just hands over an answer. It acts like a Socratic tutor sitting next to the student — it knows the paper's content but deliberately withholds synthesis, prompting the student to build that understanding themselves, step by step.
 
@@ -40,7 +40,7 @@ Three options were considered:
 **Option A — Fork PaperPulse, build on top**
 Take the PaperPulse repo as-is and add classroom features. New routes, new tables, new pages alongside existing ones.
 - Pro: Zero setup time
-- Con: Carries 40% of PaperPulse that ReadLabAI doesn't need (bibliographies, collections, highlights, multi-paper chat). Dead code slows iteration.
+- Con: Carries 40% of PaperPulse that ReadLabs doesn't need (bibliographies, collections, highlights, multi-paper chat). Dead code slows iteration.
 
 **Option B — New repo, same stack, selective copy (CHOSEN)**
 Fresh repo. Same stack: FastAPI + React + Tailwind + Supabase + Gemini. Manually copy only the modules that transfer cleanly.
@@ -59,7 +59,7 @@ Same as B for the backend, but Next.js for the frontend.
 ## Key Product Decisions Made
 
 ### 1. Classroom tool first, not self-study
-**Decision:** Build ReadLabAI as a classroom tool where teachers assign papers, not as a self-study tool where individual students find their own papers.
+**Decision:** Build ReadLabs as a classroom tool where teachers assign papers, not as a self-study tool where individual students find their own papers.
 
 **Why:** More cost effective. The AI processes each paper once and serves the guide to all students in the class — no per-student processing cost. The teacher dashboard also makes it a stickier institutional product.
 
@@ -154,7 +154,7 @@ After a student has read 3–5 papers, the tool starts asking meta-questions: "Y
 
 ## The Prompt Engineering Is the Product
 
-In PaperPulse, prompts say "summarize this." In ReadLabAI, the prompts need to coach without spoon-feeding. The checkpoint feedback prompt is the most critical piece:
+In PaperPulse, prompts say "summarize this." In ReadLabs, the prompts need to coach without spoon-feeding. The checkpoint feedback prompt is the most critical piece:
 
 ```
 The student wrote the following about the [section name] section:

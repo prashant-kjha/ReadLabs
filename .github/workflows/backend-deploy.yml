@@ -11,8 +11,8 @@ on:
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   GCP_REGION: ${{ vars.GCP_REGION }}
-  AR_REPO: readlabai
-  SERVICE: readlabai-api
+  AR_REPO: readlabs
+  SERVICE: readlabs-api
 
 # Workload Identity Federation requires id-token: write.
 permissions:

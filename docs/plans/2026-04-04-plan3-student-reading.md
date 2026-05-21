@@ -96,7 +96,7 @@ def test_in_filter_is_chainable():
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
-cd C:/Users/prash/ReadLabAI
+cd C:/Users/prash/ReadLabs
 pytest backend/tests/test_db.py -v
 ```
 
@@ -1316,7 +1316,7 @@ Find the student nav section (the part that renders when `role === 'student'`) a
 
 ```bash
 # Kill and restart backend
-cd C:/Users/prash/ReadLabAI
+cd C:/Users/prash/ReadLabs
 python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &
 sleep 4 && curl -s http://localhost:8000/api/v1/sessions/ | head -c 100
 ```
@@ -1340,7 +1340,7 @@ git commit -m "feat: add student dashboard, reading, and teacher preview routes"
 - [ ] **Step 1: Create the directory**
 
 ```bash
-mkdir -p C:/Users/prash/ReadLabAI/frontend/src/pages/student
+mkdir -p C:/Users/prash/ReadLabs/frontend/src/pages/student
 ```
 
 - [ ] **Step 2: Create `frontend/src/pages/student/StudentDashboardPage.jsx`**
@@ -2201,7 +2201,7 @@ git commit -m "feat: add Preview as Student button to assignment review page"
 - [ ] **Step 1: Run all backend tests**
 
 ```bash
-cd C:/Users/prash/ReadLabAI
+cd C:/Users/prash/ReadLabs
 pytest backend/tests/ -v
 ```
 

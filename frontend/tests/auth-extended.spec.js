@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Auth Page Extended Tests
+ * ReadLabs - Auth Page Extended Tests
  * Tests successful login flow, password masking, signup → email-confirmation flow.
  *
  * As of the 2026-05-01 security review, signup no longer auto-logs the user in;

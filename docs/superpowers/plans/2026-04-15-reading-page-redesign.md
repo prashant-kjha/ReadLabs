@@ -84,7 +84,7 @@ def test_get_pdf_url_returns_signed_url():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabAI && python -m pytest backend/tests/test_papers.py::test_get_pdf_url_returns_signed_url -v`
+Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabs && python -m pytest backend/tests/test_papers.py::test_get_pdf_url_returns_signed_url -v`
 Expected: FAIL — `AttributeError` or 404 (endpoint doesn't exist yet)
 
 - [ ] **Step 3: Write the implementation**
@@ -124,7 +124,7 @@ from backend.deps import require_teacher, require_student
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabAI && python -m pytest backend/tests/test_papers.py::test_get_pdf_url_requires_auth backend/tests/test_papers.py::test_get_pdf_url_returns_signed_url -v`
+Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabs && python -m pytest backend/tests/test_papers.py::test_get_pdf_url_requires_auth backend/tests/test_papers.py::test_get_pdf_url_returns_signed_url -v`
 Expected: Both PASS
 
 - [ ] **Step 5: Commit**
@@ -174,7 +174,7 @@ return {
 
 - [ ] **Step 2: Verify the existing session test still passes**
 
-Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabAI && python -m pytest backend/tests/test_sessions.py -v`
+Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabs && python -m pytest backend/tests/test_sessions.py -v`
 Expected: All PASS
 
 - [ ] **Step 3: Commit**
@@ -194,7 +194,7 @@ git commit -m "feat: return paper_id in session creation response"
 
 - [ ] **Step 1: Install react-pdf**
 
-Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabAI/frontend && npm install react-pdf`
+Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabs/frontend && npm install react-pdf`
 
 This adds `react-pdf` and its peer dependency `pdfjs-dist` to `package.json`.
 
@@ -1420,7 +1420,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
 
 - [ ] **Step 2: Verify the app loads**
 
-Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabAI/frontend && npm start`
+Run: `cd /c/Users/prash/OneDrive/Desktop/ReadLabs/frontend && npm start`
 Open the browser and navigate to a reading page. Verify:
 - Three-panel layout renders (sections left, PDF center, AI panel right)
 - Sections collapse/expand via the header button

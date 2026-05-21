@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Routing & Protection Tests
+ * ReadLabs - Routing & Protection Tests
  * Tests route protection, role-based access, and navigation edge cases.
  */
 const { test, expect } = require('@playwright/test');
@@ -140,7 +140,7 @@ test.describe('Mobile Responsive', () => {
 
   test('landing page hides browser mockup on mobile', async ({ page }) => {
     await page.goto('/');
-    const mockup = page.getByText('readlab.ai / paper / nature-2024-cell-biology');
+    const mockup = page.getByText('readlabs.app / paper / nature-2024-cell-biology');
     await expect(mockup).not.toBeVisible();
   });
 

@@ -154,7 +154,7 @@ def test_search_filters_by_relevance():
 - [ ] **Step 2: Run tests to confirm they fail**
 
 ```bash
-cd C:/Users/prash/ReadLabAI
+cd C:/Users/prash/ReadLabs
 pytest backend/tests/test_core_api.py -v
 ```
 
@@ -1225,7 +1225,7 @@ Add route inside the student routes section (after the `/student/read/:assignmen
 - [ ] **Step 4: Verify frontend builds**
 
 ```bash
-cd C:/Users/prash/ReadLabAI/frontend
+cd C:/Users/prash/ReadLabs/frontend
 npx react-scripts build 2>&1 | tail -5
 ```
 
@@ -1400,7 +1400,7 @@ Change to:
 - [ ] **Step 8: Verify frontend builds**
 
 ```bash
-cd C:/Users/prash/ReadLabAI/frontend
+cd C:/Users/prash/ReadLabs/frontend
 npx react-scripts build 2>&1 | tail -5
 ```
 
@@ -1420,7 +1420,7 @@ git commit -m "feat: add optional checkpoints with Skip buttons for self-study r
 - [ ] **Step 1: Run all backend tests**
 
 ```bash
-cd C:/Users/prash/ReadLabAI
+cd C:/Users/prash/ReadLabs
 pytest backend/tests/ -v
 ```
 
@@ -1429,7 +1429,7 @@ Expected: All tests PASS (existing 43 + new ~14 = ~57).
 - [ ] **Step 2: Verify frontend builds cleanly**
 
 ```bash
-cd C:/Users/prash/ReadLabAI/frontend
+cd C:/Users/prash/ReadLabs/frontend
 npx react-scripts build 2>&1 | tail -5
 ```
 
@@ -1444,7 +1444,7 @@ git commit -m "feat: complete self-study mode — CORE API search, community lib
 
 ---
 
-## Plan Complete — ReadLabAI Self-Study Mode MVP Done
+## Plan Complete — ReadLabs Self-Study Mode MVP Done
 
 At this point the full self-study mode is functional:
 

@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Authentication Page Tests
+ * ReadLabs - Authentication Page Tests
  * Tests login/signup form, validation, and error handling.
  *
  * Note: AuthPage defaults to "signin" mode (useState("signin")).
@@ -24,8 +24,8 @@ test.describe('Auth Page', () => {
     await expect(tabContainer.getByRole('button', { name: 'Log In', exact: true })).toBeVisible();
   });
 
-  test('shows ReadLabAI branding', async ({ page }) => {
-    const brand = page.getByText('ReadLabAI').first();
+  test('shows ReadLabs branding', async ({ page }) => {
+    const brand = page.getByText('ReadLabs').first();
     await expect(brand).toBeVisible();
   });
 

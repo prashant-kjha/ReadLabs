@@ -1,4 +1,4 @@
-# ReadLabAI — Complete Project Documentation
+# ReadLabs — Complete Project Documentation
 
 > Last updated: April 11, 2026
 
@@ -6,7 +6,7 @@
 
 ## Table of Contents
 
-1. [What Is ReadLabAI?](#1-what-is-readlabai)
+1. [What Is ReadLabs?](#1-what-is-readlabs)
 2. [High-Level Architecture](#2-high-level-architecture)
 3. [Technology Stack](#3-technology-stack)
 4. [Project Structure](#4-project-structure)
@@ -26,14 +26,14 @@
 
 ---
 
-## 1. What Is ReadLabAI?
+## 1. What Is ReadLabs?
 
-ReadLabAI is an **AI-guided research paper reading platform** designed to help high school and undergraduate students develop critical reading skills for academic literature. It serves two distinct user roles:
+ReadLabs is an **AI-guided research paper reading platform** designed to help high school and undergraduate students develop critical reading skills for academic literature. It serves two distinct user roles:
 
 - **Teachers** upload research papers (PDFs or via CORE API), organize students into classes, create assignments with AI-generated reading guides, and monitor student progress through a dashboard with analytics.
 - **Students** read assigned papers section by section with AI-powered assistance — guiding questions, text simplification (ELI5/high school/undergrad), jargon explanations, annotations, methodology breakdowns, quizzes, and a gamified XP/streak system.
 
-The core idea: instead of giving students a PDF and hoping they understand it, ReadLabAI breaks papers into digestible sections, sets expectations with guiding questions *before* reading, provides AI feedback *after* each checkpoint, and tracks comprehension through quizzes and synthesis paragraphs.
+The core idea: instead of giving students a PDF and hoping they understand it, ReadLabs breaks papers into digestible sections, sets expectations with guiding questions *before* reading, provides AI feedback *after* each checkpoint, and tracks comprehension through quizzes and synthesis paragraphs.
 
 ---
 
@@ -102,7 +102,7 @@ The core idea: instead of giving students a PDF and hoping they understand it, R
 ## 4. Project Structure
 
 ```
-ReadLabAI/
+ReadLabs/
 ├── .env.example                        # Template for environment variables
 ├── .gitignore
 ├── supabase_schema.sql                 # Full database schema with RLS policies

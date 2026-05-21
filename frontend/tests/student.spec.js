@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Student Pages Tests
+ * ReadLabs - Student Pages Tests
  * Tests StudentDashboardPage, SelfStudyPage, ReadingPage.
  */
 const { test, expect } = require('@playwright/test');

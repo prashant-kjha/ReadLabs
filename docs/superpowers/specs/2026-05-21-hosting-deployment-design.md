@@ -6,7 +6,7 @@
 
 ## Goal
 
-Make ReadLabAI an open-source project on GitHub with a publicly hosted live demo,
+Make ReadLabs an open-source project on GitHub with a publicly hosted live demo,
 using only free tiers across all platforms. Allow contributors to fork the repo
 and stand up their own instance with minimal friction.
 
@@ -35,9 +35,9 @@ Three providers, each doing what they do best:
 
 Request flow:
 
-1. Browser hits `readlabai.pages.dev` → CDN serves static assets.
+1. Browser hits `readlabs.pages.dev` → CDN serves static assets.
 2. React app calls Supabase directly for login and signed PDF URLs.
-3. React app calls Cloud Run at `https://readlabai-api-xxx.run.app/api/v1/...`
+3. React app calls Cloud Run at `https://readlabs-api-xxx.run.app/api/v1/...`
    for business logic + Gemini calls.
 4. Cloud Run calls Supabase PostgREST/Storage with service-role key, and calls
    Gemini with API key. Both secrets injected from Secret Manager at boot.

@@ -45,7 +45,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 text-primary font-bold text-xl">
             <BookOpen className="w-7 h-7" />
-            <span>ReadLabAI</span>
+            <span>ReadLabs</span>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -96,7 +96,7 @@ export default function LandingPage() {
                 <span className="w-3 h-3 rounded-full bg-amber-400" />
                 <span className="w-3 h-3 rounded-full bg-emerald-400" />
                 <span className="ml-4 text-xs text-[var(--color-text-secondary)] font-medium">
-                  readlab.ai / student / read / neural-networks-biology
+                  readlabs.app / student / read / neural-networks-biology
                 </span>
               </div>
               {/* three-panel content */}
@@ -349,7 +349,7 @@ export default function LandingPage() {
             Built for Every Classroom
           </h2>
           <p className="mt-4 text-[var(--color-text-secondary)] text-center max-w-2xl mx-auto">
-            Whether you are teaching or learning, ReadLabAI has you covered.
+            Whether you are teaching or learning, ReadLabs has you covered.
           </p>
           <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Teachers */}
@@ -412,7 +412,7 @@ export default function LandingPage() {
             Loved by Students & Teachers
           </h2>
           <p className="mt-4 text-[var(--color-text-secondary)] text-center max-w-2xl mx-auto">
-            See what our early users have to say about ReadLabAI.
+            See what our early users have to say about ReadLabs.
           </p>
           <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
@@ -432,7 +432,7 @@ export default function LandingPage() {
                 name: 'Dr. Amara Okafor',
                 role: 'Science Department Chair',
                 quote:
-                  'We adopted ReadLabAI across 8 classrooms. The analytics dashboard shows me exactly where students struggle, so I can target my lessons.',
+                  'We adopted ReadLabs across 8 classrooms. The analytics dashboard shows me exactly where students struggle, so I can target my lessons.',
               },
             ].map(({ name, role, quote }) => (
               <div
@@ -486,13 +486,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-primary font-bold text-lg">
             <BookOpen className="w-5 h-5" />
-            <span>ReadLabAI</span>
+            <span>ReadLabs</span>
           </div>
           <p className="text-sm text-[var(--color-text-secondary)]">
             Built for curious minds
           </p>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            &copy; {new Date().getFullYear()} ReadLabAI
+            &copy; {new Date().getFullYear()} ReadLabs
           </p>
         </div>
       </footer>

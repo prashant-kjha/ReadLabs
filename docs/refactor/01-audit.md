@@ -1,4 +1,4 @@
-# ReadLabAI — Phase 1 Audit
+# ReadLabs — Phase 1 Audit
 
 **Date**: 2026-04-29
 **Branch**: master (staged changes, not yet committed)
@@ -8,7 +8,7 @@
 
 ## Current Architecture Overview
 
-ReadLabAI is a two-tier web application that helps science students read research papers with AI-guided support. Teachers upload PDFs, the system uses Google Gemini to generate structured reading guides (sections, guiding questions, key terms, methodology elements, critical thinking prompts, quizzes), and students work through those guides section by section with Socratic AI feedback.
+ReadLabs is a two-tier web application that helps science students read research papers with AI-guided support. Teachers upload PDFs, the system uses Google Gemini to generate structured reading guides (sections, guiding questions, key terms, methodology elements, critical thinking prompts, quizzes), and students work through those guides section by section with Socratic AI feedback.
 
 ### Request Flow
 

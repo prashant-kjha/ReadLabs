@@ -1,4 +1,4 @@
-# ReadLabAI — Design Spec
+# ReadLabs — Design Spec
 **Date:** 2026-03-29
 **Status:** Approved
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-ReadLabAI is a classroom tool that teaches students *how* to read research papers through guided, Socratic interaction — not summarization. Where PaperPulse gives people the fish, ReadLabAI teaches them to fish.
+ReadLabs is a classroom tool that teaches students *how* to read research papers through guided, Socratic interaction — not summarization. Where PaperPulse gives people the fish, ReadLabs teaches them to fish.
 
 **Core distinction from PaperPulse:** The AI never hands over answers. It coaches students to build understanding themselves through section-by-section guided reading and checkpoint responses.
 

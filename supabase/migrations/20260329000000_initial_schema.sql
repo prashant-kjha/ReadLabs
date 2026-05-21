@@ -1,4 +1,4 @@
--- ReadLabAI Initial Schema Migration
+-- ReadLabs Initial Schema Migration
 -- Captures all tables, indexes, functions, triggers, and RLS policies
 
 -- ============================================================

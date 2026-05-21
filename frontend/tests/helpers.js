@@ -1,5 +1,5 @@
 /**
- * ReadLabAI Playwright Test Helpers
+ * ReadLabs Playwright Test Helpers
  * Provides reusable utilities for authentication, API mocking, and common interactions.
  */
 

@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Gap Audit Tests
+ * ReadLabs - Gap Audit Tests
  * Covers features identified as missing from the 241 existing tests after
  * line-by-line audit of every source file.
  */
@@ -127,11 +127,11 @@ test.describe('Auth Page - Decorative Panel', () => {
     await expect(page.getByText('Build Critical Thinking.')).toBeVisible();
   });
 
-  test('mobile shows ReadLabAI branding without left panel', async ({ page }) => {
+  test('mobile shows ReadLabs branding without left panel', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/auth');
     // The mobile-only branding should be visible
-    const mobileBrand = page.locator('.flex.md\\:hidden').filter({ hasText: 'ReadLabAI' });
+    const mobileBrand = page.locator('.flex.md\\:hidden').filter({ hasText: 'ReadLabs' });
     await expect(mobileBrand).toBeVisible();
     // The desktop left panel should be hidden
     await expect(page.getByText('Read Smarter')).not.toBeVisible();
@@ -143,12 +143,12 @@ test.describe('Auth Page - Decorative Panel', () => {
 test.describe('Landing Page - Browser Mockup', () => {
   test('shows URL bar in browser mockup', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('readlab.ai / student / read / neural-networks-biology')).toBeVisible();
+    await expect(page.getByText('readlabs.app / student / read / neural-networks-biology')).toBeVisible();
   });
 
   test('shows sections sidebar with Introduction', async ({ page }) => {
     await page.goto('/');
-    const urlBar = page.getByText('readlab.ai / student / read / neural-networks-biology');
+    const urlBar = page.getByText('readlabs.app / student / read / neural-networks-biology');
     const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
     await expect(mockup.getByText('Sections', { exact: true })).toBeVisible();
     await expect(mockup.getByText('Introduction')).toBeVisible();
@@ -156,7 +156,7 @@ test.describe('Landing Page - Browser Mockup', () => {
 
   test('shows structure guide pills in mockup', async ({ page }) => {
     await page.goto('/');
-    const urlBar = page.getByText('readlab.ai / student / read / neural-networks-biology');
+    const urlBar = page.getByText('readlabs.app / student / read / neural-networks-biology');
     const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
     await expect(mockup.getByText('Structure Guide')).toBeVisible();
     await expect(mockup.getByText('2I')).toBeVisible();
@@ -164,7 +164,7 @@ test.describe('Landing Page - Browser Mockup', () => {
 
   test('shows AI guidance panel with guiding questions in mockup', async ({ page }) => {
     await page.goto('/');
-    const urlBar = page.getByText('readlab.ai / student / read / neural-networks-biology');
+    const urlBar = page.getByText('readlabs.app / student / read / neural-networks-biology');
     const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
     await expect(mockup.getByText('AI Guidance')).toBeVisible();
     await expect(mockup.getByText('Guiding Questions')).toBeVisible();
@@ -172,7 +172,7 @@ test.describe('Landing Page - Browser Mockup', () => {
 
   test('shows traffic light dots in mockup title bar', async ({ page }) => {
     await page.goto('/');
-    const urlBar = page.getByText('readlab.ai / student / read / neural-networks-biology');
+    const urlBar = page.getByText('readlabs.app / student / read / neural-networks-biology');
     const titleBar = urlBar.locator('xpath=parent::div');
     await expect(titleBar.locator('.bg-red-400')).toBeVisible();
     await expect(titleBar.locator('.bg-amber-400')).toBeVisible();

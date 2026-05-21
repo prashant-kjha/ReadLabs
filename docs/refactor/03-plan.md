@@ -1,4 +1,4 @@
-# ReadLabAI — Phase 3 Migration Plan
+# ReadLabs — Phase 3 Migration Plan
 
 **Date**: 2026-04-29
 **Based on**: Approved Phase 2 Architecture (`02-architecture.md`)

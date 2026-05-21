@@ -5,7 +5,7 @@
 
 ## Overview
 
-Add self-study capability to ReadLabAI. Any authenticated user (currently student role only) can upload a paper PDF or search the community paper library ( and read it paper independently — without needing a teacher or class, or or class assignment. Reading guides is are AI and Gemini are auto-generated reading guides.
+Add self-study capability to ReadLabs. Any authenticated user (currently student role only) can upload a paper PDF or search the community paper library ( and read it paper independently — without needing a teacher or class, or or class assignment. Reading guides is are AI and Gemini are auto-generated reading guides.
 
 ## Key Decisions
 

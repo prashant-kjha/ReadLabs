@@ -1,4 +1,4 @@
-# ReadLabAI Launch Progress Tracker
+# ReadLabs Launch Progress Tracker
 
 **Last Updated:** 2026-05-01
 **Target Launch:** TBD
@@ -43,7 +43,7 @@
 
 ## Phase 4: Branding
 
-- [ ] 4.1 Decide on final project name (ReadLabAI or new name)
+- [ ] 4.1 Decide on final project name (ReadLabs or new name)
 - [ ] 4.2 Purchase domain name
 - [ ] 4.3 Design or commission logo (SVG wordmark/monogram or full logo)
 - [ ] 4.4 Create favicon and app icons from logo
@@ -117,6 +117,6 @@
 - **Deployment platform research** completed 2026-04-22. Top pick: Render (free tier). Backup: Railway ($5/mo), Koyeb (free nano instance).
 - **Frontend redesign** will use Claude (web) for design generation, then Claude Code for integration. Design prompt is ready.
 - **Current tech stack**: React 19 + Tailwind CSS + FastAPI + Supabase + Google Gemini API + slowapi (rate limiting)
-- **Project name** is undecided — ReadLabAI is the working name, may change before launch.
+- **Project name** is undecided — ReadLabs is the working name, may change before launch.
 - **Security review** completed 2026-05-01. 11 issues identified, all fixed. See "Phase 6 / Done in security review" above.
 - **Teacher provisioning** is now an explicit manual step. To create a teacher account: have the user sign up normally (they'll come up as `student`), then in the Supabase SQL editor run `UPDATE user_profiles SET role='teacher' WHERE user_id = '<their-uuid>'`. Document this when adding 6.11.

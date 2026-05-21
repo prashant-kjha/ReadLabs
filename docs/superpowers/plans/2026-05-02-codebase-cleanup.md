@@ -47,7 +47,7 @@
 ## Task 1: Set up worktree and branch
 
 **Files:**
-- Create: worktree at `../ReadLabAI-cleanup` on branch `cleanup/2026-05-02`
+- Create: worktree at `../ReadLabs-cleanup` on branch `cleanup/2026-05-02`
 
 - [ ] **Step 1.1: Verify clean tree on master**
 
@@ -58,13 +58,13 @@ Expected: `nothing to commit, working tree clean`. If not clean, stop and ask us
 
 Run from project root:
 ```bash
-git worktree add ../ReadLabAI-cleanup -b cleanup/2026-05-02
+git worktree add ../ReadLabs-cleanup -b cleanup/2026-05-02
 ```
 Expected: `Preparing worktree (new branch 'cleanup/2026-05-02')` then `HEAD is now at <hash> docs(spec): fix session-start race fix to preserve student progress`
 
-- [ ] **Step 1.3: All subsequent commands run from `../ReadLabAI-cleanup`**
+- [ ] **Step 1.3: All subsequent commands run from `../ReadLabs-cleanup`**
 
-Run: `cd ../ReadLabAI-cleanup && git branch --show-current`
+Run: `cd ../ReadLabs-cleanup && git branch --show-current`
 Expected: `cleanup/2026-05-02`
 
 - [ ] **Step 1.4: Verify backend tests pass on the new branch (baseline)**
@@ -2250,7 +2250,7 @@ Create the file with sections:
 ```markdown
 # Cleanup 2026-05-02 — Summary
 
-**Branch:** `cleanup/2026-05-02` (worktree: `../ReadLabAI-cleanup`)
+**Branch:** `cleanup/2026-05-02` (worktree: `../ReadLabs-cleanup`)
 **Commits:** 6 (one per task group)
 **Spec:** `docs/superpowers/specs/2026-05-02-codebase-cleanup-design.md`
 **Plan:** `docs/superpowers/plans/2026-05-02-codebase-cleanup.md`
@@ -2344,7 +2344,7 @@ Expected output: 7 commits (6 fixes + summary), all with clean messages.
 
 Report to user:
 - Branch ready: `cleanup/2026-05-02`
-- Worktree: `../ReadLabAI-cleanup`
+- Worktree: `../ReadLabs-cleanup`
 - Test counts: backend XX/XX, Playwright desktop XX/XX
 - Mobile/tablet failures captured in summary doc
 - A11y moderate violations captured in summary doc

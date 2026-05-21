@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Theme Toggle Tests
+ * ReadLabs - Theme Toggle Tests
  * Tests the theme toggle button functionality, persistence, and visual changes.
  */
 const { test, expect } = require('@playwright/test');

@@ -63,7 +63,7 @@ export default function AuthPage() {
         <div className="relative z-10 max-w-md px-8 text-white">
           <div className="flex items-center gap-3 mb-8">
             <BookOpen className="h-10 w-10" />
-            <span className="text-3xl font-bold">ReadLabAI</span>
+            <span className="text-3xl font-bold">ReadLabs</span>
           </div>
           <h2 className="text-3xl lg:text-4xl font-bold leading-tight mb-10">
             Understand Research.<br />Build Critical Thinking.
@@ -106,7 +106,7 @@ export default function AuthPage() {
           {/* Mobile-only branding */}
           <div className="flex md:hidden items-center gap-2 mb-8 justify-center">
             <BookOpen className="h-7 w-7 text-primary" />
-            <span className="text-xl font-bold text-[var(--color-text)]">ReadLabAI</span>
+            <span className="text-xl font-bold text-[var(--color-text)]">ReadLabs</span>
           </div>
 
           {/* Card */}

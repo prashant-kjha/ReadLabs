@@ -1,4 +1,4 @@
-# ReadLabAI — Complete Feature & Verification Guide
+# ReadLabs — Complete Feature & Verification Guide
 
 > **Purpose:** This document catalogs every feature, every user workflow, and provides step-by-step manual verification procedures for final pre-launch testing.
 > **Last Updated:** 2026-04-06
@@ -27,7 +27,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                        ReadLabAI System                          │
+│                        ReadLabs System                          │
 ├──────────────┬──────────────────────┬───────────────────────────┤
 │   Frontend   │      Backend         │      External Services    │
 │  React 19    │   FastAPI (Python)   │   Supabase (DB + Auth)    │

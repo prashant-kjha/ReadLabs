@@ -1,7 +1,7 @@
 # Codebase Cleanup — Design Spec
 
 **Date:** 2026-05-02
-**Branch (target):** `cleanup/2026-05-02` in worktree `../ReadLabAI-cleanup`
+**Branch (target):** `cleanup/2026-05-02` in worktree `../ReadLabs-cleanup`
 **Author:** Claude (Opus 4.7) under user direction
 **Status:** awaiting user review before implementation
 
@@ -295,7 +295,7 @@ projects: [
 
 ### Worktree strategy
 
-Cleanup work happens in `../ReadLabAI-cleanup` on branch `cleanup/2026-05-02`. Six commits, each independently reviewable. No squashing. User merges (or cherry-picks) at their pace.
+Cleanup work happens in `../ReadLabs-cleanup` on branch `cleanup/2026-05-02`. Six commits, each independently reviewable. No squashing. User merges (or cherry-picks) at their pace.
 
 ### No new dependencies (except testing)
 

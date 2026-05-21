@@ -1,4 +1,4 @@
-# ReadLabAI
+# ReadLabs
 
 AI-guided research paper reading tool for students. Teachers upload papers, Gemini generates reading guides with guiding questions and checkpoints, and students read interactively with real-time AI feedback, jargon lookup, and comprehension quizzes.
 
@@ -76,7 +76,7 @@ cd backend && pytest
 
 ## Deployment
 
-ReadLabAI runs entirely on free tiers:
+ReadLabs runs entirely on free tiers:
 
 - **Frontend** → Cloudflare Pages (Vite static build)
 - **Backend** → Google Cloud Run (FastAPI in Docker)

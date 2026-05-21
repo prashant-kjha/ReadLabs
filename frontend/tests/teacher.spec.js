@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Teacher Pages Tests
+ * ReadLabs - Teacher Pages Tests
  * Tests PapersPage, ClassesPage, AssignPaperPage, AssignmentReviewPage,
  * DashboardPage, AssignmentDrilldownPage.
  */
@@ -14,8 +14,8 @@ test.describe('Teacher - Layout & Navigation', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('shows ReadLabAI branding in navbar', async ({ page }) => {
-    await expect(page.getByText('ReadLabAI').first()).toBeVisible();
+  test('shows ReadLabs branding in navbar', async ({ page }) => {
+    await expect(page.getByText('ReadLabs').first()).toBeVisible();
   });
 
   test('shows teacher navigation links (Papers, Classes)', async ({ page }) => {

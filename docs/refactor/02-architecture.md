@@ -1,4 +1,4 @@
-# ReadLabAI — Phase 2 Architecture Proposal
+# ReadLabs — Phase 2 Architecture Proposal
 
 **Date**: 2026-04-29
 **Based on**: Phase 1 Audit (`01-audit.md`)

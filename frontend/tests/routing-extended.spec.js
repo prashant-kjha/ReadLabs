@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Routing Extended Tests
+ * ReadLabs - Routing Extended Tests
  * Tests ProtectedRoute loading state, deep route protection, auth persistence.
  */
 const { test, expect } = require('@playwright/test');

@@ -95,7 +95,7 @@ export default function Layout() {
           {/* Left: Branding */}
           <div className="flex items-center gap-2 shrink-0">
             <BookOpen className="h-5 w-5 text-primary" />
-            <span className="font-bold text-[var(--color-text)] text-base">ReadLabAI</span>
+            <span className="font-bold text-[var(--color-text)] text-base">ReadLabs</span>
           </div>
 
           {/* Center: Desktop Navigation */}

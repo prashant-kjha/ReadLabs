@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Teacher Extended Tests
+ * ReadLabs - Teacher Extended Tests
  * Tests empty states, loading states, form submissions, CRUD operations,
  * processing/error states, and interactive editing.
  */

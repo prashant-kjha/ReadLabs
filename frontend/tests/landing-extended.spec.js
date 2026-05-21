@@ -1,5 +1,5 @@
 /**
- * ReadLabAI - Landing Page Extended Tests
+ * ReadLabs - Landing Page Extended Tests
  * Tests scroll behavior, testimonials, feature descriptions, footer content.
  */
 const { test, expect } = require('@playwright/test');

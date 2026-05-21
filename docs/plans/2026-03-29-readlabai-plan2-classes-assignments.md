@@ -1,4 +1,4 @@
-# ReadLabAI — Plan 2: Class Management & AI Assignment Creation
+# ReadLabs — Plan 2: Class Management & AI Assignment Creation
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Same as Plan 1. New: `google-generativeai` Gemini JSON mode for structured reading guide output.
 
-**Prerequisite:** Plan 1 complete. `C:\Users\prash\ReadLabAI\` project exists with working auth and paper upload.
+**Prerequisite:** Plan 1 complete. `C:\Users\prash\ReadLabs\` project exists with working auth and paper upload.
 
 ---
 
@@ -91,7 +91,7 @@ async def test_generate_reading_guide_handles_malformed_json():
 - [ ] **Step 2: Run test to confirm it fails**
 
 ```bash
-cd C:/Users/prash/ReadLabAI
+cd C:/Users/prash/ReadLabs
 pytest backend/tests/test_ai_provider.py -v
 ```
 

@@ -1,4 +1,4 @@
-# ReadLabAI
+# ReadLabs
 
 AI-guided research paper reading tool for students. Teachers upload papers, Gemini generates reading guides with sections and guiding questions, and students read with AI-powered checkpoints, jargon lookup, and quizzes.
 

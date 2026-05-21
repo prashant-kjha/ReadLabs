@@ -1,4 +1,4 @@
-# ReadLabAI — Plan 4: Teacher Dashboard & Class Insights
+# ReadLabs — Plan 4: Teacher Dashboard & Class Insights
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -864,7 +864,7 @@ Start both servers. Sign in as a teacher. Expected flow:
 - [ ] **Step 4: Run all backend tests one final time**
 
 ```bash
-cd C:/Users/prash/ReadLabAI
+cd C:/Users/prash/ReadLabs
 pytest backend/tests/ -v
 ```
 
@@ -879,9 +879,9 @@ git commit -m "feat: add assignment drilldown page with student responses and cl
 
 ---
 
-## Plan 4 Complete — ReadLabAI MVP Done
+## Plan 4 Complete — ReadLabs MVP Done
 
-At this point the full ReadLabAI MVP is functional:
+At this point the full ReadLabs MVP is functional:
 
 **Teacher flow:**
 1. Sign up as teacher → create class → get class code

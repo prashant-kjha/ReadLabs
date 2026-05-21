@@ -11,7 +11,7 @@ from backend.routers import auth, papers, classes, assignments, enrollment, sess
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="ReadLabAI API")
+app = FastAPI(title="ReadLabs API")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
