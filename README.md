@@ -41,16 +41,28 @@ Open http://localhost:3000
 
 ### Environment Variables
 
-Copy `.env.example` and fill in:
+The backend reads `backend/.env`; the frontend reads `frontend/.env.local`.
+See [`frontend/.env.example`](frontend/.env.example) for the frontend template.
+
+**Backend (`backend/.env`):**
 
 | Variable | Description |
 |----------|-------------|
 | `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
+| `SUPABASE_ANON_KEY` | Supabase anon / public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) |
 | `GEMINI_API_KEY` | Google Gemini API key |
-| `VITE_SUPABASE_URL` | Same Supabase URL (for frontend) |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon key (for frontend) |
-| `VITE_API_URL` | Backend API URL |
+| `CORE_API_KEY` | CORE.ac.uk key (optional, for paper search) |
+| `ALLOWED_ORIGINS` | CORS origins, comma-separated (prod only) |
+| `ENVIRONMENT` | `development` or `production` |
+
+**Frontend (`frontend/.env.local`):**
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_SUPABASE_URL` | Same Supabase URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
+| `VITE_API_URL` | Backend API URL (`http://localhost:8000` for dev) |
 
 ## Testing
 
@@ -64,9 +76,15 @@ cd backend && pytest
 
 ## Deployment
 
-- **Frontend**: Deploy `frontend/` to Vercel — `vercel.json` included for SPA routing
-- **Backend**: Deploy `backend/` to Railway using the included `Dockerfile`
-- Set environment variables on both platforms
+ReadLabAI runs entirely on free tiers:
+
+- **Frontend** → Cloudflare Pages (Vite static build)
+- **Backend** → Google Cloud Run (FastAPI in Docker)
+- **DB / Auth / Storage** → Supabase
+- **AI** → Google Gemini
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full step-by-step
+self-hosting guide.
 
 ## Project Structure
 
@@ -90,6 +108,11 @@ frontend/
 supabase/migrations/   # SQL migration files
 ```
 
+## Contributing
+
+Bug reports and PRs welcome. Please open an issue first for any non-trivial
+change so we can discuss the approach.
+
 ## License
 
-Private — all rights reserved.
+[MIT](LICENSE) © 2026 Prash

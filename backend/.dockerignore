@@ -1,0 +1,30 @@
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local env files (secrets injected via Cloud Run, not baked into image)
+.env
+.env.*
+!.env.example
+
+# Tests (not needed at runtime)
+tests/
+conftest.py
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Docs
+*.md
