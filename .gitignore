@@ -29,3 +29,4 @@ backend/test-results/
 # Misc
 package-lock.json
 landing-*.png
+auth-*.png

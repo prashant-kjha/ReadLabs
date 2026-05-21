@@ -9,7 +9,6 @@ import {
   Flame,
   Users,
   GraduationCap,
-  Star,
   ArrowRight,
   CheckCircle,
   MessageSquare,
@@ -18,6 +17,7 @@ import {
   BrainCircuit,
   BarChart3,
 } from 'lucide-react';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
@@ -48,6 +48,7 @@ export default function LandingPage() {
             <span>ReadLabs</span>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <button
               onClick={() => navigate('/auth')}
               className="btn-secondary text-sm"
@@ -401,63 +402,6 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ── */}
-      <section className="py-24 bg-muted">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center">
-            Loved by Students & Teachers
-          </h2>
-          <p className="mt-4 text-[var(--color-text-secondary)] text-center max-w-2xl mx-auto">
-            See what our early users have to say about ReadLabs.
-          </p>
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                name: 'Sarah Mitchell',
-                role: 'AP Biology Teacher, Lincoln High',
-                quote:
-                  'My students went from dreading research papers to actually looking forward to reading them. The guided checkpoints make all the difference.',
-              },
-              {
-                name: 'James Park',
-                role: '11th Grade Student',
-                quote:
-                  'The jargon lookup is a lifesaver. I finally understand methodology sections without spending hours on Google. My reading streak is at 23 days!',
-              },
-              {
-                name: 'Dr. Amara Okafor',
-                role: 'Science Department Chair',
-                quote:
-                  'We adopted ReadLabs across 8 classrooms. The analytics dashboard shows me exactly where students struggle, so I can target my lessons.',
-              },
-            ].map(({ name, role, quote }) => (
-              <div
-                key={name}
-                className="card-hover rounded-xl border border-border p-6 bg-surface"
-              >
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-5 h-5 fill-amber-400 text-amber-400"
-                    />
-                  ))}
-                </div>
-                <p className="mt-4 text-[var(--color-text-secondary)] text-sm leading-relaxed italic">
-                  "{quote}"
-                </p>
-                <div className="mt-6">
-                  <p className="font-semibold text-sm">{name}</p>
-                  <p className="text-xs text-[var(--color-text-secondary)]">
-                    {role}
-                  </p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

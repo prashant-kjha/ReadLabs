@@ -9,6 +9,7 @@ import {
   Trophy,
   AlertCircle,
 } from "lucide-react";
+import ThemeToggle from "../components/ThemeToggle";
 
 export default function AuthPage() {
   const [mode, setMode] = useState("signin");
@@ -56,7 +57,10 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex">
+    <div className="min-h-screen bg-surface flex relative">
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeToggle />
+      </div>
       {/* Left Decorative Panel (hidden on mobile) */}
       <div className="hidden md:flex md:w-1/2 lg:w-[55%] relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/70 items-center justify-center">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_50%)]" />
