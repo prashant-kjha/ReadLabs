@@ -57,6 +57,10 @@ $$;
 -- EVENT TRIGGERS
 -- ============================================================
 
+-- Drop first so this migration is re-runnable: event triggers are
+-- database-global (not schema-scoped), so a partial/interrupted apply can
+-- leave `ensure_rls` behind even after a `public` schema reset.
+DROP EVENT TRIGGER IF EXISTS ensure_rls;
 CREATE EVENT TRIGGER ensure_rls
   ON ddl_command_end
   EXECUTE FUNCTION public.rls_auto_enable();
@@ -263,20 +267,21 @@ CREATE TABLE public.audit_log (
 -- INDEXES
 -- ============================================================
 
+-- NOTE: unique indexes backing the inline UNIQUE table constraints
+-- (classes.class_code, checkpoint_responses, sowhat_responses,
+-- assignment_insights, key_term_definitions) are created AUTOMATICALLY by
+-- those constraints with the conventional `<table>_<cols>_key` name. They
+-- must NOT be re-declared here, or a clean apply fails with
+-- "relation ..._key already exists" (42P07).
 CREATE INDEX idx_assignments_class ON public.assignments (class_id);
 CREATE INDEX idx_sessions_assignment ON public.student_sessions (assignment_id);
 CREATE UNIQUE INDEX student_sessions_student_id_assignment_id_key ON public.student_sessions (student_id, assignment_id);
 CREATE INDEX idx_checkpoints_session ON public.checkpoint_responses (session_id);
-CREATE UNIQUE INDEX checkpoint_responses_session_id_section_index_key ON public.checkpoint_responses (session_id, section_index);
 CREATE INDEX idx_sowhat_session ON public.sowhat_responses (session_id);
-CREATE UNIQUE INDEX sowhat_responses_session_id_key ON public.sowhat_responses (session_id);
 CREATE INDEX idx_jargon_session ON public.jargon_lookups (session_id);
 CREATE INDEX idx_annotations_session ON public.annotations (session_id, section_index);
 CREATE INDEX idx_annotations_assignment ON public.annotations (session_id);
-CREATE UNIQUE INDEX assignment_insights_assignment_id_key ON public.assignment_insights (assignment_id);
-CREATE UNIQUE INDEX key_term_definitions_assignment_id_term_key ON public.key_term_definitions (assignment_id, term);
 CREATE INDEX idx_enrollments_student ON public.class_enrollments (student_id);
-CREATE UNIQUE INDEX classes_class_code_key ON public.classes (class_code);
 CREATE INDEX idx_papers_uploaded_by ON public.papers (uploaded_by);
 CREATE INDEX idx_reading_stats_student ON public.reading_stats (student_id);
 CREATE INDEX idx_audit_log_user ON public.audit_log (user_id);

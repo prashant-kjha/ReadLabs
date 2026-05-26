@@ -1,0 +1,4 @@
+-- Seed data for local development and `supabase db reset`.
+-- Intentionally empty: ReadLabs has no seed data (users sign up, teachers are
+-- promoted manually). This file exists so `db reset` has a seed target and
+-- doesn't warn about a missing path.
