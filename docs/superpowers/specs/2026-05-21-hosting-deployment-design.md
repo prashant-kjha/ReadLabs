@@ -18,7 +18,7 @@ and stand up their own instance with minimal friction.
 | Repo layout | Monorepo | One README, one issue tracker, matches current layout |
 | Deploy trigger | Auto from `main` (GitHub Actions for backend, native Cloudflare for frontend) | Standard OSS workflow with PR previews |
 | Supabase | Separate prod project | Isolates prod data from dev experiments |
-| Domain | Free subdomains (`*.pages.dev`, `*.run.app`) | Zero DNS setup; custom domain trivial to add later |
+| Domain | `readlabs.org` (frontend), `api.readlabs.org` (backend) — **revised 2026-05-21 after domain purchase** | Domain bought via Cloudflare Registrar mid-design, so DNS is already on Cloudflare; wiring custom domain in from day one avoids a later migration |
 | Migrations | Manual `supabase db push` from laptop | Guards against accidental destructive migrations |
 | License | MIT | Permissive default; expected for student/portfolio OSS |
 
@@ -35,12 +35,18 @@ Three providers, each doing what they do best:
 
 Request flow:
 
-1. Browser hits `readlabs.pages.dev` → CDN serves static assets.
+1. Browser hits `https://readlabs.org` → Cloudflare CDN serves static assets.
 2. React app calls Supabase directly for login and signed PDF URLs.
-3. React app calls Cloud Run at `https://readlabs-api-xxx.run.app/api/v1/...`
+3. React app calls Cloud Run at `https://api.readlabs.org/api/v1/...`
    for business logic + Gemini calls.
 4. Cloud Run calls Supabase PostgREST/Storage with service-role key, and calls
    Gemini with API key. Both secrets injected from Secret Manager at boot.
+
+DNS for both subdomains lives on Cloudflare (since `readlabs.org` is registered
+via Cloudflare Registrar). Cloudflare Pages handles `readlabs.org` automatically;
+`api.readlabs.org` is a `CNAME` to `ghs.googlehosted.com` with Cloudflare proxy
+**off** (Google Cloud Run manages its own TLS cert and proxying conflicts with
+that).
 
 ## Files Created
 
@@ -68,8 +74,16 @@ Request flow:
 
 ## Out of Scope (v1)
 
-- Custom domain (easy follow-up; one env var + DNS records)
 - Staging environment (single prod env suffices for solo OSS project)
 - Database backup automation (Supabase does daily backups on free tier)
 - Sentry / observability beyond Cloud Run's built-in logs
 - Auto-applied migrations
+- `www.readlabs.org` redirect to apex (trivial Cloudflare Pages follow-up)
+
+## Revision Log
+
+- **2026-05-21**: Domain decision changed from free `*.pages.dev` / `*.run.app`
+  subdomains to `readlabs.org` / `api.readlabs.org` after Prash purchased the
+  domain via Cloudflare Registrar mid-session. localStorage keys also renamed
+  from `readlab_*` to `readlabs_*` to match the new brand name (ReadLabAI →
+  ReadLabs).

@@ -47,13 +47,6 @@ test.describe('Landing Page', () => {
     await expect(page.getByRole('heading', { name: 'For Students' })).toBeVisible();
   });
 
-  test('displays testimonials section', async ({ page }) => {
-    await expect(page.getByText('Loved by Students & Teachers')).toBeVisible();
-    await expect(page.getByText('Sarah Mitchell')).toBeVisible();
-    await expect(page.getByText('James Park')).toBeVisible();
-    await expect(page.getByText('Dr. Amara Okafor')).toBeVisible();
-  });
-
   test('has CTA section', async ({ page }) => {
     await expect(page.getByText('Start Reading Smarter Today')).toBeVisible();
   });
@@ -84,7 +77,7 @@ test.describe('Landing Page', () => {
   test('redirects logged-in users away from landing page', async ({ page }) => {
     // Set teacher auth in localStorage
     await page.evaluate(() => {
-      localStorage.setItem('readlab_user', JSON.stringify({
+      localStorage.setItem('readlabs_user', JSON.stringify({
         id: 't1', email: 't@test.com', name: 'Teacher', role: 'teacher', access_token: 'tok',
       }));
     });

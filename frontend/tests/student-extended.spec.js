@@ -325,7 +325,7 @@ test.describe('Student - Reading Page Section Navigation', () => {
     await page.waitForLoadState('networkidle');
 
     // The AI panel width is persisted
-    const pref = await page.evaluate(() => localStorage.getItem('readlab_ai_panel_width'));
+    const pref = await page.evaluate(() => localStorage.getItem('readlabs_panel_width'));
     expect(pref).toBeTruthy();
   });
 
@@ -337,7 +337,7 @@ test.describe('Student - Reading Page Section Navigation', () => {
 
     // Click to collapse sections
     await page.getByText('Hide').first().click();
-    const pref = await page.evaluate(() => localStorage.getItem('readlab_sections_collapsed'));
+    const pref = await page.evaluate(() => localStorage.getItem('readlabs_sections_collapsed'));
     expect(pref).toBe('true');
   });
 });

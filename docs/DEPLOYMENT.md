@@ -2,13 +2,18 @@
 
 Step-by-step instructions to deploy ReadLabs for free using:
 
-- **Frontend** → Cloudflare Pages
-- **Backend** → Google Cloud Run
+- **Frontend** → Cloudflare Pages at `readlabs.org`
+- **Backend** → Google Cloud Run at `api.readlabs.org`
 - **DB / Auth / Storage** → Supabase
 - **AI** → Google Gemini
 
-Total cost at low traffic: **$0/month**. Requires a credit card on file at GCP
-(no charges within free tier).
+Total cost at low traffic: **$0/month** (plus your domain registration). Requires
+a credit card on file at GCP (no charges within free tier).
+
+> **Assumes you own `readlabs.org` via Cloudflare Registrar** (so DNS is already
+> on Cloudflare). If your registrar is elsewhere, transfer the nameservers to
+> Cloudflare first — it's free, takes ~5 min, and makes the custom-domain steps
+> below one-click.
 
 ---
 
@@ -18,7 +23,7 @@ Create accounts (free) if you don't have them:
 
 1. [GitHub](https://github.com/signup)
 2. [Supabase](https://supabase.com/dashboard/sign-up)
-3. [Cloudflare](https://dash.cloudflare.com/sign-up)
+3. [Cloudflare](https://dash.cloudflare.com/sign-up) — already done if you bought the domain there
 4. [Google Cloud](https://console.cloud.google.com/) — credit card required at signup (no charges at free tier traffic)
 5. [Google AI Studio](https://aistudio.google.com/) — for the Gemini API key
 
@@ -27,6 +32,7 @@ Install locally:
 - [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install)
 - [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
 - [GitHub CLI (`gh`)](https://cli.github.com/) — optional but easier
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — for the first manual Cloud Run deploy
 
 ---
 
@@ -70,11 +76,10 @@ supabase db push
 - `anon / public` key — for `VITE_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY`
 - `service_role / secret` key — for `SUPABASE_SERVICE_ROLE_KEY` ⚠️ never expose this to the browser
 
-**Configure auth redirect URLs:**
+**Configure auth redirect URLs** (Authentication → URL Configuration):
 
-Authentication → URL Configuration:
-- Site URL: `https://<your-app>.pages.dev` (you'll know this after Part 4)
-- Redirect URLs: add `https://<your-app>.pages.dev/**`
+- Site URL: `https://readlabs.org`
+- Redirect URLs: add `https://readlabs.org/**`
 
 ---
 
@@ -89,7 +94,9 @@ plenty for a demo.
 
 ---
 
-## Part 4 — Deploy the frontend to Cloudflare Pages
+## Part 4 — Deploy the frontend to Cloudflare Pages at readlabs.org
+
+### 4.1 — Connect the repo
 
 1. Cloudflare dashboard → **Workers & Pages** → **Create application** → **Pages** → **Connect to Git**
 2. Authorize GitHub, pick your `readlabs` repo
@@ -102,14 +109,19 @@ plenty for a demo.
 4. **Environment variables** (Production):
    - `VITE_SUPABASE_URL` = your Supabase project URL
    - `VITE_SUPABASE_ANON_KEY` = your Supabase anon key
-   - `VITE_API_URL` = `https://placeholder.run.app` (you'll update this in Part 6 once Cloud Run is live)
-5. **Save and Deploy**
+   - `VITE_API_URL` = `https://api.readlabs.org` (the Cloud Run service we'll create in Part 5)
+5. **Save and Deploy** — the first build runs immediately. It'll be reachable at the auto-generated `*.pages.dev` URL while we set up the custom domain.
 
-After ~2 minutes you'll get a URL like `readlabs-abc.pages.dev`.
-**Write this down** — you'll need it for backend CORS in Part 6.
+### 4.2 — Attach the custom domain
 
-Go back to Supabase → Authentication → URL Configuration and update Site URL +
-Redirect URLs with this real Pages URL.
+1. Your Pages project → **Custom domains** → **Set up a custom domain**
+2. Enter `readlabs.org`
+3. Cloudflare auto-creates the DNS record (because the domain is on Cloudflare). Click confirm.
+4. (Optional) Add `www.readlabs.org` as a second custom domain that redirects to the apex.
+
+The custom domain is live within ~60 seconds. The site won't fully work until
+Part 6 (the backend is missing), but the frontend loads and you can confirm
+HTTPS, CSP, etc.
 
 ---
 
@@ -229,10 +241,11 @@ gcloud iam workload-identity-pools providers describe github-provider \
     --format='value(name)'
 ```
 
-### 5.6 — First manual deploy (to get the Cloud Run URL)
+### 5.6 — First manual deploy (bootstraps the Cloud Run service)
 
-Before GitHub Actions can deploy, the Cloud Run service has to exist. Easiest:
-one manual deploy with a placeholder image.
+Before GitHub Actions can deploy, the Cloud Run service must exist. We do one
+manual deploy with the real config — `ALLOWED_ORIGINS` is already known
+(`https://readlabs.org`) because the domain is fixed.
 
 ```bash
 # Build and push from your laptop (one time)
@@ -251,21 +264,57 @@ gcloud run deploy readlabs-api \
     --port 8080 \
     --memory 512Mi \
     --service-account $RUNTIME_SA \
-    --set-env-vars "ENVIRONMENT=production,ALLOWED_ORIGINS=https://<your-app>.pages.dev,SUPABASE_URL=https://<ref>.supabase.co" \
+    --set-env-vars "ENVIRONMENT=production,ALLOWED_ORIGINS=https://readlabs.org,SUPABASE_URL=https://<your-ref>.supabase.co" \
     --update-secrets "SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest,SUPABASE_ANON_KEY=supabase-anon-key:latest,GEMINI_API_KEY=gemini-api-key:latest,CORE_API_KEY=core-api-key:latest"
 ```
 
-Cloud Run prints the service URL — looks like `https://readlabs-api-<hash>-uc.a.run.app`. **Write it down.**
+Cloud Run prints a temporary service URL (`https://readlabs-api-<hash>-uc.a.run.app`).
+That's fine — it's only used until we attach the custom domain in Part 6.
 
 ---
 
-## Part 6 — Wire frontend to backend
+## Part 6 — Wire `api.readlabs.org` to Cloud Run
 
-1. Cloudflare Pages → your project → Settings → Environment variables
-2. Update `VITE_API_URL` to the Cloud Run URL from 5.6
-3. Settings → Deployments → **Retry deployment** (or just push any frontend change)
+### 6.1 — Create the domain mapping in Cloud Run
 
-Test it: open `https://<your-app>.pages.dev`, sign up, upload a paper. Watch
+```bash
+gcloud beta run domain-mappings create \
+    --service=readlabs-api \
+    --domain=api.readlabs.org \
+    --region=$REGION
+```
+
+This command prints DNS records (a CNAME or A/AAAA set) that you need to add
+to Cloudflare. Copy them.
+
+### 6.2 — Add the DNS records in Cloudflare
+
+1. Cloudflare dashboard → `readlabs.org` → **DNS** → **Records**
+2. Add the record(s) from 6.1. For Cloud Run, it's typically:
+   - Type: `CNAME`
+   - Name: `api`
+   - Target: `ghs.googlehosted.com` (or whatever the command printed)
+   - Proxy status: **DNS only** (gray cloud, not orange) — Google manages the TLS cert; Cloudflare proxying would conflict.
+3. Save.
+
+### 6.3 — Wait for the certificate
+
+```bash
+# Watch the mapping until status = "Ready" (usually 5-15 min)
+gcloud beta run domain-mappings describe \
+    --domain=api.readlabs.org \
+    --region=$REGION \
+    --format="value(status.conditions[0].type,status.conditions[0].status)"
+```
+
+### 6.4 — End-to-end smoke test
+
+```bash
+# Should return {"status":"ok"}
+curl https://api.readlabs.org/health
+```
+
+Then visit https://readlabs.org in a browser, sign up, upload a paper. Watch
 Cloud Run logs in real time:
 
 ```bash
@@ -289,10 +338,10 @@ In your GitHub repo → Settings → Secrets and variables → Actions:
 - `GCP_PROJECT_ID` = your project ID
 - `GCP_REGION` = `us-central1` (or whatever you picked)
 - `SUPABASE_URL` = your Supabase project URL
-- `ALLOWED_ORIGINS` = `https://<your-app>.pages.dev`
+- `ALLOWED_ORIGINS` = `https://readlabs.org`
 
 Test it by editing any file under `backend/` and pushing to `main`. The
-`Deploy backend to Cloud Run` workflow should run and ship the change.
+`Deploy backend to Cloud Run` workflow should run and ship the change in ~3 min.
 
 ---
 
@@ -300,7 +349,7 @@ Test it by editing any file under `backend/` and pushing to `main`. The
 
 | Change | What happens |
 |---|---|
-| Edit frontend, push to `main` | Cloudflare Pages auto-builds + deploys in ~90s |
+| Edit frontend, push to `main` | Cloudflare Pages auto-builds + deploys to `readlabs.org` in ~90s |
 | Open a PR with frontend changes | Cloudflare publishes a preview at `<sha>.<project>.pages.dev` |
 | Edit backend, push to `main` | GitHub Actions builds image + deploys to Cloud Run in ~3 min |
 | Add a SQL migration | Run `supabase db push` from your laptop |
@@ -314,25 +363,33 @@ Test it by editing any file under `backend/` and pushing to `main`. The
 → `gcloud run services logs read readlabs-api --region=$REGION --limit=50` — usually a missing env var or secret.
 
 **Frontend gets CORS errors**
-→ `ALLOWED_ORIGINS` env var on Cloud Run must exactly match the Pages origin (including https://, no trailing slash). Redeploy after changing it.
+→ `ALLOWED_ORIGINS` env var on Cloud Run must exactly match the frontend origin (`https://readlabs.org`, no trailing slash). Redeploy after changing it.
 
 **"Token expired" loop after login**
-→ Check Supabase Auth → URL Configuration includes the Pages URL in both Site URL and Redirect URLs.
+→ Check Supabase Auth → URL Configuration includes `https://readlabs.org` in both Site URL and Redirect URLs.
+
+**`api.readlabs.org` returns 404 or hangs**
+→ The domain mapping isn't `Ready` yet. Check `gcloud beta run domain-mappings describe ...`. If stuck >30 min, verify the Cloudflare DNS record points at the exact target Google provided and the proxy is **off** (gray cloud).
+
+**Cloudflare shows "Error 525 SSL handshake failed" on `api.readlabs.org`**
+→ Cloudflare proxying is on (orange cloud) but Cloud Run manages its own cert. Switch the DNS record to **DNS only**.
 
 **Supabase project paused after 7 days**
-→ Free tier pauses inactive projects. Click "Restore" in the Supabase dashboard. To prevent: set up an external uptime ping (cron-job.org → `https://<your-app>.pages.dev`) every few days.
+→ Free tier pauses inactive projects. Click "Restore" in the Supabase dashboard. To prevent: set up an external uptime ping (e.g. cron-job.org → `https://readlabs.org`) every few days.
 
 ---
 
-## Adding a custom domain later
+## Why `api.readlabs.org` and not just `readlabs.org/api`?
 
-When you're ready:
+Two reasons:
 
-1. Buy a domain (Cloudflare Registrar sells at cost).
-2. **Frontend**: Cloudflare Pages → Custom domains → Add `readlabs.com`. DNS auto-configures if the domain is on Cloudflare.
-3. **Backend**: Cloud Run → your service → Custom Domains → Add `api.readlabs.com`. Cloud Run gives you a CNAME target; add it in Cloudflare DNS.
-4. Update env vars:
-   - Cloudflare Pages: `VITE_API_URL=https://api.readlabs.com`
-   - Cloud Run: `ALLOWED_ORIGINS=https://readlabs.com`
-5. Update Supabase Auth Site URL + Redirect URLs to the new domain.
-6. Redeploy both. ~5 minutes of work.
+1. **Different platforms.** The frontend is on Cloudflare's CDN and the backend
+   is on Google Cloud Run. Routing `/api/*` to a different origin would require
+   a Cloudflare Worker in the middle — extra moving part, extra cold-start
+   surface, extra place for things to break.
+2. **CORS clarity.** With distinct origins, CORS is explicit: backend allows
+   `https://readlabs.org`, that's it. No cookie domain confusion, no SSR/edge
+   request weirdness.
+
+The browser handles the two origins seamlessly — users don't see `api.readlabs.org`
+in their address bar; it's only ever called via `fetch()` from the frontend.

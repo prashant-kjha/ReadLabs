@@ -34,13 +34,6 @@ test.describe('Landing Page - Extended', () => {
     }
   });
 
-  test('testimonials show 5-star ratings', async ({ page }) => {
-    const starIcons = page.locator('.fill-amber-400');
-    // 3 testimonials x 5 stars = 15 star icons
-    const count = await starIcons.count();
-    expect(count).toBe(15);
-  });
-
   test('teacher section has 4 checklist items', async ({ page }) => {
     const forTeachers = page.getByRole('heading', { name: 'For Teachers' }).locator('xpath=ancestor::div[contains(@class, "card-hover")]');
     const teacherChecks = [

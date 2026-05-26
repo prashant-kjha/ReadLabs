@@ -30,9 +30,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080
 
 # Runtime-only system libs (no compiler).
+# libmagic1 is required by python-magic for content-based PDF validation.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libjpeg62-turbo \
         zlib1g \
+        libmagic1 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 1000 app
 

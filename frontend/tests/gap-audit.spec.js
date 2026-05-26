@@ -203,13 +203,6 @@ test.describe('Landing Page - Navigation Buttons', () => {
     const section = page.locator('#how-it-works');
     await expect(section).toBeVisible();
   });
-
-  test('testimonial names are visible', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByText('Sarah Mitchell')).toBeVisible();
-    await expect(page.getByText('James Park')).toBeVisible();
-    await expect(page.getByText('Dr. Amara Okafor')).toBeVisible();
-  });
 });
 
 // ── Reading Page Gap Tests ─────────────────────────────────────────────────────

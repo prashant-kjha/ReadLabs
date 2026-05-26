@@ -19,10 +19,10 @@ interface CheckpointEntry {
 }
 
 const SECTION_TYPE_COLORS: Record<string, string> = {
-  Introduction: "bg-blue-500/20 text-blue-300",
-  Methods: "bg-purple-500/20 text-purple-300",
-  Results: "bg-green-500/20 text-green-300",
-  Discussion: "bg-amber-500/20 text-amber-300",
+  Introduction: "bg-blue-500/20 text-blue-800 dark:text-blue-300",
+  Methods: "bg-purple-500/20 text-purple-800 dark:text-purple-300",
+  Results: "bg-green-500/20 text-green-800 dark:text-green-300",
+  Discussion: "bg-amber-500/20 text-amber-800 dark:text-amber-300",
   Other: "bg-muted text-[var(--color-text-secondary)]",
 };
 

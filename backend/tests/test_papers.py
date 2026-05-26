@@ -98,6 +98,26 @@ def test_upload_rejects_non_pdf():
     assert "PDF" in response.json()["detail"]
 
 
+def test_upload_rejects_disguised_non_pdf():
+    """File with application/pdf MIME header but non-PDF bytes must be rejected.
+
+    The MIME header is client-controlled — only the file content is trustworthy.
+    Covers the header-byte check in _validate_pdf_content; libmagic adds an extra
+    layer on top when installed.
+    """
+    mock_teacher = {"sub": "teacher-uuid-123"}
+    app.dependency_overrides[_require_teacher] = lambda: mock_teacher
+    try:
+        response = api_client.post(
+            "/api/v1/papers/upload",
+            files={"file": ("fake.pdf", b"<html>not a pdf</html>", "application/pdf")},
+        )
+    finally:
+        app.dependency_overrides.pop(_require_teacher, None)
+    assert response.status_code == 400
+    assert "PDF" in response.json()["detail"]
+
+
 def test_upload_returns_paper_metadata():
     import fitz, io
     doc = fitz.open()

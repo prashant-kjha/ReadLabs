@@ -52,12 +52,12 @@ test.describe('Theme Toggle', () => {
     const toggle = page.locator('button[aria-label*="Switch to"]');
     await toggle.click();
     // Check localStorage
-    const stored = await page.evaluate(() => localStorage.getItem('readlab_theme'));
+    const stored = await page.evaluate(() => localStorage.getItem('readlabs_theme'));
     expect(stored).toBe('dark');
   });
 
   test('theme is restored from localStorage on reload', async ({ page }) => {
-    await page.evaluate(() => localStorage.setItem('readlab_theme', 'dark'));
+    await page.evaluate(() => localStorage.setItem('readlabs_theme', 'dark'));
     await page.reload();
     await page.waitForLoadState('networkidle');
     await expect(page.locator('html')).toHaveClass(/\bdark\b/);

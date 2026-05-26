@@ -39,7 +39,7 @@ test.describe('Teacher - Layout & Navigation', () => {
   test('logout clears auth and redirects to /auth', async ({ page }) => {
     await page.getByText('Logout').click();
     await expect(page).toHaveURL(/\/auth/);
-    const stored = await page.evaluate(() => localStorage.getItem('readlab_user'));
+    const stored = await page.evaluate(() => localStorage.getItem('readlabs_user'));
     expect(stored).toBeNull();
   });
 

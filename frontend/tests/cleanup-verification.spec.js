@@ -65,7 +65,7 @@ test.describe('Cleanup verification: post-May-1 fixes', () => {
 
     await expect(page.locator('text=/check your email/i').first()).toBeVisible({ timeout: 5000 });
     expect(page.url()).toContain('/auth');
-    const storedUser = await page.evaluate(() => localStorage.getItem('readlab_user'));
+    const storedUser = await page.evaluate(() => localStorage.getItem('readlabs_user'));
     expect(storedUser).toBeNull();
   });
 

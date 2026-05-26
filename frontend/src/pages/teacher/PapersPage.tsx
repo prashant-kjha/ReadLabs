@@ -73,6 +73,12 @@ export default function PapersPage() {
           />
         </label>
         <p className="text-[var(--color-text-secondary)] text-xs mt-2">Max 20 MB. Text and figures are extracted automatically.</p>
+        <p className="text-[var(--color-text-secondary)] text-xs mt-2 leading-relaxed">
+          By uploading you confirm you have the right to share this paper with your
+          enrolled students under classroom-use copyright provisions (e.g. fair use /
+          the TEACH Act in the US). PDFs are not made public. See our{" "}
+          <a href="/terms" className="text-primary underline" target="_blank" rel="noreferrer">Terms</a>.
+        </p>
       </div>
 
       <div className="space-y-3">

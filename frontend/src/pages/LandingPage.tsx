@@ -435,9 +435,16 @@ export default function LandingPage() {
           <p className="text-sm text-[var(--color-text-secondary)]">
             Built for curious minds
           </p>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            &copy; {new Date().getFullYear()} ReadLabs
-          </p>
+          <nav className="flex items-center gap-4 text-sm text-[var(--color-text-secondary)]">
+            <a href="/terms" className="hover:text-primary transition-colors">Terms</a>
+            <a
+              href="mailto:legal@readlabs.org?subject=Copyright%20Infringement%20Report"
+              className="hover:text-primary transition-colors"
+            >
+              Report copyright
+            </a>
+            <span>&copy; {new Date().getFullYear()} ReadLabs</span>
+          </nav>
         </div>
       </footer>
     </div>

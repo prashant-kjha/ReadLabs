@@ -91,7 +91,7 @@ test.describe('Auth Page', () => {
 
   test('redirects logged-in teacher to /teacher/papers', async ({ page }) => {
     await page.evaluate((user) => {
-      localStorage.setItem('readlab_user', JSON.stringify(user));
+      localStorage.setItem('readlabs_user', JSON.stringify(user));
     }, TEACHER_USER);
     await page.goto('/auth');
     await expect(page).toHaveURL(/\/teacher\/papers/);
@@ -99,7 +99,7 @@ test.describe('Auth Page', () => {
 
   test('redirects logged-in student to /student/dashboard', async ({ page }) => {
     await page.evaluate((user) => {
-      localStorage.setItem('readlab_user', JSON.stringify(user));
+      localStorage.setItem('readlabs_user', JSON.stringify(user));
     }, STUDENT_USER);
     await page.goto('/auth');
     await expect(page).toHaveURL(/\/student\/dashboard/);

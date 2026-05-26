@@ -39,7 +39,7 @@ test.describe('Auth Page - Extended', () => {
     await page.getByLabel('Password').fill('password123');
     await page.locator('form button[type="submit"]').click();
     await expect(page).toHaveURL(/\/teacher\/papers/);
-    const stored = await page.evaluate(() => localStorage.getItem('readlab_user'));
+    const stored = await page.evaluate(() => localStorage.getItem('readlabs_user'));
     const parsed = JSON.parse(stored);
     expect(parsed.role).toBe('teacher');
     expect(parsed.access_token).toBeTruthy();
@@ -80,7 +80,7 @@ test.describe('Auth Page - Extended', () => {
     await expect(page).toHaveURL(/\/auth/);
 
     // No user record should be in localStorage (no auto-login).
-    const stored = await page.evaluate(() => localStorage.getItem('readlab_user'));
+    const stored = await page.evaluate(() => localStorage.getItem('readlabs_user'));
     expect(stored).toBeNull();
   });
 

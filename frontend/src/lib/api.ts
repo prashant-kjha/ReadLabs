@@ -44,11 +44,11 @@ api.interceptors.response.use(
           data: { session },
         } = await supabase.auth.refreshSession();
         if (session?.access_token) {
-          const stored = localStorage.getItem("readlab_user");
+          const stored = localStorage.getItem("readlabs_user");
           if (stored) {
             const parsed = JSON.parse(stored);
             localStorage.setItem(
-              "readlab_user",
+              "readlabs_user",
               JSON.stringify({
                 ...parsed,
                 access_token: session.access_token,
@@ -63,7 +63,7 @@ api.interceptors.response.use(
           return api(original);
         }
       } catch {
-        localStorage.removeItem("readlab_user");
+        localStorage.removeItem("readlabs_user");
         window.location.href = "/auth";
         return Promise.reject(new Error("Session expired. Please log in again."));
       }

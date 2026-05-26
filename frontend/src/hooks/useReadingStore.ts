@@ -133,11 +133,11 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   quizResults: null,
   quizGenerating: false,
   quizSubmitting: false,
-  sectionsCollapsed: localStorage.getItem("readlab_sections_collapsed") === "true",
+  sectionsCollapsed: localStorage.getItem("readlabs_sections_collapsed") === "true",
   aiPanelWidth: (() => {
-    const stored = localStorage.getItem("readlab_ai_panel_width");
+    const stored = localStorage.getItem("readlabs_panel_width");
     if (stored) return parseInt(stored, 10);
-    localStorage.setItem("readlab_ai_panel_width", "340");
+    localStorage.setItem("readlabs_panel_width", "340");
     return 340;
   })(),
   aiPanelVisible: true,
@@ -329,12 +329,12 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   },
 
   setSectionsCollapsed: (collapsed) => {
-    localStorage.setItem("readlab_sections_collapsed", String(collapsed));
+    localStorage.setItem("readlabs_sections_collapsed", String(collapsed));
     set({ sectionsCollapsed: collapsed });
   },
 
   setAiPanelWidth: (width) => {
-    localStorage.setItem("readlab_ai_panel_width", String(width));
+    localStorage.setItem("readlabs_panel_width", String(width));
     set({ aiPanelWidth: width });
   },
 

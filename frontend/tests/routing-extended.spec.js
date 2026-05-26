@@ -103,7 +103,7 @@ test.describe('Auth Persistence', () => {
     await expect(page.getByText('Test Teacher')).toBeVisible();
 
     // Clear localStorage
-    await page.evaluate(() => localStorage.removeItem('readlab_user'));
+    await page.evaluate(() => localStorage.removeItem('readlabs_user'));
     await page.reload();
     await page.waitForLoadState('networkidle');
 

@@ -26,7 +26,7 @@ const STUDENT_USER = {
 async function loginAs(page, user) {
   await page.goto('/');
   await page.evaluate((userData) => {
-    localStorage.setItem('readlab_user', JSON.stringify(userData));
+    localStorage.setItem('readlabs_user', JSON.stringify(userData));
   }, user);
 }
 

@@ -198,6 +198,19 @@ export default function Layout() {
       <main className="pt-14" inert={mobileMenuOpen}>
         <Outlet />
       </main>
+
+      <footer className="border-t border-border mt-12 py-4">
+        <div className="max-w-screen-2xl mx-auto px-4 flex flex-wrap items-center justify-end gap-4 text-xs text-[var(--color-text-secondary)]">
+          <a href="/terms" className="underline hover:text-primary transition-colors">Terms</a>
+          <a
+            href="mailto:legal@readlabs.org?subject=Copyright%20Infringement%20Report"
+            className="underline hover:text-primary transition-colors"
+          >
+            Report copyright
+          </a>
+          <span>&copy; {new Date().getFullYear()} ReadLabs</span>
+        </div>
+      </footer>
     </div>
   );
 }

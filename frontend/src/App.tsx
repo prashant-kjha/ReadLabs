@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import RoleRoute from "./components/RoleRoute";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
+import TermsPage from "./pages/TermsPage";
 import Layout from "./components/Layout";
 import PapersPage from "./pages/teacher/PapersPage";
 import ClassesPage from "./pages/teacher/ClassesPage";
@@ -30,6 +31,9 @@ function AppRoutes() {
 
       {/* Auth */}
       <Route path="/auth" element={user ? <Navigate to={defaultPath} /> : <AuthPage />} />
+
+      {/* Public legal pages */}
+      <Route path="/terms" element={<TermsPage />} />
 
       {/* Protected app routes */}
       <Route element={<ProtectedRoute />}>

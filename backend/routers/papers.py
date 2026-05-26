@@ -13,6 +13,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
+_PDF_HEADER = b"%PDF-"
+
+try:
+    import magic as _libmagic
+    _HAS_LIBMAGIC = True
+except Exception as _e:  # missing system lib, bad install, etc.
+    _libmagic = None
+    _HAS_LIBMAGIC = False
+    logger.warning("libmagic unavailable (%s) — falling back to header byte check only", _e)
+
+
+def _validate_pdf_content(pdf_bytes: bytes) -> None:
+    """Reject anything that isn't actually a PDF, regardless of client-supplied MIME type.
+
+    Defense in depth:
+      1. Cheap prefix check rejects obvious garbage in nanoseconds.
+      2. libmagic sniffs the actual content signature (catches polyglots).
+    """
+    if not pdf_bytes.startswith(_PDF_HEADER):
+        raise HTTPException(status_code=400, detail="File is not a valid PDF")
+    if _HAS_LIBMAGIC:
+        detected = _libmagic.from_buffer(pdf_bytes[:4096], mime=True)
+        if detected != "application/pdf":
+            logger.info("rejected upload: libmagic detected %s, not PDF", detected)
+            raise HTTPException(status_code=400, detail="File content does not appear to be a PDF")
 
 
 async def _upload_to_storage(pdf_bytes: bytes, object_path: str) -> str:
@@ -41,6 +66,8 @@ async def upload_paper(
     pdf_bytes = await file.read()
     if len(pdf_bytes) > MAX_PDF_BYTES:
         raise HTTPException(status_code=400, detail="PDF must be under 20 MB")
+
+    _validate_pdf_content(pdf_bytes)
 
     extracted = extract_text_and_figures(pdf_bytes)
 

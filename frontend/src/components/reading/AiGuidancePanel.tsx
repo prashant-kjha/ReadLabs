@@ -84,7 +84,7 @@ export default function AiGuidancePanel({
       const delta = startX - moveEvent.clientX;
       const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
       setInternalWidth(newWidth);
-      localStorage.setItem("readlab_ai_panel_width", newWidth.toString());
+      localStorage.setItem("readlabs_panel_width", newWidth.toString());
     };
 
     const handleDragEnd = () => {

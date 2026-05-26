@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const restore = async () => {
-      const stored = localStorage.getItem("readlab_user");
+      const stored = localStorage.getItem("readlabs_user");
       if (stored) {
         const parsed: UserData = JSON.parse(stored);
         try {
@@ -34,14 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               access_token: session.access_token,
               refresh_token: session.refresh_token,
             };
-            localStorage.setItem("readlab_user", JSON.stringify(updated));
+            localStorage.setItem("readlabs_user", JSON.stringify(updated));
             setUser(updated);
           } else {
             setUser(parsed);
           }
           setRole(parsed.role);
         } catch {
-          localStorage.removeItem("readlab_user");
+          localStorage.removeItem("readlabs_user");
         }
       }
       setLoading(false);
@@ -54,14 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       access_token: userData.access_token,
       refresh_token: userData.refresh_token,
     });
-    localStorage.setItem("readlab_user", JSON.stringify(userData));
+    localStorage.setItem("readlabs_user", JSON.stringify(userData));
     setUser(userData);
     setRole(userData.role);
   };
 
   const logout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem("readlab_user");
+    localStorage.removeItem("readlabs_user");
     delete api.defaults.headers.common["Authorization"];
     setUser(null);
     setRole(null);

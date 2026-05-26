@@ -18,15 +18,15 @@ interface SessionInfo {
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: "badge bg-emerald-500/10 text-success",
-  intermediate: "badge bg-amber-500/10 text-warning",
-  advanced: "badge bg-red-500/10 text-red-400",
+  beginner: "badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  intermediate: "badge bg-amber-500/10 text-amber-800 dark:text-amber-300",
+  advanced: "badge bg-red-500/10 text-red-700 dark:text-red-400",
 };
 
 const STATUS_COLORS: Record<string, string> = {
   not_started: "badge bg-muted text-[var(--color-text-secondary)]",
   in_progress: "badge bg-primary-light text-primary",
-  completed: "badge bg-emerald-500/10 text-success",
+  completed: "badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
 };
 
 const STATUS_LABELS: Record<string, string> = {
