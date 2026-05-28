@@ -1,7 +1,7 @@
 # ReadLabs Launch Progress Tracker
 
-**Last Updated:** 2026-05-01
-**Target Launch:** TBD
+**Last Updated:** 2026-05-27
+**Target Launch:** ✅ Deployed to production 2026-05-27 — https://readlabs.org
 
 ---
 
@@ -14,17 +14,21 @@
 - [ ] 1.5 Clean root directory (remove or `.gitignore` the `landing-*.png` screenshots)
 - [ ] 1.6 Verify no service role keys or JWT secrets appear anywhere in history
 
-## Phase 2: Deployment Platform Setup
+## Phase 2: Deployment Platform Setup — ✅ DONE (2026-05-27)
 
-- [ ] 2.1 Choose platform (recommended: **Render** — free static site + free backend with spin-down)
-- [ ] 2.2 Create Dockerfile for FastAPI backend
-- [ ] 2.3 Create `render.yaml` (or equivalent config) for deployment
-- [ ] 2.4 Set up environment variables on the platform (Supabase, Gemini, CORE API keys) — **must include `ENVIRONMENT=production`** so the new startup secret check fires and exception details stay hidden
-- [ ] 2.5 Configure build command for React frontend (`npm run build`)
-- [ ] 2.6 Set up separate Supabase project for production (or isolate with different keys)
-- [ ] 2.7 Verify CORS `allowed_origins` points to production domain (currently hardcoded to `http://localhost:3000` in `backend/main.py`)
-- [ ] 2.8 Configure `slowapi` storage for production — switch from in-memory to Redis (`SLOWAPI_STORAGE_URI=redis://...`) if running multi-instance
-- [ ] 2.9 Test deployment end-to-end (signup → email confirm → signin → upload paper → read paper)
+Final platform: **Cloudflare Pages** (frontend) + **Google Cloud Run** (backend),
+per `docs/superpowers/specs/2026-05-21-hosting-deployment-design.md`. This
+supersedes the earlier Render research (see Notes).
+
+- [x] 2.1 Platform chosen: Cloudflare Pages + Cloud Run (not Render)
+- [x] 2.2 Dockerfile for FastAPI backend (multi-stage, binds `$PORT`)
+- [x] 2.3 Deploy config: GitHub Actions (`backend-deploy.yml`) via Workload Identity Federation — no `render.yaml`
+- [x] 2.4 Env vars on Cloud Run incl. `ENVIRONMENT=production`; 4 secrets via GCP Secret Manager
+- [x] 2.5 Frontend build (`npm run build`, root `frontend`, output `dist`) on Cloudflare Pages (Git-connected, auto-deploy on push)
+- [x] 2.6 Separate prod Supabase project; schema applied via `supabase db push` (migration made replayable first)
+- [x] 2.7 CORS now reads `ALLOWED_ORIGINS` env var (wired into `main.py`); set to `https://readlabs.org`, verified in-browser (clean 401 on bad creds, no CORS block)
+- [ ] 2.8 `slowapi` still **in-memory**. ⚠️ Cloud Run runs up to `--max-instances 3`, so rate limits are enforced **per instance** (effective ceiling ≈ 3× the configured limit). For strict global limits, set `--max-instances 1` or move to Redis via `SLOWAPI_STORAGE_URI`.
+- [~] 2.9 End-to-end **connectivity** verified in browser (frontend → backend → Supabase). Full signup → email-confirm → upload → read still pending a real confirmed account.
 
 ## Phase 3: Frontend Redesign
 
@@ -79,11 +83,11 @@
 
 ### Still to do
 
-- [ ] 6.1 Lock CORS to production domain only (currently hardcoded `http://localhost:3000`); wire `settings.allowed_origins` into `app.add_middleware`
+- [x] 6.1 Lock CORS to production domain only — DONE: `main.py` reads `ALLOWED_ORIGINS`; set to `https://readlabs.org` on Cloud Run, verified in-browser
 - [ ] 6.3 Add error monitoring (Sentry or equivalent) — wire DSN into FastAPI and React
 - [ ] 6.5 Audit Supabase RLS policies on every table (note: backend uses `service_role` which bypasses RLS, so policies are only the safety net for direct client→Supabase access; verify storage bucket `papers` is **private**, not public)
 - [ ] 6.6 Set Gemini API spending caps on Google Cloud billing
-- [ ] 6.7 Verify HTTPS everywhere (handled by platform, but confirm)
+- [x] 6.7 HTTPS everywhere — DONE: Cloudflare edge cert (`readlabs.org`) + Google-managed cert (`api.readlabs.org`); HSTS header set via `_headers`
 - [ ] 6.8 Add loading state for backend cold starts ("Waking up..." message)
 - [ ] 6.9 Test all user flows in production environment
 - [ ] 6.10 Configure Supabase Auth email templates (confirmation email subject/body, redirect URL pointing at `/auth?confirmed=1` or similar)
@@ -114,7 +118,7 @@
 
 ## Notes
 
-- **Deployment platform research** completed 2026-04-22. Top pick: Render (free tier). Backup: Railway ($5/mo), Koyeb (free nano instance).
+- **Deployment platform research** completed 2026-04-22. Top pick: Render (free tier). Backup: Railway ($5/mo), Koyeb (free nano instance). **Superseded 2026-05-27**: shipped on **Cloudflare Pages + Google Cloud Run** instead (see Phase 2 and the hosting design spec).
 - **Frontend redesign** will use Claude (web) for design generation, then Claude Code for integration. Design prompt is ready.
 - **Current tech stack**: React 19 + Tailwind CSS + FastAPI + Supabase + Google Gemini API + slowapi (rate limiting)
 - **Project name** is undecided — ReadLabs is the working name, may change before launch.

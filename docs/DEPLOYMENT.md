@@ -73,8 +73,22 @@ supabase db push
 **Grab the keys** from Project Settings → API:
 
 - `Project URL` — for `SUPABASE_URL`
-- `anon / public` key — for `VITE_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY`
-- `service_role / secret` key — for `SUPABASE_SERVICE_ROLE_KEY` ⚠️ never expose this to the browser
+- **Publishable** key (`sb_publishable_…`, or the legacy **anon / public** key on older projects) — for `VITE_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY`
+- **Secret** key (`sb_secret_…`, or the legacy **service_role / secret** key on older projects) — for `SUPABASE_SERVICE_ROLE_KEY` ⚠️ never expose this to the browser
+
+> New Supabase projects use the `sb_publishable_…` / `sb_secret_…` key formats
+> instead of the old JWT-style anon/service_role keys. They are drop-in
+> replacements here — the backend only ever sends them as `apikey`/`Bearer`
+> headers, and user-token verification uses the project's JWKS (asymmetric
+> ES256) signing key, which both formats support.
+
+**Create the PDF storage bucket** (Storage → New bucket):
+
+- Name: `papers` — must match exactly (hardcoded in `routers/papers.py` and
+  `routers/library.py`)
+- **Public bucket: OFF** (private). The app serves PDFs via short-lived signed
+  URLs, so a public bucket would leak every uploaded paper. Storage buckets are
+  not created by SQL migrations, so this step is manual.
 
 **Configure auth redirect URLs** (Authentication → URL Configuration):
 
@@ -246,6 +260,19 @@ gcloud iam workload-identity-pools providers describe github-provider \
 Before GitHub Actions can deploy, the Cloud Run service must exist. We do one
 manual deploy with the real config — `ALLOWED_ORIGINS` is already known
 (`https://readlabs.org`) because the domain is fixed.
+
+> **No Docker installed locally?** Skip the build/push steps below and let Cloud
+> Build build the image from source in a single command (requires
+> `cloudbuild.googleapis.com` enabled, which `gcloud services enable` in 5.1 can
+> include):
+>
+> ```bash
+> gcloud run deploy readlabs-api --source ./backend --region $REGION \
+>   --allow-unauthenticated --port 8080 --memory 512Mi \
+>   --service-account $RUNTIME_SA \
+>   --set-env-vars "ENVIRONMENT=production,ALLOWED_ORIGINS=https://readlabs.org,SUPABASE_URL=https://<your-ref>.supabase.co" \
+>   --update-secrets "SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest,SUPABASE_ANON_KEY=supabase-anon-key:latest,GEMINI_API_KEY=gemini-api-key:latest,CORE_API_KEY=core-api-key:latest"
+> ```
 
 ```bash
 # Build and push from your laptop (one time)
