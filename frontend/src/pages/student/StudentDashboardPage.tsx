@@ -92,7 +92,7 @@ export default function StudentDashboardPage() {
   if (loading) return <div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>;
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="section-heading">My Classes</h1>
         <button

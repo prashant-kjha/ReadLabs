@@ -76,7 +76,7 @@ export default function TeacherDashboardPage() {
     student.sessions.find((s: Session) => s.assignment_id === asnId);
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="section-heading">{data.class?.name}</h1>
         <button

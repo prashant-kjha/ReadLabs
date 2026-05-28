@@ -44,7 +44,7 @@ export default function AssignPaperPage() {
   };
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-2xl mx-auto">
       <h1 className="section-heading mb-2">Assign a Paper</h1>
       <p className="text-[var(--color-text-secondary)] text-sm mb-6">
         Select an uploaded paper. Gemini will generate the reading guide automatically.

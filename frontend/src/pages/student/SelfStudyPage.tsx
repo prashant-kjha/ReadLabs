@@ -176,7 +176,7 @@ export default function SelfStudyPage() {
   };
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="section-heading">Paper Library</h1>
         <button

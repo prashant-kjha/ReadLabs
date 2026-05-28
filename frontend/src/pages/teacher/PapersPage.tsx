@@ -43,7 +43,7 @@ export default function PapersPage() {
   };
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-3xl mx-auto">
       <h1 className="section-heading mb-6">Papers</h1>
 
       <div className="card p-6 mb-8">

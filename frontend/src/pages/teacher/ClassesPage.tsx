@@ -77,7 +77,7 @@ export default function ClassesPage() {
   };
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-8 max-w-4xl mx-auto">
       <h1 className="section-heading mb-6">Classes</h1>
 
       {/* Create class */}

@@ -196,7 +196,7 @@ export default function AssignmentDrilldownPage() {
   }, [assignmentId]);
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-3xl mx-auto">
       <button
         onClick={() => navigate(-1)}
         className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm mb-6 block transition-colors flex items-center gap-1"
