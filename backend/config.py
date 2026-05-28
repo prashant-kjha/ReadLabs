@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     # CORE API (core.ac.uk — open access full-text aggregator)
     core_api_key: str = ""
 
+    # Error monitoring (optional). When set, unhandled exceptions are sent to
+    # Sentry. Leave empty to disable (Sentry init is skipped).
+    sentry_dsn: str = ""
+
     # CORS — comma-separated list of allowed origins (overrides frontend_url when set)
     allowed_origins: str = ""
     frontend_url: str = "http://localhost:3000"

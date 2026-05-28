@@ -1,4 +1,5 @@
 import logging
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -10,6 +11,19 @@ from backend.rate_limit import limiter
 from backend.routers import auth, papers, classes, assignments, enrollment, sessions, dashboard, library, superpowers
 
 logger = logging.getLogger(__name__)
+
+# Error monitoring — initialise Sentry before the app is created so its
+# FastAPI/Starlette integration instruments the whole request lifecycle. No-op
+# when SENTRY_DSN is unset, so local/dev and CI run without it.
+_sentry_dsn = get_settings().sentry_dsn
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment=get_settings().environment,
+        traces_sample_rate=0.0,   # error reporting only; no perf tracing
+        send_default_pii=False,   # don't attach request bodies / user data
+    )
+    logger.info("Sentry error monitoring enabled.")
 
 app = FastAPI(title="ReadLabs API")
 
@@ -59,6 +73,7 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def global_error_handler(request: Request, exc: Exception):
     logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+    sentry_sdk.capture_exception(exc)  # no-op if Sentry isn't configured
     from backend.config import get_settings
     detail = "Internal server error" if get_settings().environment == "production" else str(exc)
     return JSONResponse(status_code=500, content={"detail": detail})
