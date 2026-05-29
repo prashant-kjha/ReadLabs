@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
@@ -32,10 +32,16 @@ export default function AssignmentReviewPage() {
   const [guide, setGuide] = useState<ReadingGuide | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Tracks the latest status so the polling interval reads fresh state without
+  // being torn down/recreated on every status change (which caused the poll to
+  // stop after the first tick due to a stale `assignment` closure).
+  const statusRef = useRef<string | undefined>(undefined);
+
   const load = useCallback(async () => {
     try {
       const { data } = await api.get(`/assignments/${assignmentId}`);
       setAssignment(data);
+      statusRef.current = data.status;
       if (data.reading_guide?.sections) {
         setGuide(data.reading_guide);
       }
@@ -44,14 +50,27 @@ export default function AssignmentReviewPage() {
     }
   }, [assignmentId]);
 
-  // Poll while processing
+  // Poll while processing. The interval is created once per assignment and drives
+  // off `statusRef` (fresh state). It stops once status is no longer "processing"
+  // and is capped at MAX_ATTEMPTS so a stuck "processing" doesn't poll forever.
   useEffect(() => {
     load();
+    const MAX_ATTEMPTS = 60;
+    let attempts = 0;
     const interval = setInterval(() => {
-      if (assignment?.status === "processing") load();
+      if (statusRef.current !== "processing") {
+        clearInterval(interval);
+        return;
+      }
+      attempts++;
+      if (attempts >= MAX_ATTEMPTS) {
+        clearInterval(interval);
+        return;
+      }
+      load();
     }, 3000);
     return () => clearInterval(interval);
-  }, [load, assignment?.status]);
+  }, [assignmentId, load]);
 
   const updateQuestion = (sectionIdx: number, qIdx: number, value: string) => {
     setGuide((prev) => {

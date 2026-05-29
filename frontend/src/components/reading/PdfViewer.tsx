@@ -1,19 +1,28 @@
 import { useState, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 export default function PdfViewer({ url }: { url: string | null }) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setPageNumber(1);
+    setLoadError(false);
+  }, []);
+
+  const retry = useCallback(() => {
+    setLoadError(false);
+    setReloadKey((k) => k + 1);
   }, []);
 
   const goToPage = (n: number) => {
@@ -51,15 +60,28 @@ export default function PdfViewer({ url }: { url: string | null }) {
 
       {/* PDF pages */}
       <div className="flex-1 overflow-auto flex justify-center py-6" style={{ background: "var(--color-bg)" }}>
-        <Document file={url} onLoadSuccess={onDocumentLoadSuccess} loading={
-          <div className="flex items-center justify-center h-64 text-[var(--color-text-secondary)]">Loading PDF...</div>
-        }>
-          <Page
-            pageNumber={pageNumber}
-            scale={scale}
-            loading={<div className="w-[595px] h-[842px] bg-muted animate-pulse rounded" />}
-          />
-        </Document>
+        {loadError ? (
+          <div className="flex flex-col items-center justify-center h-64 gap-3 text-center text-[var(--color-text-secondary)]">
+            <p>Couldn&apos;t load the PDF.</p>
+            <button onClick={retry} className="btn-secondary text-sm">Retry</button>
+          </div>
+        ) : (
+          <Document
+            key={reloadKey}
+            file={url}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={() => setLoadError(true)}
+            loading={
+              <div className="flex items-center justify-center h-64 text-[var(--color-text-secondary)]">Loading PDF...</div>
+            }
+          >
+            <Page
+              pageNumber={pageNumber}
+              scale={scale}
+              loading={<div className="w-[595px] h-[842px] bg-muted animate-pulse rounded" />}
+            />
+          </Document>
+        )}
       </div>
     </div>
   );

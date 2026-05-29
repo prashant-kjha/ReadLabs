@@ -3,9 +3,9 @@ export interface CriticalPrompt {
   assignment_id: string;
   section_index: number | null;
   prompt_text: string;
-  prompt_type: "evaluation" | "connection" | "synthesis" | "application";
-  ai_followup: string;
-  created_at: string;
+  prompt_type?: "evaluation" | "connection" | "synthesis" | "application";
+  ai_followup?: string;
+  created_at?: string;
 }
 
 export interface QuizQuestion {
@@ -29,8 +29,8 @@ export interface QuizQuestionResult {
   question_id: string;
   score: number;
   max: number;
-  correct_answer: string;
-  explanation: string;
+  correct_answer: string | null;
+  explanation: string | null;
 }
 
 export interface ReadingStats {

@@ -32,11 +32,26 @@ export default function SelfStudyPage() {
   const [fetching, setFetching] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
+  // Tracks mount status and the in-flight poll timeout so the self-rescheduling
+  // poll below never calls setState/navigate after the user navigates away.
+  const mountedRef = useRef(true);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     loadPapers();
     getRecommendations().then(setRecommendations).catch(() => {
       // Recommendations are non-critical; fail silently
     });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+        pollTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   const loadPapers = async () => {
@@ -96,21 +111,25 @@ export default function SelfStudyPage() {
   const pollAndNavigate = async (assignmentId: string) => {
     let attempts = 0;
     const poll = async () => {
+      if (!mountedRef.current) return;
       try {
         const { data } = await api.get(`/library/status/${assignmentId}`);
+        if (!mountedRef.current) return;
         if (data.status === "published" || data.status === "draft") {
           setUploading(false);
           setFetching(null);
           await api.post(`/sessions/`, { assignment_id: assignmentId });
+          if (!mountedRef.current) return;
           navigate(`/student/read/${assignmentId}`);
           return;
         }
       } catch {
         // Polling — transient errors are expected, retry
       }
+      if (!mountedRef.current) return;
       attempts++;
       if (attempts < 90) {
-        setTimeout(poll, 2000);
+        pollTimeoutRef.current = setTimeout(poll, 2000);
       } else {
         toast.error("Guide generation is taking too long. Check back later.");
         setUploading(false);
