@@ -10,6 +10,7 @@ interface CheckpointState {
   ai_feedback: string | null;
   pending: boolean;
   skipped: boolean;
+  feedbackError?: boolean;
 }
 
 interface SoWhatState {
@@ -17,6 +18,7 @@ interface SoWhatState {
   ai_feedback: string | null;
   pending: boolean;
   skipped: boolean;
+  feedbackError?: boolean;
 }
 
 interface ReadingState {
@@ -78,15 +80,45 @@ interface ReadingState {
   cleanup: () => void;
 }
 
+// Stop polling after this many attempts (~2 minutes at 2s/poll) so a stuck or
+// failed AI job doesn't leave the checkpoint/sowhat spinner pending forever.
+const MAX_POLL_ATTEMPTS = 60;
+
 function startPolling(
   get: () => ReadingState,
   set: (partial: Partial<ReadingState>) => void
 ) {
   const { sessionId, _pollIntervalId } = get();
   if (_pollIntervalId || !sessionId) return;
+  let attempts = 0;
+  let consecutiveErrors = 0;
+
+  // Give up: stop polling, clear the pending flag on any still-pending item and
+  // mark it errored so the UI can stop spinning and offer a retry.
+  const fail = (id: ReturnType<typeof setInterval>) => {
+    clearInterval(id);
+    const state = get();
+    const cpMap: Record<number, CheckpointState> = {};
+    Object.entries(state.checkpoints).forEach(([k, cp]) => {
+      cpMap[Number(k)] = cp.pending && !cp.ai_feedback
+        ? { ...cp, pending: false, feedbackError: true }
+        : cp;
+    });
+    const soWhat = state.soWhat.pending && !state.soWhat.ai_feedback
+      ? { ...state.soWhat, pending: false, feedbackError: true }
+      : state.soWhat;
+    set({ checkpoints: cpMap, soWhat, _pollIntervalId: null });
+  };
+
   const id = setInterval(async () => {
+    attempts += 1;
+    if (attempts > MAX_POLL_ATTEMPTS) {
+      fail(id);
+      return;
+    }
     try {
       const { data } = await api.get(`/sessions/${sessionId}`);
+      consecutiveErrors = 0;
       let pending = false;
       const cpMap: Record<number, CheckpointState> = {};
       (data.checkpoints || []).forEach((cp: { section_index: number; student_text: string; ai_feedback: string | null }) => {
@@ -110,7 +142,9 @@ function startPolling(
         set({ _pollIntervalId: null });
       }
     } catch {
-      // ignore polling errors
+      // Tolerate transient errors, but give up after several in a row.
+      consecutiveErrors += 1;
+      if (consecutiveErrors >= 5) fail(id);
     }
   }, 2000);
   set({ _pollIntervalId: id });
@@ -223,7 +257,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
     const { currentSection, checkpoints, readingGuide, sessionId } = get();
     const cp = checkpoints[currentSection];
     if (!cp?.text?.trim()) return;
-    set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { ...(s.checkpoints[currentSection] ?? { text: "", ai_feedback: null, pending: false, skipped: false }), pending: true } } }));
+    set((s) => ({ checkpoints: { ...s.checkpoints, [currentSection]: { ...(s.checkpoints[currentSection] ?? { text: "", ai_feedback: null, pending: false, skipped: false }), pending: true, feedbackError: false } } }));
 
     if (previewMode) {
       const section = readingGuide!.sections[currentSection]!;
@@ -278,7 +312,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   submitSoWhat: async (previewMode) => {
     const { soWhat, paperTitle, readingGuide, sessionId } = get();
     if (!soWhat.text.trim()) return;
-    set({ soWhat: { ...soWhat, pending: true } });
+    set({ soWhat: { ...soWhat, pending: true, feedbackError: false } });
 
     if (previewMode) {
       try {

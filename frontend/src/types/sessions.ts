@@ -40,7 +40,7 @@ export interface Session {
   paper_id: string;
   status: "not_started" | "in_progress" | "completed";
   current_section_index: number;
-  reading_guide: ReadingGuide;
+  reading_guide: ReadingGuide | null;
   paper_title: string;
   difficulty: "beginner" | "intermediate" | "advanced";
 }

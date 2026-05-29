@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 import logging
 import httpx
@@ -72,7 +73,7 @@ async def upload_paper(
     if len(pdf_bytes) > MAX_PDF_BYTES:
         raise HTTPException(status_code=400, detail="PDF must be under 20 MB")
 
-    extracted = extract_text_and_figures(pdf_bytes)
+    extracted = await asyncio.to_thread(extract_text_and_figures, pdf_bytes)
 
     paper_title = title.strip() or (
         file.filename.replace(".pdf", "").replace("_", " ") if file.filename else "Untitled"
@@ -129,12 +130,28 @@ async def upload_paper(
 
 @router.get("/status/{assignment_id}", response_model=LibraryStatusResponse)
 async def get_status(assignment_id: str, user=Depends(require_student), db=Depends(get_db)):
-    """Poll reading guide generation status."""
+    """Poll reading guide generation status. Only the paper's uploader or a
+    student with a session for this assignment may read its status."""
     result = await db.from_("assignments") \
-        .select("id, status, reading_guide, difficulty") \
+        .select("id, status, reading_guide, difficulty, paper_id") \
         .eq("id", assignment_id).single().execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # Authorize: caller uploaded the underlying paper...
+    paper = await db.from_("papers").select("uploaded_by") \
+        .eq("id", result.data["paper_id"]).single().execute()
+    authorized = bool(paper.data) and paper.data.get("uploaded_by") == user["sub"]
+
+    # ...or the caller has a session for this assignment.
+    if not authorized:
+        session = await db.from_("student_sessions").select("id") \
+            .eq("assignment_id", assignment_id).eq("student_id", user["sub"]).single().execute()
+        authorized = bool(session.data)
+
+    if not authorized:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
     return result.data
 
 

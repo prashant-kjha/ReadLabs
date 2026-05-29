@@ -168,4 +168,7 @@ async def get_insights(assignment_id: str, user=Depends(require_teacher), db=Dep
         "insights": insights_payload,
     }, on_conflict="assignment_id").execute()
 
-    return {"insights": insights_payload, "generated_at": result.data.get("generated_at") if result.data else None}
+    row = result.data
+    if isinstance(row, list):
+        row = row[0] if row else None
+    return {"insights": insights_payload, "generated_at": row.get("generated_at") if isinstance(row, dict) else None}

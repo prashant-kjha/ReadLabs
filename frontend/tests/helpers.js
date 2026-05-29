@@ -259,7 +259,7 @@ function mockStudentApiRoutes(page) {
 
   const mockCategories = ['Biology', 'Computer Science', 'Chemistry', 'Physics'];
   const mockRecommendations = [
-    { paper: { id: 'rec1', title: 'Recommended Paper 1', category: 'Biology' }, reason: 'Based on your reading history' },
+    { paper: { id: 'rec1', title: 'Recommended Paper 1' }, assignment_id: 'rec-asn-1', reason: 'Based on your reading history' },
   ];
   const mockStats = { level: 2, xp: 150, current_streak: 5 };
 

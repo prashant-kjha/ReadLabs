@@ -1,23 +1,46 @@
 import { useState, useEffect } from "react";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
-import { Upload, FileText } from "lucide-react";
+import { Upload, FileText, RefreshCw } from "lucide-react";
 
 interface Paper {
   id: string;
   title: string;
   text_length?: number;
   figure_count?: number;
+  status?: string;
 }
+
+const STATUS_BADGES: Record<string, string> = {
+  processing: "badge bg-amber-500/10 text-amber-800 dark:text-amber-300",
+  ready: "badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  failed: "badge bg-red-500/10 text-red-700 dark:text-red-400",
+};
 
 export default function PapersPage() {
   const [papers, setPapers]     = useState<Paper[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [title, setTitle]       = useState("");
 
+  const loadPapers = async () => {
+    try {
+      const { data } = await api.get("/papers/");
+      setPapers(data);
+    } catch {
+      toast.error("Could not load papers");
+    }
+  };
+
   useEffect(() => {
-    api.get("/papers/").then(({ data }) => setPapers(data)).catch(() => toast.error("Could not load papers"));
+    loadPapers();
   }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadPapers();
+    setRefreshing(false);
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,7 +67,18 @@ export default function PapersPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="section-heading mb-6">Papers</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="section-heading">Papers</h1>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="btn-secondary text-sm flex items-center gap-1.5 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
 
       <div className="card p-6 mb-8">
         <h2 className="text-[var(--color-text)] font-medium mb-4 flex items-center gap-2">
@@ -101,6 +135,11 @@ export default function PapersPage() {
                 )}
               </div>
             </div>
+            {paper.status && (
+              <span className={`text-xs ${STATUS_BADGES[paper.status] || "badge bg-muted text-[var(--color-text-secondary)]"}`}>
+                {paper.status}
+              </span>
+            )}
           </div>
         ))}
       </div>

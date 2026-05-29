@@ -1,5 +1,13 @@
 # ReadLabs — Complete Project Documentation
 
+> **⚠️ PARTIALLY OUTDATED — historical design doc.** The authoritative references are
+> `README.md` and `CLAUDE.md`. Notable corrections: the frontend is **TypeScript + Vite +
+> Zustand** (not plain JS/React-Context); signup is **student-only** with email confirmation
+> (no role selection); the **Annotations** and **Methodology Decoder** features were **removed**;
+> env vars are **VITE_*** (not REACT_APP_*), the dev commands are `npm run dev` / `uvicorn main:app`,
+> and there is **no SUPABASE_JWT_SECRET** (JWT verification uses Supabase's JWKS endpoint).
+> Apply the schema via `supabase/migrations/`, not the root snapshot.
+
 > Last updated: April 11, 2026
 
 ---
@@ -598,7 +606,7 @@ All routes are guarded by `ProtectedRoute` which checks for an authenticated use
 A marketing-style landing page with hero section, "How It Works" steps, features grid, teacher/student comparison, testimonials, and CTA. No auth required.
 
 #### AuthPage
-Split-panel design with decorative left side (hidden on mobile) and form right side. Supports signup (with teacher/student role selection) and signin. Uses tab toggle between modes.
+Split-panel design with decorative left side (hidden on mobile) and form right side. Supports **student-only** signup (no role selection — shows a "check your email" confirmation panel) and signin. Uses tab toggle between modes. **Teachers are promoted manually via SQL.**
 
 #### PapersPage (Teacher)
 Upload PDFs, view paper library with text length and figure counts. Each paper can be assigned to a class.
@@ -659,7 +667,7 @@ The app uses React Context for two concerns:
 - Custom hook: `useTheme()` returns `{ theme, setTheme, toggleTheme }`
 
 ### Data Fetching
-No global state management library (no Redux, Zustand, etc.). Each page component manages its own data fetching with `useEffect` + `useState`. The `api.js` and `superpowersApi.js` modules provide thin Axios-based wrappers for all backend endpoints.
+**CORRECTION:** A **Zustand** store (`hooks/useReadingStore.ts`) manages the complex reading-page state (session, checkpoints, so-what, jargon, quiz, layout, polling). Simpler pages manage their own data fetching with `useEffect` + `useState`. The `api.ts` and `superpowersApi.ts` modules provide thin Axios-based wrappers for all backend endpoints.
 
 ---
 
@@ -702,7 +710,9 @@ Defined in `@layer components` in `index.css`:
 
 The "Superpowers" are a set of AI-enhanced features built on top of the core reading experience. They are implemented across three backend files (`ai_provider.py`, `routers/superpowers.py`) and integrated into the ReadingPage frontend.
 
-### Annotations
+### Annotations — REMOVED
+> This feature was removed and is no longer part of the product. The description below is historical.
+
 Students can highlight any passage and:
 - Choose a category: **important**, **confusion**, **question**, **idea**
 - Add a personal note
@@ -710,7 +720,9 @@ Students can highlight any passage and:
 
 Annotations are stored with character-level positions (`start_char`, `end_char`) so they can be re-rendered precisely when a student returns to a section.
 
-### Methodology Decoder
+### Methodology Decoder — REMOVED
+> This feature was removed and is no longer part of the product. The description below is historical.
+
 For Methods and Results sections, the AI identifies specific methodology elements:
 - **Types:** study design, sample size, statistical test, control, effect size, limitation, assumption, variable, finding, key result
 - Each element includes a plain-English explanation of *why it matters to students*

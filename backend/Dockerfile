@@ -49,5 +49,9 @@ COPY --chown=app:app . /app/backend
 USER app
 EXPOSE 8080
 
+# Probe /health using python (curl/wget may be absent from the slim image).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request,os,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:'+os.environ.get('PORT','8080')+'/health').status==200 else sys.exit(1)"
+
 # Cloud Run injects $PORT at runtime; uvicorn binds to it.
 CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT}"]

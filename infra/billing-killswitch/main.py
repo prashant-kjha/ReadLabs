@@ -30,9 +30,18 @@ def killswitch(cloud_event):
 
     cost = float(budget.get("costAmount", 0) or 0)
     amount = float(budget.get("budgetAmount", 0) or 0)
-    log.info("Budget notification: cost=%.4f budget=%.4f", cost, amount)
+    # GCP's guaranteed contract for threshold-rule notifications: this field is
+    # set to the fraction of the budget that has been exceeded (1.0 == 100%).
+    threshold = float(budget.get("alertThresholdExceeded", 0) or 0)
+    log.info(
+        "Budget notification: cost=%.4f budget=%.4f threshold=%.4f",
+        cost, amount, threshold,
+    )
 
-    if amount <= 0 or cost < amount:
+    # Trip primarily on the guaranteed threshold field; fall back to comparing
+    # reported cost against the budget amount when it isn't present.
+    tripped = threshold >= 1.0 or (amount > 0 and cost >= amount)
+    if not tripped:
         log.info("Under budget — no action.")
         return
 
@@ -45,7 +54,13 @@ def killswitch(cloud_event):
     log.warning(
         "COST %.2f >= BUDGET %.2f — disabling billing on %s", cost, amount, PROJECT_NAME
     )
-    billing.projects().updateBillingInfo(
-        name=PROJECT_NAME, body={"billingAccountName": ""}
-    ).execute()
+    try:
+        billing.projects().updateBillingInfo(
+            name=PROJECT_NAME, body={"billingAccountName": ""}
+        ).execute()
+    except Exception:
+        # Log at ERROR so the 'severity>=ERROR' alert fires, then re-raise so
+        # Pub/Sub redelivers and we retry disabling billing.
+        log.exception("Failed to disable billing on %s — will retry.", PROJECT_NAME)
+        raise
     log.warning("Billing DISABLED for %s. Re-attach manually to restore service.", PROJECT_NAME)

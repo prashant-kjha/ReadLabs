@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import * as Sentry from "@sentry/react";
 
 interface Props {
   children: ReactNode;
@@ -16,7 +17,11 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("ErrorBoundary caught:", error, info.componentStack);
+    // No-op if Sentry was never initialized (e.g. missing DSN).
+    Sentry.captureException(error);
+    if (import.meta.env.DEV) {
+      console.error("ErrorBoundary caught:", error, info.componentStack);
+    }
   }
 
   render() {
@@ -28,14 +33,22 @@ export default class ErrorBoundary extends Component<Props, State> {
               Something went wrong
             </h2>
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-              An unexpected error occurred. Try reloading the page.
+              An unexpected error occurred. Try again or reload the page.
             </p>
-            <button
-              className="btn-primary"
-              onClick={() => window.location.reload()}
-            >
-              Reload page
-            </button>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                className="btn-secondary"
+                onClick={() => this.setState({ hasError: false })}
+              >
+                Try again
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => window.location.reload()}
+              >
+                Reload page
+              </button>
+            </div>
           </div>
         </div>
       );

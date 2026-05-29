@@ -1,11 +1,38 @@
 import json
 import re
+from typing import Any
 from google import genai
 from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential
 from backend.config import get_settings
 
 _MODEL_NAME = "gemini-2.5-flash"
+
+# Max characters of paper text fed into the reading-guide prompt.
+_MAX_GUIDE_CHARS = 30000
+
+
+class AIResponseError(Exception):
+    """Raised when the model returns output we cannot parse/validate."""
+
+
+def _parse_json(raw: str) -> Any:
+    """Parse JSON from a model response, tolerating markdown fences/whitespace."""
+    if not raw:
+        raise AIResponseError("empty AI response")
+    text = raw.strip()
+    # strip ```json ... ``` fences if present
+    if text.startswith("```"):
+        text = text.split("```", 2)[1] if "```" in text[3:] else text
+        text = text.lstrip("json").lstrip("JSON").strip().strip("`").strip()
+    try:
+        return json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        pass
+    try:
+        return json.loads(text)
+    except (TypeError, json.JSONDecodeError) as e:
+        raise AIResponseError(f"could not parse AI JSON: {e}")
 
 _client: genai.Client | None = None
 
@@ -30,14 +57,14 @@ async def _generate(prompt: str, *, temperature: float, json_mode: bool = False)
         contents=prompt,
         config=types.GenerateContentConfig(**config_kwargs),
     )
-    return response.text
+    return response.text or ""
 
 
 # Strip control characters and our own delimiter tokens so a malicious PDF or
 # student response can't close the data block and inject new instructions.
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
 _DELIMITER_LEAK_RE = re.compile(
-    r"</?(paper_text|student_response|term|paper_context|class_responses|expected_answer|student_answer|question)>",
+    r"<\s*/?\s*(paper_text|student_response|term|paper_context|class_responses|expected_answer|student_answer|question)\b[^>]*>",
     re.IGNORECASE,
 )
 
@@ -67,12 +94,12 @@ async def generate_reading_guide(extracted_text: str, figure_count: int) -> dict
     Generate a structured reading guide for a research paper.
     One call per assignment — result is cached in the assignments table.
     """
-    safe_text = _sanitize_untrusted(extracted_text[:30000])
+    safe_text = _sanitize_untrusted(extracted_text[:_MAX_GUIDE_CHARS])
     prompt = f"""You are creating a guided reading experience for students reading a research paper.
 
 {_INJECTION_GUARD}
 
-Paper text (may be truncated to 50,000 characters):
+Paper text (may be truncated to {_MAX_GUIDE_CHARS:,} characters):
 <paper_text>
 {safe_text}
 </paper_text>
@@ -121,7 +148,7 @@ Rules:
 - Return ONLY the JSON object, no markdown, no explanation"""
 
     raw = await _generate(prompt, temperature=0.3, json_mode=True)
-    return json.loads(raw)
+    return _parse_json(raw)
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
@@ -240,7 +267,13 @@ Rules:
 - Return ONLY the JSON object, no other text"""
 
     raw = await _generate(prompt, temperature=0.3, json_mode=True)
-    return json.loads(raw)
+    data = _parse_json(raw)
+    # Trust the server-side count, not the model's echo.
+    data["student_count"] = len(responses)
+    for _field in ("common_misconception", "commonly_grasped"):
+        if not isinstance(data.get(_field), str):
+            data[_field] = ""
+    return data
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
@@ -280,7 +313,7 @@ Rules:
 Return ONLY the JSON array, no markdown."""
 
     raw = await _generate(prompt, temperature=0.3, json_mode=True)
-    return json.loads(raw)
+    return _parse_json(raw)
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
@@ -306,4 +339,4 @@ Return JSON: {{"score": 0|1|2, "explanation": "one sentence explaining the score
 Return ONLY the JSON object."""
 
     raw = await _generate(prompt, temperature=0.2, json_mode=True)
-    return json.loads(raw)
+    return _parse_json(raw)

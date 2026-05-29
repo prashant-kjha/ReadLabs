@@ -10,6 +10,7 @@ interface CheckpointState {
   ai_feedback: string | null;
   pending: boolean;
   skipped: boolean;
+  feedbackError?: boolean;
 }
 
 interface SoWhatState {
@@ -17,6 +18,7 @@ interface SoWhatState {
   ai_feedback: string | null;
   pending: boolean;
   skipped: boolean;
+  feedbackError?: boolean;
 }
 
 interface AiGuidancePanelProps {
@@ -201,13 +203,16 @@ function SectionContent({ section, currentSection, currentAssignmentId, checkpoi
         {!checkpoint?.ai_feedback && !checkpoint?.skipped && (
           <div className="mt-2 flex gap-2">
             <button onClick={submitCheckpoint} disabled={checkpoint?.pending || !checkpoint?.text?.trim()}
-              className="btn-primary text-sm disabled:opacity-50">{checkpoint?.pending ? "Getting feedback..." : "Submit"}</button>
+              className="btn-primary text-sm disabled:opacity-50">{checkpoint?.pending ? "Getting feedback..." : checkpoint?.feedbackError ? "Retry" : "Submit"}</button>
             {optionalCheckpoints && (
               <button onClick={skipCheckpoint} className="btn-secondary text-sm flex items-center gap-1">
                 <SkipForward className="w-3.5 h-3.5" /> Skip
               </button>
             )}
           </div>
+        )}
+        {checkpoint?.feedbackError && !checkpoint?.ai_feedback && !checkpoint?.pending && (
+          <p className="mt-2 text-red-400 text-xs">Couldn&apos;t generate feedback — try again.</p>
         )}
         {checkpoint?.skipped && !checkpoint?.ai_feedback && optionalCheckpoints && (
           <p className="mt-2 text-[var(--color-text-secondary)] text-xs italic">Section skipped. You can come back later.</p>
@@ -285,12 +290,15 @@ function SoWhatContent({ soWhat, setSoWhat, submitSoWhat, previewMode, optionalC
       {!soWhat?.ai_feedback && !soWhat?.skipped && (
         <div className="mt-2 flex gap-2">
           <button onClick={submitSoWhat} disabled={soWhat?.pending || !soWhat?.text?.trim()}
-            className="btn-primary mt-2 text-sm disabled:opacity-50">{soWhat?.pending ? "Getting feedback..." : "Submit"}</button>
+            className="btn-primary mt-2 text-sm disabled:opacity-50">{soWhat?.pending ? "Getting feedback..." : soWhat?.feedbackError ? "Retry" : "Submit"}</button>
           {optionalCheckpoints && (
             <button onClick={() => setSoWhat({ ...soWhat, skipped: true })}
               className="btn-secondary mt-2 text-sm flex items-center gap-1"><SkipForward className="w-3.5 h-3.5" /> Skip</button>
           )}
         </div>
+      )}
+      {soWhat?.feedbackError && !soWhat?.ai_feedback && !soWhat?.pending && (
+        <p className="mt-2 text-red-400 text-xs">Couldn&apos;t generate feedback — try again.</p>
       )}
       {soWhat?.pending && (
         <div className="mt-3 flex items-center gap-2 text-[var(--color-text-secondary)] text-sm">

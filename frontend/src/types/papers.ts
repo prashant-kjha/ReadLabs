@@ -13,7 +13,7 @@ export interface Paper {
   extracted_text: string;
   figures: Figure[];
   pdf_path: string;
-  uploaded_by: string;
+  uploaded_by?: string;
   created_at: string;
 }
 

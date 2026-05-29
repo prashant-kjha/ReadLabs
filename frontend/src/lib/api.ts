@@ -8,10 +8,59 @@ import type { Session, SessionDetail } from "../types/sessions";
 export const API_URL: string =
   import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+// In production a missing VITE_API_URL silently falls back to localhost, which
+// breaks every API call against a deployed backend. Log loudly (don't crash the
+// bundle) so the misconfiguration is obvious. The dev fallback is kept.
+if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+  console.error(
+    "[config] VITE_API_URL is not set — falling back to http://localhost:8000. " +
+      "API requests will fail in production. Set VITE_API_URL in the build environment."
+  );
+}
+
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
   headers: { "Content-Type": "application/json" },
 });
+
+// Single-flight refresh guard: concurrent 401s share one in-flight refresh
+// instead of each triggering their own (which races and can invalidate tokens).
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.refreshSession();
+        if (session?.access_token) {
+          const stored = localStorage.getItem("readlabs_user");
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              localStorage.setItem(
+                "readlabs_user",
+                JSON.stringify({
+                  ...parsed,
+                  access_token: session.access_token,
+                  refresh_token: session.refresh_token,
+                })
+              );
+            } catch {
+              // Corrupted stored value — ignore; session itself is still valid.
+            }
+          }
+          return session.access_token;
+        }
+        return null;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+  return refreshPromise;
+}
 
 // Attach Supabase JWT to every request
 api.interceptors.request.use(async (config) => {
@@ -27,41 +76,33 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Auto-refresh on token expiry
+// Auto-refresh on any 401 (not just an exact "Token expired" detail string),
+// excluding /auth/* endpoints (their 401 means bad credentials, not an expired
+// session). Guarded by `_retry` so we attempt the refresh at most once per request.
 api.interceptors.response.use(
   (res) => res,
   async (err: { config?: Record<string, unknown>; response?: { status?: number; data?: { detail?: string } }; message?: string }) => {
     const original = err.config;
+    const url = typeof original?.url === "string" ? original.url : "";
+    const isAuthEndpoint = url.startsWith("/auth/") || url.startsWith("auth/");
     if (
       err.response?.status === 401 &&
-      err.response?.data?.detail === "Token expired" &&
       original &&
-      !original._retry
+      !original._retry &&
+      !isAuthEndpoint
     ) {
       original._retry = true;
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.refreshSession();
-        if (session?.access_token) {
-          const stored = localStorage.getItem("readlabs_user");
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            localStorage.setItem(
-              "readlabs_user",
-              JSON.stringify({
-                ...parsed,
-                access_token: session.access_token,
-                refresh_token: session.refresh_token,
-              })
-            );
-          }
+        const accessToken = await refreshAccessToken();
+        if (accessToken) {
           original.headers = {
-            ...(original.headers || {}),
-            Authorization: `Bearer ${session.access_token}`,
+            ...((original.headers as Record<string, unknown>) || {}),
+            Authorization: `Bearer ${accessToken}`,
           };
           return api(original);
         }
+        // Refresh produced no session — fall through to logout below.
+        throw new Error("No session after refresh");
       } catch {
         localStorage.removeItem("readlabs_user");
         window.location.href = "/auth";

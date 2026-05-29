@@ -37,13 +37,15 @@ async def _get_jwks(force_refresh: bool = False) -> dict:
 
 async def _verify_token(token: str, _retried: bool = False) -> dict:
     jwks = await _get_jwks()
+    issuer = f"{get_settings().supabase_url.rstrip('/')}/auth/v1"
     last_error: Exception | None = None
     for key_data in jwks.get("keys", []):
         try:
             return jwt.decode(
                 token, key_data,
                 algorithms=["RS256", "ES256"],
-                options={"verify_aud": False},
+                audience="authenticated",
+                issuer=issuer,
             )
         except ExpiredSignatureError:
             raise

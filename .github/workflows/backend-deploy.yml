@@ -1,11 +1,10 @@
 name: Deploy backend to Cloud Run
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Backend tests"]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-deploy.yml'
   workflow_dispatch:
 
 env:
@@ -22,6 +21,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
 

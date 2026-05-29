@@ -1,4 +1,5 @@
 import uuid
+import asyncio
 import logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
@@ -47,7 +48,8 @@ async def _upload_to_storage(pdf_bytes: bytes, object_path: str) -> str:
     async with httpx.AsyncClient(timeout=60) as c:
         r = await c.post(url, headers=headers, content=pdf_bytes)
     if r.status_code not in (200, 201):
-        raise HTTPException(status_code=500, detail=f"Failed to store PDF: {r.text}")
+        logger.error("Failed to store PDF: %s %s", r.status_code, r.text[:200])
+        raise HTTPException(status_code=500, detail="Failed to store PDF")
     return object_path
 
 
@@ -63,13 +65,21 @@ async def upload_paper(
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are accepted")
 
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_PDF_BYTES:
+                raise HTTPException(status_code=400, detail="PDF must be under 20 MB")
+        except ValueError:
+            pass
+
     pdf_bytes = await file.read()
     if len(pdf_bytes) > MAX_PDF_BYTES:
         raise HTTPException(status_code=400, detail="PDF must be under 20 MB")
 
     _validate_pdf_content(pdf_bytes)
 
-    extracted = extract_text_and_figures(pdf_bytes)
+    extracted = await asyncio.to_thread(extract_text_and_figures, pdf_bytes)
 
     paper_title = title.strip() or (
         file.filename.replace(".pdf", "").replace("_", " ") if file.filename else "Untitled"
@@ -87,6 +97,8 @@ async def upload_paper(
         "uploaded_by":    user["sub"],
     }).execute()
 
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to save paper")
     paper = result.data[0]
     return {
         "id":           paper["id"],
@@ -178,4 +190,4 @@ async def get_pdf_url(paper_id: str, user=Depends(require_student), db=Depends(g
         raise
     except Exception as e:
         logger.error("pdf-url unexpected error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"PDF URL error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate PDF URL")

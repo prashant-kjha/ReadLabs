@@ -23,10 +23,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install deps
-        working-directory: backend
-        run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio
+        run: pip install -r backend/requirements.txt -r backend/requirements-test.txt
 
       - name: Run pytest
         # Run from repo root so `backend.*` imports resolve, matching prod.

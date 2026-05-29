@@ -44,7 +44,11 @@ _REQUIRED_FOR_PRODUCTION = (
     "supabase_url",
     "supabase_anon_key",
     "supabase_service_role_key",
+    "gemini_api_key",  # AI reading-guide/feedback generation; fail fast if missing
 )
+# NOTE: ALLOWED_ORIGINS is intentionally NOT required — it falls back to a
+# sensible localhost default. Production deployments SHOULD set ALLOWED_ORIGINS
+# to their real frontend origin(s) so CORS is locked down correctly.
 
 
 @lru_cache()

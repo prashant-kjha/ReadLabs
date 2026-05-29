@@ -178,7 +178,12 @@ async def submit_checkpoint(
 
     assignment = await db.from_("assignments").select("reading_guide") \
         .eq("id", session.data["assignment_id"]).single().execute()
-    sections = assignment.data["reading_guide"]["sections"]
+    if not assignment.data:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    guide = assignment.data.get("reading_guide") or {}
+    sections = guide.get("sections") or []
+    if not sections:
+        raise HTTPException(status_code=409, detail="Reading guide not ready")
     if body.section_index >= len(sections):
         raise HTTPException(status_code=400, detail="Invalid section index")
     section = sections[body.section_index]
@@ -222,8 +227,10 @@ async def submit_sowhat(
 
     assignment = await db.from_("assignments").select("reading_guide, paper_id") \
         .eq("id", session.data["assignment_id"]).single().execute()
-    guide = assignment.data["reading_guide"]
-    section_titles = [s["title"] for s in guide["sections"]]
+    if not assignment.data:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    guide = assignment.data.get("reading_guide") or {}
+    section_titles = [s["title"] for s in (guide.get("sections") or [])]
 
     paper = await db.from_("papers").select("title") \
         .eq("id", assignment.data["paper_id"]).single().execute()

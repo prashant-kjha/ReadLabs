@@ -40,7 +40,7 @@
 **Step 7: Zustand store for reading page**
 - `useReadingStore.ts` — centralized 270-line store managing session, checkpoints, so-what, jargon, quiz, layout, polling
 - ReadingPage.tsx reduced from ~300 lines to ~60 lines
-- All 104 Playwright tests pass
+- Full Playwright suite passing
 
 **Step 8: Standardized error handling**
 - Replaced 5 empty catch blocks with `toast.error()` across 4 pages
@@ -56,7 +56,7 @@
 
 ## Test Results
 
-- **104/104 Playwright tests pass** (53 student + 51 teacher)
+- **Full Playwright suite passing** (327 tests)
 - **Vite build**: 442ms, 439KB JS gzipped to 131KB
 
 ## Git History

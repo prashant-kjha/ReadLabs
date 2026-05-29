@@ -54,10 +54,25 @@ async def get_critical_prompt(
 
     result = await db.from_("critical_prompts").select("*") \
         .eq("assignment_id", assignment_id).eq("section_index", section_index).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="No critical prompt for this section")
     return result.data
 
 
 # ── Quiz ─────────────────────────────────────────────────────────────────────
+
+# Fields that reveal answers — must never be sent to students while taking the
+# quiz. They are returned only in the post-submission result of submit_quiz_attempt.
+_QUIZ_ANSWER_FIELDS = ("correct_answer", "explanation")
+
+
+def _strip_quiz_answers(questions: list[dict]) -> list[dict]:
+    """Return quiz-taking questions with answer-revealing fields removed."""
+    return [
+        {k: v for k, v in q.items() if k not in _QUIZ_ANSWER_FIELDS}
+        for q in questions
+    ]
+
 
 @router.get("/quiz/{assignment_id}", response_model=list[QuizQuestionResponse])
 async def get_quiz(assignment_id: str, user=Depends(require_student), db=Depends(get_db)):
@@ -68,7 +83,7 @@ async def get_quiz(assignment_id: str, user=Depends(require_student), db=Depends
 
     questions = await db.from_("quiz_questions").select("*") \
         .eq("assignment_id", assignment_id).execute()
-    return questions.data or []
+    return _strip_quiz_answers(questions.data or [])
 
 
 @router.post("/quiz/{assignment_id}/generate")
@@ -84,7 +99,7 @@ async def generate_quiz(request: Request, assignment_id: str, user=Depends(requi
     if existing.data:
         questions = await db.from_("quiz_questions").select("*") \
             .eq("assignment_id", assignment_id).execute()
-        return questions.data
+        return _strip_quiz_answers(questions.data or [])
 
     assign_full = await db.from_("assignments").select("reading_guide, difficulty, paper_id") \
         .eq("id", assignment_id).single().execute()
@@ -101,7 +116,7 @@ async def generate_quiz(request: Request, assignment_id: str, user=Depends(requi
     questions = await generate_quiz_questions(paper_title, sections, difficulty)
     rows = [{**q, "assignment_id": assignment_id} for q in questions]
     result = await db.from_("quiz_questions").insert(rows).execute()
-    return result.data or []
+    return _strip_quiz_answers(result.data or [])
 
 
 @router.post("/quiz/attempt", response_model=QuizAttemptResponse)
@@ -138,13 +153,19 @@ async def submit_quiz_attempt(request: Request, body: QuizAttemptRequest, user=D
         else:
             max_score += 2
             grading = await grade_short_answer(q["question_text"], q["correct_answer"] or "", student_answer)
-            total_score += grading["score"]
+            # Don't trust the AI: coerce and bound the score to the valid 0-2 range.
+            try:
+                score = max(0, min(2, int(grading.get("score", 0))))
+            except (TypeError, ValueError):
+                score = 0
+            explanation = grading.get("explanation", "")
+            total_score += score
             results.append({
                 "question_id": q["id"],
-                "score": grading["score"],
+                "score": score,
                 "max": 2,
                 "correct_answer": q["correct_answer"],
-                "explanation": grading["explanation"],
+                "explanation": explanation,
             })
 
     await db.from_("quiz_attempts").insert({
@@ -205,7 +226,13 @@ async def add_xp(body: XpRequest, user=Depends(require_student), db=Depends(get_
 
     stats = existing.data
     last_read_at = stats.get("last_read_at")
-    last_date = datetime.fromisoformat(last_read_at).date() if last_read_at else None
+    last_date = None
+    if last_read_at:
+        last_dt = datetime.fromisoformat(last_read_at)
+        # Treat a naive timestamp as UTC so the date comparison stays consistent.
+        if last_dt.tzinfo is None:
+            last_dt = last_dt.replace(tzinfo=UTC)
+        last_date = last_dt.astimezone(UTC).date()
 
     current_streak = stats["current_streak"]
     longest_streak = stats["longest_streak"]
