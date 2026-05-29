@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+import backend.db
 from backend.config import get_settings
 from backend.rate_limit import limiter
 from backend.routers import auth, papers, classes, assignments, enrollment, sessions, dashboard, library, superpowers
@@ -25,7 +27,15 @@ if _sentry_dsn:
     )
     logger.info("Sentry error monitoring enabled.")
 
-app = FastAPI(title="ReadLabs API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: nothing to pre-warm (clients are lazily created on first use).
+    yield
+    # Shutdown: close the shared httpx client so connections are released cleanly.
+    await backend.db.aclose_shared_client()
+
+
+app = FastAPI(title="ReadLabs API", lifespan=lifespan)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -76,7 +86,15 @@ async def global_error_handler(request: Request, exc: Exception):
     sentry_sdk.capture_exception(exc)  # no-op if Sentry isn't configured
     from backend.config import get_settings
     detail = "Internal server error" if get_settings().environment == "production" else str(exc)
-    return JSONResponse(status_code=500, content={"detail": detail})
+    # CORSMiddleware doesn't run on responses produced by exception handlers, so
+    # echo the allowed Origin manually — otherwise the browser hides the 500 body
+    # behind an opaque CORS error.
+    headers = {}
+    origin = request.headers.get("origin")
+    if origin and origin in _allowed_origins:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    return JSONResponse(status_code=500, content={"detail": detail}, headers=headers)
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(papers.router, prefix="/api/v1/papers", tags=["papers"])

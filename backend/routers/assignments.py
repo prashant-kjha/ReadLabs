@@ -20,6 +20,12 @@ async def _process_assignment(assignment_id: str, extracted_text: str, figure_co
     try:
         full_result = await generate_reading_guide(extracted_text, figure_count)
 
+        # A valid reading guide must carry a list of sections; otherwise the
+        # student reading page has nothing to render. Treat a malformed result
+        # as a generation failure (handled by the except branch below).
+        if not isinstance(full_result.get("sections"), list):
+            raise ValueError("reading guide missing list 'sections'")
+
         critical_prompts = full_result.pop("critical_prompts", [])
 
         await db.from_("assignments").update({
@@ -63,6 +69,8 @@ async def create_assignment(
         "paper_id": body.paper_id,
         "status": "processing",
     }).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create assignment")
     assignment = result.data[0]
 
     paper_record = _one(paper.data)
@@ -114,9 +122,17 @@ async def update_assignment(
     if existing_record["status"] == "published":
         raise HTTPException(status_code=400, detail="Cannot modify a published assignment")
 
+    if body.status is not None and body.status not in ("draft", "published"):
+        raise HTTPException(status_code=400, detail="status must be 'draft' or 'published'")
+
+    if body.reading_guide is not None and not isinstance(body.reading_guide.get("sections"), list):
+        raise HTTPException(status_code=400, detail="reading_guide must contain a list 'sections'")
+
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
     result = await db.from_("assignments").update(updates).eq("id", assignment_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to update assignment")
     return result.data[0]

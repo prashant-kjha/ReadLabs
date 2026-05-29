@@ -89,6 +89,8 @@ async def signin(request: Request, body: SigninRequest, db=Depends(get_db)):
     profile_resp = await db.from_("user_profiles").select("name, role") \
         .eq("user_id", user_id).single().execute()
 
+    if getattr(profile_resp, "error", None) and not profile_resp.data:
+        raise HTTPException(status_code=500, detail="Profile lookup failed")
     if not profile_resp.data:
         raise HTTPException(status_code=404, detail="User profile not found")
 
@@ -102,9 +104,12 @@ async def signin(request: Request, body: SigninRequest, db=Depends(get_db)):
 
 
 @router.get("/me", response_model=MeResponse)
-async def me(user=Depends(get_current_user), db=Depends(get_db)):
+@limiter.limit("60/minute")
+async def me(request: Request, user=Depends(get_current_user), db=Depends(get_db)):
     profile_resp = await db.from_("user_profiles").select("name, role") \
         .eq("user_id", user["sub"]).single().execute()
+    if getattr(profile_resp, "error", None) and not profile_resp.data:
+        raise HTTPException(status_code=500, detail="Profile lookup failed")
     if not profile_resp.data:
         raise HTTPException(status_code=404, detail="Profile not found")
     return {"user_id": user["sub"], **profile_resp.data}

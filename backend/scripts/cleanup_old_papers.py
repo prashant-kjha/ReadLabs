@@ -45,6 +45,15 @@ async def _delete_storage_object(object_path: str) -> bool:
     return False
 
 
+def _parse_ts(ts: str) -> datetime:
+    """Parse a Postgres/ISO-8601 timestamp into an aware datetime.
+
+    Lexicographic string comparison is unsafe across differing fractional-second
+    precision and timezone suffixes, so compare real datetimes instead.
+    """
+    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
 async def find_stale_papers(cutoff: datetime) -> list[dict]:
     """Return papers whose assignment activity (if any) is all older than cutoff."""
     db = get_db()
@@ -55,17 +64,16 @@ async def find_stale_papers(cutoff: datetime) -> list[dict]:
     if result.error:
         raise RuntimeError(f"Failed to list papers: {result.error}")
 
-    cutoff_iso = cutoff.isoformat()
     stale: list[dict] = []
     for p in (result.data or []):
         assignments = p.get("assignments") or []
         if not assignments:
             # Orphan paper: stale if it's old enough.
-            if p["created_at"] < cutoff_iso:
+            if _parse_ts(p["created_at"]) < cutoff:
                 stale.append(p)
             continue
-        latest = max(a["created_at"] for a in assignments)
-        if latest < cutoff_iso:
+        latest = max(_parse_ts(a["created_at"]) for a in assignments)
+        if latest < cutoff:
             stale.append(p)
     return stale
 
@@ -92,6 +100,7 @@ async def cleanup(days: int, dry_run: bool, verbose: bool) -> int:
 
     deleted_storage = 0
     deleted_rows = 0
+    storage_failures = 0
     db = get_db()
     for p in stale:
         pdf_path = p.get("pdf_path")
@@ -100,6 +109,13 @@ async def cleanup(days: int, dry_run: bool, verbose: bool) -> int:
             object_path = pdf_path.removeprefix("papers/")
             if await _delete_storage_object(object_path):
                 deleted_storage += 1
+            else:
+                # Storage delete failed — skip the row delete so the PDF isn't
+                # orphaned (a row pointing at it lets a future run retry).
+                storage_failures += 1
+                logger.warning("skipping row delete for %s: storage object %s could not be deleted",
+                               p["id"], object_path)
+                continue
 
         row = await db.from_("papers").delete().eq("id", p["id"]).execute()
         if row.error:
@@ -107,7 +123,8 @@ async def cleanup(days: int, dry_run: bool, verbose: bool) -> int:
         else:
             deleted_rows += 1
 
-    logger.info("done: %d storage object(s), %d paper row(s) deleted", deleted_storage, deleted_rows)
+    logger.info("done: %d storage object(s), %d paper row(s) deleted, %d storage failure(s)",
+                deleted_storage, deleted_rows, storage_failures)
     return 0
 
 

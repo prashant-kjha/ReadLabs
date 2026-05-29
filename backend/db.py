@@ -202,6 +202,13 @@ def get_shared_client() -> httpx.AsyncClient:
     return _shared_client
 
 
+async def aclose_shared_client() -> None:
+    global _shared_client
+    if _shared_client is not None and not _shared_client.is_closed:
+        await _shared_client.aclose()
+    _shared_client = None
+
+
 def get_db() -> SupabaseDB:
     global _admin_db
     if _admin_db is None:

@@ -98,8 +98,12 @@ async def list_enrolled_classes(user=Depends(require_student), db=Depends(get_db
 
 @router.delete("/classes/{class_id}")
 async def leave_class(class_id: str, user=Depends(require_student), db=Depends(get_db)):
+    existing = await db.from_("class_enrollments").select("class_id") \
+        .eq("class_id", class_id).eq("student_id", user["sub"]).limit(1).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
     result = await db.from_("class_enrollments").delete() \
         .eq("class_id", class_id).eq("student_id", user["sub"]).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Enrollment not found")
+    if result.error:
+        raise HTTPException(status_code=500, detail="Failed to leave class")
     return {"ok": True}
