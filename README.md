@@ -55,6 +55,7 @@ See [`frontend/.env.example`](frontend/.env.example) for the frontend template.
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `CORE_API_KEY` | CORE.ac.uk key (optional, for paper search) |
+| `SENTRY_DSN` | Backend error monitoring (optional, leave empty to disable) |
 | `ALLOWED_ORIGINS` | CORS origins, comma-separated (prod only) |
 | `ENVIRONMENT` | `development` or `production` |
 
@@ -65,6 +66,7 @@ See [`frontend/.env.example`](frontend/.env.example) for the frontend template.
 | `VITE_SUPABASE_URL` | Same Supabase URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
 | `VITE_API_URL` | Backend API URL (`http://localhost:8000` for dev) |
+| `VITE_SENTRY_DSN` | Frontend error monitoring (optional, leave empty to disable) |
 
 ## Testing
 

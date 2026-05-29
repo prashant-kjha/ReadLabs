@@ -1,3 +1,6 @@
+-- NON-AUTHORITATIVE SNAPSHOT. The source of truth is supabase/migrations/.
+-- Do not apply this file directly to provision a database; run the migrations instead.
+
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
@@ -23,7 +26,15 @@ create table classes (
 );
 alter table classes enable row level security;
 create policy "Teachers manage own classes" on classes for all using (auth.uid() = teacher_id);
-create policy "Anyone can read classes"     on classes for select using (true);
+create policy "Teachers read own classes"   on classes for select using (auth.uid() = teacher_id);
+create policy "Students read enrolled classes" on classes
+  for select using (
+    exists (
+      select 1 from class_enrollments
+      where class_enrollments.class_id = classes.id
+        and class_enrollments.student_id = auth.uid()
+    )
+  );
 
 -- Enrollments (student joins class via class_code)
 create table class_enrollments (

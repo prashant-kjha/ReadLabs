@@ -78,7 +78,7 @@ supersedes the earlier Render research (see Notes).
 - [x] 6.S7 Class codes generated via `secrets.choice` (CSPRNG) instead of `random`
 - [x] 6.2 Rate limiting added (`slowapi`) on auth + AI endpoints (signup 5/h, signin 10/min, jargon/keyterm 60/min, checkpoint 30/min, sowhat 20/min, uploads 10/h, quiz generate 10/h)
 - [x] 6.S8 Prompt-injection hardening — untrusted input wrapped in delimiter tags + sanitization + system instruction in every AI prompt
-- [x] 6.S9 Pydantic settings: `extra = "forbid"` (typo'd env vars now error at startup); production-only required-secret check in `get_settings()`
+- [x] 6.S9 Pydantic settings: `extra = "ignore"` by design (leftover/unknown env vars don't break startup; strict validation that errors on typo'd env vars is a future task); production-only required-secret check in `get_settings()`
 - [x] 6.4 PDF upload size limit (20 MB) — already enforced in `papers.py` and `library.py`
 
 ### Still to do

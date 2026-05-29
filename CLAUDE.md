@@ -29,7 +29,7 @@ AI-guided research paper reading tool for students. Teachers upload papers, Gemi
 # Frontend
 cd frontend && npm run dev      # Vite dev server on :3000
 cd frontend && npm run build    # Production build
-cd frontend && npx playwright test  # E2E tests (all 104)
+cd frontend && npx playwright test  # E2E tests (327)
 
 # Backend
 cd backend && uvicorn main:app --reload  # Dev server on :8000

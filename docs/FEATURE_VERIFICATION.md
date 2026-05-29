@@ -1,5 +1,11 @@
 # ReadLabs — Complete Feature & Verification Guide
 
+> **⚠️ PARTIALLY OUTDATED.** Corrections: signup is **student-only** with an email-confirmation
+> panel (teachers are promoted manually via SQL); env vars are **VITE_*** (not REACT_APP_*); use
+> `npm run dev` (not `npm start`); there is **no SUPABASE_JWT_SECRET** (JWKS is used); apply the
+> schema from `supabase/migrations/` (not the root `supabase_schema.sql`, which is a non-authoritative
+> snapshot). The Annotations and Methodology Decoder features were removed.
+
 > **Purpose:** This document catalogs every feature, every user workflow, and provides step-by-step manual verification procedures for final pre-launch testing.
 > **Last Updated:** 2026-04-06
 > **Status:** Final pre-launch verification
@@ -96,7 +102,7 @@ npm start    # runs on port 3000
 ```
 
 ### Database Setup
-Run `supabase_schema.sql` in the Supabase SQL Editor. This creates:
+Apply the schema from `supabase/migrations/` (the authoritative source) — e.g. via `supabase db push`, or by running each migration in the Supabase SQL Editor in chronological order. (The root `supabase_schema.sql` is a non-authoritative snapshot.) This creates:
 - 14 tables (6 core + 8 superpowers)
 - Row Level Security policies on every table
 - Storage bucket for PDF uploads
@@ -111,7 +117,7 @@ Run `supabase_schema.sql` in the Supabase SQL Editor. This creates:
 | # | Feature | Status | Backend | Frontend |
 |---|---------|--------|---------|----------|
 | 1 | User Authentication (signup/signin) | COMPLETE | auth.py | AuthPage.jsx |
-| 2 | Role Selection (teacher/student) | COMPLETE | auth.py | AuthPage.jsx |
+| 2 | ~~Role Selection (teacher/student)~~ | REMOVED — signup is student-only; teachers promoted via SQL | auth.py | AuthPage.tsx |
 | 3 | PDF Upload with Text Extraction | COMPLETE | papers.py | PapersPage.jsx |
 | 4 | Class Creation with Enrollment Codes | COMPLETE | classes.py | ClassesPage.jsx |
 | 5 | Class Enrollment via Codes | COMPLETE | enrollment.py | StudentDashboardPage.jsx |
