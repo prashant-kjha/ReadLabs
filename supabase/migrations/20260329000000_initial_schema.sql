@@ -510,6 +510,9 @@ CREATE POLICY "Students read key terms for enrolled assignments"
       AND ce.student_id = auth.uid()
   ));
 
+-- NOTE: This over-permissive USING(true) policy is superseded and dropped by
+-- 20260601000000_audit_remediation.sql (HIGH #15). The scoped student/teacher
+-- policies above are sufficient. Kept here so migration history stays append-only.
 CREATE POLICY "authenticated users can read key_term_definitions"
   ON public.key_term_definitions FOR SELECT
   TO authenticated
