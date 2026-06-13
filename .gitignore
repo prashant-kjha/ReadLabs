@@ -13,6 +13,7 @@ build/
 frontend/dist/
 frontend/test-results/
 frontend/playwright-report/
+frontend/showcase/
 
 # Backend
 backend/test-results/

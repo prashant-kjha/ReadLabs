@@ -1,20 +1,20 @@
 import { Link } from "react-router-dom";
-import { BookOpen, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 const CONTACT_EMAIL = "legal@readlabs.org";
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-surface text-[var(--color-text)]">
-      <header className="border-b border-border">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+      <header className="border-b border-border bg-surface">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-primary font-bold text-lg">
-            <BookOpen className="w-5 h-5" />
-            <span>ReadLabs</span>
+          <Link to="/" className="flex items-baseline gap-1.5 select-none">
+            <span className="inline-block w-2.5 h-2.5 bg-accent rounded-[1px]" aria-hidden="true" />
+            <span className="font-display font-bold text-lg leading-none text-[var(--color-text)]">ReadLabs</span>
           </Link>
           <Link
             to="/"
-            className="flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
+            className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.14em] text-[var(--color-text-secondary)] hover:text-accent transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Back
           </Link>
@@ -22,8 +22,9 @@ export default function TermsPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-12 prose-readlabs">
-        <h1 className="text-3xl font-bold mb-2">Terms of Service</h1>
-        <p className="text-sm text-[var(--color-text-secondary)] mb-10">
+        <p className="label-mono text-accent">The Fine Print</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold mb-2">Terms of Service</h1>
+        <p className="font-mono text-xs text-[var(--color-text-secondary)] mb-10 border-b border-[var(--color-border-strong)] pb-6">
           Last updated: {new Date().toISOString().slice(0, 10)}
         </p>
 
@@ -152,8 +153,8 @@ export default function TermsPage() {
         </Section>
       </main>
 
-      <footer className="border-t border-border py-6 mt-8">
-        <div className="max-w-3xl mx-auto px-6 text-xs text-[var(--color-text-secondary)] text-center">
+      <footer className="border-t border-border py-6 mt-8 bg-surface">
+        <div className="max-w-3xl mx-auto px-6 font-mono text-xs text-[var(--color-text-secondary)] text-center">
           &copy; {new Date().getFullYear()} ReadLabs
         </div>
       </footer>
@@ -163,8 +164,8 @@ export default function TermsPage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-8">
-      <h2 className="text-xl font-semibold mb-3">{title}</h2>
+    <section className="mb-8 border-t border-dotted border-border pt-6 first:border-t-0 first:pt-0">
+      <h2 className="font-display text-xl font-semibold mb-3">{title}</h2>
       <div className="space-y-3 text-[var(--color-text-secondary)] leading-relaxed [&_a]:break-all [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:space-y-1">
         {children}
       </div>

@@ -78,7 +78,10 @@ export default function ClassesPage() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="section-heading mb-6">Classes</h1>
+      <div className="mb-8 border-b border-[var(--color-border-strong)] pb-6">
+        <p className="label-mono text-accent">Teacher · Roster</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--color-text)]">Classes</h1>
+      </div>
 
       {/* Create class */}
       <form onSubmit={handleCreate} className="card p-6 mb-8 flex gap-3">
@@ -102,11 +105,11 @@ export default function ClassesPage() {
       <div className="grid grid-cols-2 gap-6">
         {/* Class list */}
         <div className="space-y-3">
-          {loading && <p className="text-[var(--color-text-secondary)] text-sm">Loading...</p>}
+          {loading && <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--color-text-secondary)]">Loading...</p>}
           {!loading && classes.length === 0 && (
-            <div className="card p-8 text-center">
-              <Users className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
-              <p className="text-[var(--color-text-secondary)] text-sm">No classes yet.</p>
+            <div className="rounded-sm border border-dotted border-[var(--color-muted-foreground)] p-10 text-center">
+              <Users className="w-8 h-8 text-[var(--color-muted-foreground)] mx-auto mb-3" />
+              <p className="font-display italic text-[var(--color-text-secondary)] text-sm">No classes yet.</p>
             </div>
           )}
           {classes.map((cls: ClassData) => (
@@ -114,39 +117,39 @@ export default function ClassesPage() {
               key={cls.id}
               onClick={() => loadClass(cls.id)}
               className={`card-hover w-full text-left p-4 ${
-                selected?.id === cls.id ? "ring-2 ring-primary" : ""
+                selected?.id === cls.id ? "border-accent ring-1 ring-accent" : ""
               }`}
             >
               <p className="text-[var(--color-text)] font-medium">{cls.name}</p>
-              <p className="text-[var(--color-text-secondary)] text-xs mt-0.5 font-mono">Code: {cls.class_code}</p>
+              <p className="font-mono text-[11px] tracking-wide text-[var(--color-text-secondary)] mt-1">Code: {cls.class_code}</p>
             </button>
           ))}
         </div>
 
         {/* Class detail */}
         {selected && (
-          <div className="card p-5">
+          <div className="card-print p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[var(--color-text)] font-semibold">{selected.name}</h2>
-              <span className="bg-muted text-[var(--color-text)] font-mono text-sm px-3 py-1 rounded-lg">
+              <h2 className="font-display text-xl font-semibold text-[var(--color-text)]">{selected.name}</h2>
+              <span className="font-mono text-xs tracking-wider bg-muted text-[var(--color-text)] border border-dashed border-[var(--color-muted-foreground)] px-2.5 py-1 rounded-sm">
                 {selected.class_code}
               </span>
             </div>
 
-            <p className="text-[var(--color-text-secondary)] text-xs mb-3">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--color-text-secondary)] mb-3 border-b border-dotted border-border pb-2">
               {selected.students.length} student{selected.students.length !== 1 ? "s" : ""}
             </p>
 
             <div className="space-y-2">
               {selected.students.length === 0 && (
-                <p className="text-[var(--color-text-secondary)] text-sm">No students enrolled yet.</p>
+                <p className="font-display italic text-[var(--color-text-secondary)] text-sm">No students enrolled yet.</p>
               )}
               {selected.students.map((s: Student) => (
-                <div key={s.student_id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                <div key={s.student_id} className="flex items-center justify-between py-1.5 border-b border-dotted border-border last:border-0">
                   <span className="text-[var(--color-text)] text-sm">{s.student_name}</span>
                   <button
                     onClick={() => removeStudent(selected.id, s.student_id)}
-                    className="text-red-400 hover:text-red-300 text-xs transition-colors"
+                    className="text-danger hover:opacity-70 font-mono text-[11px] uppercase tracking-wider transition-opacity"
                   >
                     Remove
                   </button>

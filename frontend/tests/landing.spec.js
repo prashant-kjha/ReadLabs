@@ -43,8 +43,9 @@ test.describe('Landing Page', () => {
   });
 
   test('shows For Teachers and For Students sections', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'For Teachers' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'For Students' })).toBeVisible();
+    // "For Teachers"/"For Students" are kicker labels above the section cards
+    await expect(page.getByText('For Teachers', { exact: true })).toBeVisible();
+    await expect(page.getByText('For Students', { exact: true })).toBeVisible();
   });
 
   test('has CTA section', async ({ page }) => {
