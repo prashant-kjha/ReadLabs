@@ -140,43 +140,38 @@ test.describe('Auth Page - Decorative Panel', () => {
 
 // ── Landing Page Gap Tests ─────────────────────────────────────────────────────
 
-test.describe('Landing Page - Browser Mockup', () => {
-  test('shows URL bar in browser mockup', async ({ page }) => {
+test.describe('Landing Page - Hero Manuscript Mockup', () => {
+  test('shows journal running head in manuscript mockup', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('readlabs.app / student / read / neural-networks-biology')).toBeVisible();
+    await expect(page.getByText('J. Neuro. Biol. · Vol 42')).toBeVisible();
   });
 
-  test('shows sections sidebar with Introduction', async ({ page }) => {
+  test('shows section progress indicator', async ({ page }) => {
     await page.goto('/');
-    const urlBar = page.getByText('readlabs.app / student / read / neural-networks-biology');
-    const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
-    await expect(mockup.getByText('Sections', { exact: true })).toBeVisible();
-    await expect(mockup.getByText('Introduction')).toBeVisible();
+    await expect(page.getByText('Section 1 of 4')).toBeVisible();
+    await expect(page.getByText('2/4 sections · +40 XP')).toBeVisible();
   });
 
-  test('shows structure guide pills in mockup', async ({ page }) => {
+  test('shows paper title and authors in mockup', async ({ page }) => {
     await page.goto('/');
-    const urlBar = page.getByText('readlabs.app / student / read / neural-networks-biology');
-    const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
-    await expect(mockup.getByText('Structure Guide')).toBeVisible();
-    await expect(mockup.getByText('2I')).toBeVisible();
+    await expect(
+      page.getByText('Neural Mechanisms of Memory Consolidation During Sleep')
+    ).toBeVisible();
+    await expect(page.getByText('Chen, R., Okafor, M., et al. (2025)')).toBeVisible();
   });
 
-  test('shows AI guidance panel with guiding questions in mockup', async ({ page }) => {
+  test('shows AI checkpoint card in mockup', async ({ page }) => {
     await page.goto('/');
-    const urlBar = page.getByText('readlabs.app / student / read / neural-networks-biology');
-    const mockup = urlBar.locator('xpath=ancestor::div[contains(@class, "rounded-xl") and contains(@class, "border")]');
-    await expect(mockup.getByText('AI Guidance')).toBeVisible();
-    await expect(mockup.getByText('Guiding Questions')).toBeVisible();
+    await expect(page.getByText('Checkpoint · AI')).toBeVisible();
+    await expect(page.getByText(/why does the hippocampus/)).toBeVisible();
   });
 
-  test('shows traffic light dots in mockup title bar', async ({ page }) => {
+  test('shows jargon marginalia in mockup', async ({ page }) => {
     await page.goto('/');
-    const urlBar = page.getByText('readlabs.app / student / read / neural-networks-biology');
-    const titleBar = urlBar.locator('xpath=parent::div');
-    await expect(titleBar.locator('.bg-red-400')).toBeVisible();
-    await expect(titleBar.locator('.bg-amber-400')).toBeVisible();
-    await expect(titleBar.locator('.bg-emerald-400')).toBeVisible();
+    await expect(page.getByText('★ jargon')).toBeVisible();
+    await expect(
+      page.getByText(/how short-term memories become permanent/)
+    ).toBeVisible();
   });
 });
 

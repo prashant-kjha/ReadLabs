@@ -54,7 +54,7 @@ function StudentResponseCard({ studentId, studentName, assignmentId }: { student
   };
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card overflow-hidden p-0">
       <button
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted transition-colors"
         onClick={() => { setOpen(!open); load(); }}
@@ -66,27 +66,27 @@ function StudentResponseCard({ studentId, studentName, assignmentId }: { student
       {open && data && (
         <div className="border-t border-border px-5 py-4 space-y-4">
           {data.checkpoints.length === 0 && (
-            <p className="text-[var(--color-text-secondary)] text-sm">No responses yet.</p>
+            <p className="font-display italic text-[var(--color-text-secondary)] text-sm">No responses yet.</p>
           )}
           {data.checkpoints.map((cp: CheckpointResponse, i: number) => (
             <div key={i} className="text-sm">
-              <p className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide mb-1">
+              <p className="label-mono mb-1.5">
                 Section {cp.section_index + 1} response
               </p>
-              <p className="text-[var(--color-text)] mb-2 bg-muted rounded p-2">{cp.student_text}</p>
+              <p className="text-[var(--color-text)] mb-2 bg-muted rounded-sm border-l-2 border-[var(--color-border-strong)] p-3">{cp.student_text}</p>
               {cp.ai_feedback && (
-                <p className="text-primary text-xs italic">{cp.ai_feedback}</p>
+                <p className="text-accent text-xs italic">{cp.ai_feedback}</p>
               )}
             </div>
           ))}
           {data.sowhat && (
-            <div className="text-sm border-t border-border pt-4">
-              <p className="text-[var(--color-text-secondary)] text-xs font-semibold uppercase tracking-wide mb-1">
+            <div className="text-sm border-t border-dotted border-border pt-4">
+              <p className="label-mono mb-1.5">
                 So What? response
               </p>
-              <p className="text-[var(--color-text)] mb-2 bg-muted rounded p-2">{data.sowhat.student_text}</p>
+              <p className="text-[var(--color-text)] mb-2 bg-muted rounded-sm border-l-2 border-[var(--color-border-strong)] p-3">{data.sowhat.student_text}</p>
               {data.sowhat.ai_feedback && (
-                <p className="text-primary text-xs italic">{data.sowhat.ai_feedback}</p>
+                <p className="text-accent text-xs italic">{data.sowhat.ai_feedback}</p>
               )}
             </div>
           )}
@@ -113,14 +113,14 @@ function InsightsPanel({ assignmentId }: { assignmentId: string | undefined }) {
   };
 
   return (
-    <div className="card p-6 mb-8">
+    <div className="card-print p-6 mb-8">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-[var(--color-text)] font-semibold flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
+          <h2 className="font-display text-lg font-semibold text-[var(--color-text)] flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-accent" />
             Class Insights
           </h2>
-          <p className="text-[var(--color-text-secondary)] text-xs mt-0.5">
+          <p className="font-mono text-[11px] text-[var(--color-text-secondary)] mt-1">
             Common misconceptions and concepts students grasped, generated from all responses.
           </p>
         </div>
@@ -137,7 +137,7 @@ function InsightsPanel({ assignmentId }: { assignmentId: string | undefined }) {
           <button
             onClick={generate}
             disabled={loading}
-            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-xs transition-colors flex items-center gap-1"
+            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] font-mono text-[11px] uppercase tracking-wider transition-colors flex items-center gap-1"
           >
             <RefreshCw className="w-3 h-3" />
             {loading ? "Refreshing..." : "Regenerate"}
@@ -148,23 +148,23 @@ function InsightsPanel({ assignmentId }: { assignmentId: string | undefined }) {
       {insights && (
         <div className="space-y-4">
           {insights.sections?.map((section: InsightSection, i: number) => (
-            <div key={i} className="border border-border rounded-lg p-4">
+            <div key={i} className="border border-dashed border-border rounded-sm p-4">
               <p className="text-[var(--color-text)] font-medium mb-3">{section.title}</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-red-400 text-xs font-semibold uppercase tracking-wide mb-1">
+                  <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-danger mb-1">
                     Common misconception
                   </p>
                   <p className="text-[var(--color-text)] text-sm">{section.common_misconception}</p>
                 </div>
                 <div>
-                  <p className="text-green-400 text-xs font-semibold uppercase tracking-wide mb-1">
+                  <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-success mb-1">
                     Most commonly grasped
                   </p>
                   <p className="text-[var(--color-text)] text-sm">{section.commonly_grasped}</p>
                 </div>
               </div>
-              <p className="text-[var(--color-text-secondary)] text-xs mt-2">
+              <p className="font-mono text-[10px] text-[var(--color-text-secondary)] mt-3 border-t border-dotted border-border pt-2">
                 Based on {section.student_count} response{section.student_count !== 1 ? "s" : ""}
               </p>
             </div>
@@ -173,7 +173,7 @@ function InsightsPanel({ assignmentId }: { assignmentId: string | undefined }) {
       )}
 
       {!insights && !loading && (
-        <p className="text-[var(--color-text-secondary)] text-sm">
+        <p className="font-display italic text-[var(--color-text-secondary)] text-sm">
           Click "Generate Insights" to analyze all student responses for this assignment.
         </p>
       )}
@@ -199,20 +199,23 @@ export default function AssignmentDrilldownPage() {
     <div className="p-8 max-w-3xl mx-auto">
       <button
         onClick={() => navigate(-1)}
-        className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm mb-6 block transition-colors flex items-center gap-1"
+        className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] font-mono text-xs uppercase tracking-wider mb-6 transition-colors flex items-center gap-1"
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h1 className="section-heading mb-6">Assignment Responses</h1>
+      <div className="mb-8 border-b border-[var(--color-border-strong)] pb-6">
+        <p className="label-mono text-accent">Teacher · Student Work</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--color-text)]">Assignment Responses</h1>
+      </div>
 
       <InsightsPanel assignmentId={assignmentId} />
 
-      <h2 className="section-subheading mb-3">Student Responses</h2>
+      <h2 className="label-mono mb-3">Student Responses</h2>
       <div className="space-y-2">
         {students.length === 0 && (
-          <p className="text-[var(--color-text-secondary)] text-sm">No students have started this assignment yet.</p>
+          <p className="font-display italic text-[var(--color-text-secondary)] text-sm">No students have started this assignment yet.</p>
         )}
         {students.map((s: StudentProgress) => (
           <StudentResponseCard

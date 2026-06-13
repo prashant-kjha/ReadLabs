@@ -27,9 +27,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-bg p-8">
-          <div className="card max-w-md text-center">
-            <h2 className="text-xl font-bold text-[var(--color-text)] mb-2">
+        <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] p-8">
+          <div className="card-print max-w-md text-center">
+            <h2 className="font-display text-xl font-semibold text-[var(--color-text)] mb-2">
               Something went wrong
             </h2>
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">

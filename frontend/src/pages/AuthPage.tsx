@@ -3,13 +3,29 @@ import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
-import {
-  BookOpen,
-  Brain,
-  Trophy,
-  AlertCircle,
-} from "lucide-react";
+import { BookOpen, Brain, Trophy, AlertCircle } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
+
+const PANEL_FEATURES = [
+  {
+    Icon: BookOpen,
+    num: "01",
+    title: "Read Smarter",
+    desc: "Learn to parse and understand academic papers section by section.",
+  },
+  {
+    Icon: Brain,
+    num: "02",
+    title: "Think Critically",
+    desc: "Develop skills to evaluate methodology, evidence, and conclusions.",
+  },
+  {
+    Icon: Trophy,
+    num: "03",
+    title: "Earn Achievements",
+    desc: "Build streaks, earn XP, and level up as you master research literacy.",
+  },
+];
 
 export default function AuthPage() {
   const [mode, setMode] = useState("signin");
@@ -57,72 +73,82 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex relative">
+    <div className="min-h-screen bg-[var(--color-bg)] flex relative">
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
-      {/* Left Decorative Panel (hidden on mobile) */}
-      <div className="hidden md:flex md:w-1/2 lg:w-[55%] relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/70 items-center justify-center">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_50%)]" />
-        <div className="relative z-10 max-w-md px-8 text-white">
-          <div className="flex items-center gap-3 mb-8">
-            <BookOpen className="h-10 w-10" />
-            <span className="text-3xl font-bold">ReadLabs</span>
+      {/* Left: the book cover (fixed ink-green, both themes) */}
+      <div className="hidden md:flex md:w-1/2 lg:w-[55%] relative overflow-hidden bg-[#1b3a2c] text-[#f3eee2] items-center justify-center">
+        {/* Ruled lines, like a ledger */}
+        <div
+          className="absolute inset-0 opacity-[0.07] pointer-events-none"
+          aria-hidden="true"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(to bottom, transparent, transparent 39px, #f3eee2 39px, #f3eee2 40px)",
+          }}
+        />
+        {/* Spine rule along the right edge */}
+        <div className="absolute inset-y-0 right-0 w-px bg-[#f3eee2]/20" aria-hidden="true" />
+        <div className="absolute inset-y-0 right-3 w-px bg-[#f3eee2]/10" aria-hidden="true" />
+
+        <div className="relative z-10 max-w-md px-10 py-16">
+          <div className="flex items-baseline gap-2 mb-12">
+            <span className="inline-block w-3 h-3 bg-[#e8784a] rounded-[1px]" aria-hidden="true" />
+            <span className="font-display text-3xl font-bold">ReadLabs</span>
           </div>
-          <h2 className="text-3xl lg:text-4xl font-bold leading-tight mb-10">
-            Understand Research.<br />Build Critical Thinking.
+
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f3eee2]/60">
+            A field guide to the scientific literature
+          </p>
+          <h2 className="mt-4 font-display text-4xl lg:text-[2.75rem] font-semibold leading-tight mb-12">
+            Understand Research.
+            <br />
+            <em className="text-[#e8784a] font-medium">Build Critical Thinking.</em>
           </h2>
-          <ul className="space-y-5">
-            <li className="flex items-start gap-4">
-              <div className="shrink-0 w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                <BookOpen className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-lg">Read Smarter</p>
-                <p className="text-white/80 text-sm">Learn to parse and understand academic papers section by section.</p>
-              </div>
-            </li>
-            <li className="flex items-start gap-4">
-              <div className="shrink-0 w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                <Brain className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-lg">Think Critically</p>
-                <p className="text-white/80 text-sm">Develop skills to evaluate methodology, evidence, and conclusions.</p>
-              </div>
-            </li>
-            <li className="flex items-start gap-4">
-              <div className="shrink-0 w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                <Trophy className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-lg">Earn Achievements</p>
-                <p className="text-white/80 text-sm">Build streaks, earn XP, and level up as you master research literacy.</p>
-              </div>
-            </li>
+
+          <ul className="space-y-7">
+            {PANEL_FEATURES.map(({ Icon, num, title, desc }) => (
+              <li key={num} className="flex items-start gap-4 border-t border-[#f3eee2]/15 pt-5">
+                <span className="font-mono text-xs text-[#e8784a] mt-1">{num}</span>
+                <div className="shrink-0 w-9 h-9 rounded-sm border border-[#f3eee2]/25 flex items-center justify-center">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-display font-semibold text-lg leading-snug">{title}</p>
+                  <p className="text-[#f3eee2]/65 text-sm leading-relaxed mt-1">{desc}</p>
+                </div>
+              </li>
+            ))}
           </ul>
         </div>
       </div>
 
-      {/* Right Side: Auth Form */}
+      {/* Right: the library card */}
       <div className="w-full md:w-1/2 lg:w-[45%] flex items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-md">
           {/* Mobile-only branding */}
-          <div className="flex md:hidden items-center gap-2 mb-8 justify-center">
-            <BookOpen className="h-7 w-7 text-primary" />
-            <span className="text-xl font-bold text-[var(--color-text)]">ReadLabs</span>
+          <div className="flex md:hidden items-baseline gap-1.5 mb-8 justify-center">
+            <span className="inline-block w-2.5 h-2.5 bg-accent rounded-[1px]" aria-hidden="true" />
+            <span className="font-display text-xl font-bold text-[var(--color-text)]">ReadLabs</span>
           </div>
 
+          <p className="label-mono text-center mb-4">
+            {mode === "signin" ? "Reader check-in" : "New library card"}
+          </p>
+
           {/* Card */}
-          <div className="card p-6 sm:p-8">
+          <div className="card-print p-6 sm:p-8">
             {/* Tab Toggle */}
-            <div className="flex rounded-lg bg-muted p-1 mb-6">
+            {/* rounded-lg + bg-muted classes are load-bearing: auth.spec.js targets
+                '.flex.rounded-lg.bg-muted' to disambiguate tab buttons */}
+            <div className="flex rounded-lg border border-border bg-muted p-1 mb-6">
               <button
                 type="button"
                 onClick={() => switchMode("signup")}
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 py-2 font-mono text-xs uppercase tracking-[0.12em] rounded-sm transition-colors ${
                   mode === "signup"
-                    ? "bg-surface text-[var(--color-text)] shadow-sm"
+                    ? "bg-surface-raised text-[var(--color-text)] shadow-sm border border-border"
                     : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
                 }`}
               >
@@ -131,9 +157,9 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={() => switchMode("signin")}
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 py-2 font-mono text-xs uppercase tracking-[0.12em] rounded-sm transition-colors ${
                   mode === "signin"
-                    ? "bg-surface text-[var(--color-text)] shadow-sm"
+                    ? "bg-surface-raised text-[var(--color-text)] shadow-sm border border-border"
                     : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
                 }`}
               >
@@ -143,8 +169,8 @@ export default function AuthPage() {
 
             {signupSuccess && mode === "signup" ? (
               <div className="space-y-4">
-                <div className="rounded-lg bg-primary/10 p-4 text-sm text-[var(--color-text)]">
-                  <p className="font-medium mb-1">Check your email</p>
+                <div className="rounded-sm border border-primary/40 bg-primary/5 p-4 text-sm text-[var(--color-text)]">
+                  <p className="font-medium font-display mb-1">Check your email</p>
                   <p className="text-[var(--color-text-secondary)]">
                     We sent a confirmation link to <span className="font-medium">{form.email}</span>.
                     Click it to activate your account, then log in below.
@@ -163,7 +189,7 @@ export default function AuthPage() {
               {/* Name Field (signup only) */}
               {mode === "signup" && (
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                  <label htmlFor="name" className="label-mono block mb-1.5">
                     Full Name
                   </label>
                   <input
@@ -181,7 +207,7 @@ export default function AuthPage() {
 
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                <label htmlFor="email" className="label-mono block mb-1.5">
                   Email
                 </label>
                 <input
@@ -198,7 +224,7 @@ export default function AuthPage() {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                <label htmlFor="password" className="label-mono block mb-1.5">
                   Password
                 </label>
                 <input
@@ -215,9 +241,11 @@ export default function AuthPage() {
 
               {/* Error Message */}
               {error && (
-                <div className="flex items-center gap-2 text-red-500 text-sm bg-red-500/10 rounded-lg px-3 py-2">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{error}</span>
+                /* text-red-500 on the wrapper is load-bearing: auth.spec.js targets
+                   '.text-red-500 span'; children carry the actual token color */
+                <div className="flex items-center gap-2 text-red-500 text-sm border border-danger/30 bg-danger/5 rounded-sm px-3 py-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-danger" />
+                  <span className="text-danger">{error}</span>
                 </div>
               )}
 
@@ -238,7 +266,7 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={() => switchMode(mode === "signin" ? "signup" : "signin")}
-                className="text-primary font-medium hover:underline"
+                className="text-accent font-medium hover:underline underline-offset-4"
               >
                 {mode === "signin" ? "Sign up" : "Log in"}
               </button>

@@ -1,23 +1,173 @@
-import { useState, useEffect, type MouseEvent } from 'react';
+import { useState, useEffect, type MouseEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BookOpen,
   Upload,
   Sparkles,
+  BookOpen,
   Compass,
   HelpCircle,
   Flame,
-  Users,
-  GraduationCap,
   ArrowRight,
-  CheckCircle,
   MessageSquare,
   Search,
-  FileText,
   BrainCircuit,
-  BarChart3,
 } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
+
+function Wordmark({ size = 'base' }: { size?: 'base' | 'lg' }) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5 select-none">
+      <span className="inline-block w-2.5 h-2.5 bg-accent rounded-[1px]" aria-hidden="true" />
+      <span className={`font-display font-bold leading-none text-[var(--color-text)] ${size === 'lg' ? 'text-2xl' : 'text-lg'}`}>ReadLabs</span>
+    </span>
+  );
+}
+
+/* Section header in the scholarly register: mono folio + serif title */
+function SectionHeader({
+  folio,
+  title,
+  lede,
+}: {
+  folio: string;
+  title: ReactNode;
+  lede?: string;
+}) {
+  return (
+    <div className="max-w-2xl">
+      <p className="label-mono text-accent">{folio}</p>
+      <h2 className="mt-3 font-display text-3xl md:text-4xl font-semibold leading-tight">
+        {title}
+      </h2>
+      {lede && (
+        <p className="mt-4 text-[var(--color-text-secondary)] leading-relaxed">{lede}</p>
+      )}
+    </div>
+  );
+}
+
+/* The hero artifact: a research paper rendered as an annotated manuscript */
+function AnnotatedManuscript() {
+  return (
+    <div className="relative">
+      {/* Backdrop sheet, slightly rotated, like a stack of paper */}
+      <div
+        className="absolute inset-0 translate-x-3 translate-y-3 rotate-[0.8deg] rounded-sm border border-border bg-muted"
+        aria-hidden="true"
+      />
+      {/* The manuscript itself */}
+      <div className="relative card-print p-0 overflow-hidden">
+        {/* Running head */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
+          <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--color-text-secondary)]">
+            J. Neuro. Biol. · Vol 42
+          </span>
+          <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-accent">
+            Section 1 of 4
+          </span>
+        </div>
+
+        <div className="grid grid-cols-[1fr_148px]">
+          {/* Paper body */}
+          <div className="p-5 pr-4 border-r border-dashed border-border">
+            <p className="font-display font-semibold text-sm leading-snug">
+              Neural Mechanisms of Memory Consolidation During Sleep
+            </p>
+            <p className="mt-1 font-mono text-[9px] text-[var(--color-text-secondary)]">
+              Chen, R., Okafor, M., et al. (2025)
+            </p>
+
+            {/* Abstract lines, one highlighted by the AI */}
+            <div className="mt-4 space-y-2" aria-hidden="true">
+              <div className="h-1.5 rounded-full bg-muted w-full" />
+              <div className="h-1.5 rounded-full bg-muted w-11/12" />
+              <div className="relative">
+                <div className="absolute -inset-x-1 -inset-y-1 bg-warning/20 rounded-sm" />
+                <div className="relative h-1.5 rounded-full bg-muted-foreground/60 w-full" />
+              </div>
+              <div className="h-1.5 rounded-full bg-muted w-4/5" />
+              <div className="h-1.5 rounded-full bg-muted w-full" />
+              <div className="h-1.5 rounded-full bg-muted w-2/3" />
+            </div>
+
+            {/* AI checkpoint card */}
+            <div className="mt-5 rounded-sm border border-primary/40 bg-primary/5 p-3">
+              <p className="label-mono !text-[9px] text-primary">Checkpoint · AI</p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--color-text)]">
+                In your own words — why does the hippocampus &ldquo;replay&rdquo; memories during slow-wave sleep?
+              </p>
+              <div className="mt-2.5 flex items-center gap-2">
+                <div className="h-6 flex-1 rounded-sm border border-border bg-surface" />
+                <span className="inline-flex items-center rounded-sm bg-primary px-2 py-1 font-mono text-[8px] font-semibold uppercase tracking-wider text-[var(--color-primary-foreground)]">
+                  Submit
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Marginalia column */}
+          <div className="p-3 space-y-4 bg-surface">
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-accent">★ jargon</p>
+              <p className="mt-1 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                <span className="font-semibold text-[var(--color-text)]">consolidation</span> — how short-term memories become permanent
+              </p>
+            </div>
+            <div className="border-t border-dotted border-border pt-3">
+              <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-accent">¶ guide</p>
+              <p className="mt-1 text-[10px] leading-snug text-[var(--color-text-secondary)]">
+                Watch for the <em className="font-display">method</em> — what did they actually measure?
+              </p>
+            </div>
+            <div className="border-t border-dotted border-border pt-3">
+              <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-primary">✓ progress</p>
+              <div className="mt-2 flex gap-1" aria-hidden="true">
+                <span className="h-1 flex-1 rounded-full bg-primary" />
+                <span className="h-1 flex-1 rounded-full bg-primary" />
+                <span className="h-1 flex-1 rounded-full bg-muted" />
+                <span className="h-1 flex-1 rounded-full bg-muted" />
+              </div>
+              <p className="mt-1.5 font-mono text-[9px] text-[var(--color-text-secondary)]">2/4 sections · +40 XP</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const FEATURES = [
+  {
+    Icon: Compass,
+    title: 'Guided Reading',
+    desc: 'Section-by-section guiding questions tell you what to look for before you read.',
+  },
+  {
+    Icon: MessageSquare,
+    title: 'AI Checkpoints',
+    desc: 'Write responses at each section and get instant AI feedback on your understanding.',
+  },
+  {
+    Icon: Search,
+    title: 'Jargon Lookup',
+    desc: 'Look up any scientific term and get a plain-language explanation instantly.',
+  },
+  {
+    Icon: HelpCircle,
+    title: 'Comprehension Quizzes',
+    desc: 'Multiple choice and short answer quizzes graded by AI after reading.',
+  },
+  {
+    Icon: BrainCircuit,
+    title: 'Critical Thinking',
+    desc: 'Targeted prompts that push you to analyze, evaluate, and think deeper about each section.',
+  },
+  {
+    Icon: Flame,
+    title: 'Streaks & XP',
+    desc: 'Earn XP for every section, checkpoint, and quiz. Build your reading streak.',
+  },
+];
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
@@ -35,30 +185,26 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface text-[var(--color-text)]">
-      {/* ── Top Nav ── */}
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+      {/* ── Masthead ── */}
       <nav
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-          scrolled ? 'bg-surface shadow-card' : 'bg-transparent'
+          scrolled
+            ? 'bg-surface/95 backdrop-blur-sm border-b border-border shadow-card'
+            : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-primary font-bold text-xl">
-            <BookOpen className="w-7 h-7" />
-            <span>ReadLabs</span>
-          </div>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Wordmark />
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <button
               onClick={() => navigate('/auth')}
-              className="btn-secondary text-sm"
+              className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors px-3 py-2"
             >
               Login
             </button>
-            <button
-              onClick={() => navigate('/auth')}
-              className="btn-primary text-sm"
-            >
+            <button onClick={() => navigate('/auth')} className="btn-primary text-sm">
               Get Started
             </button>
           </div>
@@ -66,151 +212,97 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="pt-32 pb-20 lg:pt-40 lg:pb-28">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
-              Read Research Papers{' '}
-              <span className="text-primary">Like a Pro</span>
-            </h1>
-            <p className="mt-6 text-lg text-[var(--color-text-secondary)] max-w-xl leading-relaxed">
-              AI-guided reading that breaks down complex research into
-              interactive, section-by-section lessons — with checkpoints,
-              quizzes, and real-time feedback built for students.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <button onClick={() => navigate('/auth')} className="btn-primary flex items-center gap-2">
-                Get Started Free <ArrowRight className="w-4 h-4" />
-              </button>
-              <button onClick={scrollToHow} className="btn-outline flex items-center gap-2">
-                See How It Works
-              </button>
-            </div>
+      <section className="relative pt-28 pb-20 lg:pt-36 lg:pb-28 overflow-hidden">
+        {/* Ruled-paper baseline grid */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.35]"
+          aria-hidden="true"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(to bottom, transparent, transparent 31px, var(--color-border) 31px, var(--color-border) 32px)',
+            maskImage: 'linear-gradient(to bottom, black, transparent 75%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 75%)',
+          }}
+        />
+        <div className="relative max-w-6xl mx-auto px-6">
+          {/* Kicker rule */}
+          <div className="rule-ornament animate-rise-in">
+            <span className="label-mono whitespace-nowrap">
+              AI-Guided Reading · Classrooms &amp; Curious Minds
+            </span>
           </div>
 
-          {/* ── Three-Panel Reading Layout Mockup ── */}
-          <div className="hidden lg:block">
-            <div className="rounded-xl border border-border shadow-card overflow-hidden">
-              {/* title bar */}
-              <div className="bg-muted flex items-center gap-2 px-4 py-3">
-                <span className="w-3 h-3 rounded-full bg-red-400" />
-                <span className="w-3 h-3 rounded-full bg-amber-400" />
-                <span className="w-3 h-3 rounded-full bg-emerald-400" />
-                <span className="ml-4 text-xs text-[var(--color-text-secondary)] font-medium">
-                  readlabs.app / student / read / neural-networks-biology
-                </span>
+          <div className="mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-6">
+              <h1 className="font-display text-5xl md:text-6xl lg:text-[4.4rem] font-semibold leading-[1.02] tracking-tight animate-rise-in [animation-delay:80ms]">
+                Read Research Papers{' '}
+                <em className="text-accent font-medium">Like a Pro</em>
+                <sup className="font-mono text-base text-[var(--color-text-secondary)] align-super ml-1">1</sup>
+              </h1>
+              <p className="mt-7 text-lg text-[var(--color-text-secondary)] max-w-xl leading-relaxed animate-rise-in [animation-delay:160ms]">
+                AI-guided reading that breaks down complex research into
+                interactive, section-by-section lessons — with checkpoints,
+                quizzes, and real-time feedback built for students.
+              </p>
+              <div className="mt-9 flex flex-wrap gap-4 animate-rise-in [animation-delay:240ms]">
+                <button onClick={() => navigate('/auth')} className="btn-accent flex items-center gap-2 px-7 py-3">
+                  Get Started Free <ArrowRight className="w-4 h-4" />
+                </button>
+                <button onClick={scrollToHow} className="btn-outline flex items-center gap-2 px-7 py-3">
+                  See How It Works
+                </button>
               </div>
-              {/* three-panel content */}
-              <div className="bg-surface flex" style={{ height: 280 }}>
-                {/* Left: Sections Sidebar */}
-                <div className="w-44 border-r border-border p-3 space-y-2 shrink-0">
-                  <p className="text-xs font-bold text-primary uppercase tracking-wide">Sections</p>
-                  <div className="flex items-center gap-2 px-2 py-1.5 bg-primary/10 rounded-md">
-                    <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold">1</span>
-                    <span className="text-xs font-medium">Introduction</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
-                    <span className="w-5 h-5 rounded-full bg-muted text-[var(--color-text-secondary)] text-[10px] flex items-center justify-center font-bold">2</span>
-                    <span className="text-xs text-[var(--color-text-secondary)]">Methods</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
-                    <span className="w-5 h-5 rounded-full bg-muted text-[var(--color-text-secondary)] text-[10px] flex items-center justify-center font-bold">3</span>
-                    <span className="text-xs text-[var(--color-text-secondary)]">Results</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-2 py-1.5 rounded-md">
-                    <span className="w-5 h-5 rounded-full bg-muted text-[var(--color-text-secondary)] text-[10px] flex items-center justify-center font-bold">4</span>
-                    <span className="text-xs text-[var(--color-text-secondary)]">Discussion</span>
-                  </div>
-                  <div className="border-t border-border my-2" />
-                  <p className="text-[10px] text-[var(--color-text-secondary)]">Structure Guide</p>
-                  <div className="flex gap-1">
-                    <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">2I</span>
-                    <span className="text-[9px] bg-muted text-[var(--color-text-secondary)] px-1.5 py-0.5 rounded">1M</span>
-                    <span className="text-[9px] bg-muted text-[var(--color-text-secondary)] px-1.5 py-0.5 rounded">1R</span>
-                  </div>
-                </div>
+              {/* Footnote */}
+              <p className="mt-12 font-mono text-xs text-[var(--color-text-secondary)] animate-rise-in [animation-delay:320ms]">
+                <span className="text-accent">1.</span> No PhD required.
+              </p>
+            </div>
 
-                {/* Center: PDF Viewer */}
-                <div className="flex-1 p-4 flex flex-col items-center justify-center bg-muted/30">
-                  <div className="w-full max-w-[180px] bg-white border border-border rounded-md p-3 space-y-2 shadow-sm">
-                    <div className="h-2 bg-gray-200 rounded w-3/4" />
-                    <div className="h-2 bg-gray-200 rounded w-full" />
-                    <div className="h-2 bg-gray-200 rounded w-5/6" />
-                    <div className="h-2 bg-gray-200 rounded w-2/3" />
-                    <div className="h-2 bg-gray-200 rounded w-full" />
-                    <div className="h-2 bg-gray-200 rounded w-4/6" />
-                  </div>
-                  <div className="mt-3 flex items-center gap-3 text-[10px] text-[var(--color-text-secondary)]">
-                    <span>Page 1 of 12</span>
-                    <span className="text-primary font-medium">100%</span>
-                  </div>
-                </div>
-
-                {/* Right: AI Guidance Panel */}
-                <div className="w-52 border-l border-border p-3 space-y-3 shrink-0">
-                  <p className="text-xs font-bold text-primary uppercase tracking-wide">AI Guidance</p>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold">Guiding Questions</p>
-                    <div className="h-1.5 bg-muted rounded w-full" />
-                    <div className="h-1.5 bg-muted rounded w-3/4" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold">Your Response</p>
-                    <div className="h-8 bg-muted rounded w-full" />
-                    <div className="h-5 bg-primary rounded w-16 flex items-center justify-center">
-                      <span className="text-[8px] text-white font-bold">Submit</span>
-                    </div>
-                  </div>
-                  <div className="border-t border-border pt-2 space-y-1.5">
-                    <p className="text-[10px] font-semibold">Look up a term</p>
-                    <div className="h-5 bg-muted rounded w-full" />
-                  </div>
-                </div>
-              </div>
+            <div className="hidden lg:block lg:col-span-6 animate-rise-in [animation-delay:200ms]">
+              <AnnotatedManuscript />
             </div>
           </div>
         </div>
       </section>
 
       {/* ── How It Works ── */}
-      <section id="how-it-works" className="py-24 bg-muted">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center">
-            How It Works
-          </h2>
-          <p className="mt-4 text-[var(--color-text-secondary)] text-center max-w-2xl mx-auto">
-            Three simple steps to transform how you read research papers.
-          </p>
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-10">
+      <section id="how-it-works" className="py-24 border-t border-border bg-surface">
+        <div className="max-w-6xl mx-auto px-6">
+          <SectionHeader
+            folio="§ 01 — The Method"
+            title="How It Works"
+            lede="Three simple steps to transform how you read research papers."
+          />
+          <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-px bg-border border border-border">
             {[
               {
-                num: '1',
+                num: '01',
                 title: 'Upload a Paper',
                 desc: 'Paste a URL or upload a PDF — our AI extracts every section in seconds.',
                 Icon: Upload,
               },
               {
-                num: '2',
+                num: '02',
                 title: 'AI Generates Your Guide',
                 desc: 'Guiding questions, checkpoints, and quizzes are created automatically for each section.',
                 Icon: Sparkles,
               },
               {
-                num: '3',
+                num: '03',
                 title: 'Read Interactively',
                 desc: 'Work through each section with AI prompts, submit checkpoints, and track your progress.',
                 Icon: BookOpen,
               },
             ].map(({ num, title, desc, Icon }) => (
-              <div key={num} className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center text-2xl font-bold shadow-card">
-                  {num}
+              <div key={num} className="group bg-surface p-8 transition-colors hover:bg-[var(--color-bg)]">
+                <div className="flex items-start justify-between">
+                  <span className="font-display text-5xl font-light text-[var(--color-muted-foreground)] transition-colors group-hover:text-accent">
+                    {num}
+                  </span>
+                  <Icon className="w-5 h-5 text-primary mt-2" />
                 </div>
-                <div className="mt-5 w-12 h-12 text-primary">
-                  <Icon className="w-full h-full" />
-                </div>
-                <h3 className="mt-4 text-xl font-semibold">{title}</h3>
-                <p className="mt-2 text-[var(--color-text-secondary)] leading-relaxed">
+                <h3 className="mt-8 font-display text-xl font-semibold">{title}</h3>
+                <p className="mt-3 text-sm text-[var(--color-text-secondary)] leading-relaxed">
                   {desc}
                 </p>
               </div>
@@ -219,57 +311,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features Grid ── */}
+      {/* ── Features Index ── */}
       <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center">
-            Everything You Need to Read Smarter
-          </h2>
-          <p className="mt-4 text-[var(--color-text-secondary)] text-center max-w-2xl mx-auto">
-            Powerful features designed to make research papers accessible to every student.
-          </p>
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                Icon: Compass,
-                title: 'Guided Reading',
-                desc: 'Section-by-section guiding questions tell you what to look for before you read.',
-              },
-              {
-                Icon: MessageSquare,
-                title: 'AI Checkpoints',
-                desc: 'Write responses at each section and get instant AI feedback on your understanding.',
-              },
-              {
-                Icon: Search,
-                title: 'Jargon Lookup',
-                desc: 'Look up any scientific term and get a plain-language explanation instantly.',
-              },
-              {
-                Icon: HelpCircle,
-                title: 'Comprehension Quizzes',
-                desc: 'Multiple choice and short answer quizzes graded by AI after reading.',
-              },
-              {
-                Icon: BrainCircuit,
-                title: 'Critical Thinking',
-                desc: 'Targeted prompts that push you to analyze, evaluate, and think deeper about each section.',
-              },
-              {
-                Icon: Flame,
-                title: 'Streaks & XP',
-                desc: 'Earn XP for every section, checkpoint, and quiz. Build your reading streak.',
-              },
-            ].map(({ Icon, title, desc }) => (
+        <div className="max-w-6xl mx-auto px-6">
+          <SectionHeader
+            folio="§ 02 — The Apparatus"
+            title="Everything You Need to Read Smarter"
+            lede="Powerful features designed to make research papers accessible to every student."
+          />
+          <div className="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
+            {FEATURES.map(({ Icon, title, desc }, i) => (
               <div
                 key={title}
-                className="card-hover rounded-xl p-6 border border-border"
+                className="group relative p-8 bg-[var(--color-bg)] transition-colors hover:bg-surface"
               >
-                <div className="w-11 h-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <Icon className="w-6 h-6" />
+                <div className="flex items-center justify-between">
+                  <Icon className="w-5 h-5 text-accent" />
+                  <span className="font-mono text-[10px] text-[var(--color-muted-foreground)]">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-                <p className="mt-2 text-[var(--color-text-secondary)] text-sm leading-relaxed">
+                <h3 className="mt-5 font-display text-lg font-semibold group-hover:text-primary transition-colors">
+                  {title}
+                </h3>
+                <p className="mt-2 text-sm text-[var(--color-text-secondary)] leading-relaxed">
                   {desc}
                 </p>
               </div>
@@ -278,98 +343,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Reading Experience Showcase ── */}
-      <section className="py-24 bg-muted">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center">
-            A Smarter Way to Read
-          </h2>
-          <p className="mt-4 text-[var(--color-text-secondary)] text-center max-w-2xl mx-auto">
-            Every tool you need is right where you need it — alongside the paper.
-          </p>
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Student reading experience */}
-            <div className="card-hover rounded-xl border border-border p-8 bg-surface">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-semibold">The Reading Experience</h3>
-              </div>
-              <ul className="space-y-4">
-                {[
-                  'Three-panel layout: sections, PDF, and AI guidance side by side',
-                  'Section-by-section checkpoints with instant AI feedback',
-                  'So What? reflection to connect ideas across sections',
-                  'Built-in PDF viewer with zoom and page navigation',
-                  'Structure guide showing the paper\'s organization at a glance',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
-                    <span className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Teacher tools */}
-            <div className="card-hover rounded-xl border border-border p-8 bg-surface">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-semibold">Teacher Tools</h3>
-              </div>
-              <ul className="space-y-4">
-                {[
-                  'Upload papers and assign them to your classes',
-                  'Review student checkpoint responses with AI-generated feedback',
-                  'Track reading progress and completion across your class',
-                  'Drill down into individual student sessions and answers',
-                  'Dashboard with assignment analytics and class insights',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
-                    <span className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── For Teachers / For Students ── */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center">
-            Built for Every Classroom
-          </h2>
-          <p className="mt-4 text-[var(--color-text-secondary)] text-center max-w-2xl mx-auto">
-            Whether you are teaching or learning, ReadLabs has you covered.
-          </p>
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* ── Two Readers ── */}
+      <section className="py-24 border-t border-border bg-surface">
+        <div className="max-w-6xl mx-auto px-6">
+          <SectionHeader
+            folio="§ 03 — The Readers"
+            title="Built for Every Classroom"
+            lede="Whether you are teaching or learning, ReadLabs has you covered."
+          />
+          <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Teachers */}
-            <div className="card-hover rounded-xl border border-border p-8 bg-surface">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <Users className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-semibold">For Teachers</h3>
-              </div>
-              <ul className="space-y-4">
+            <div className="card-print p-8">
+              <p className="label-mono text-accent">For Teachers</p>
+              <h3 className="mt-2 font-display text-2xl font-semibold">The Lectern</h3>
+              <ul className="mt-6 space-y-4">
                 {[
                   'Upload papers and assign them to your classes',
                   'Review student responses and reading progress',
                   'Get class-wide insights and analytics',
                   'Manage classes with join codes and student rosters',
-                ].map((item) => (
+                ].map((item, i) => (
                   <li key={item} className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
+                    <span className="font-mono text-xs text-primary mt-0.5 shrink-0">
+                      {String(i + 1).padStart(2, '0')}.
+                    </span>
                     <span className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
                       {item}
                     </span>
@@ -379,22 +376,20 @@ export default function LandingPage() {
             </div>
 
             {/* Students */}
-            <div className="card-hover rounded-xl border border-border p-8 bg-surface">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-semibold">For Students</h3>
-              </div>
-              <ul className="space-y-4">
+            <div className="card-print p-8">
+              <p className="label-mono text-accent">For Students</p>
+              <h3 className="mt-2 font-display text-2xl font-semibold">The Reading Desk</h3>
+              <ul className="mt-6 space-y-4">
                 {[
                   'Self-study library with open-access research papers',
                   'Guided reading with AI-powered assistance',
                   'Interactive quizzes to test understanding',
                   'Earn XP and build your reading streak',
-                ].map((item) => (
+                ].map((item, i) => (
                   <li key={item} className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
+                    <span className="font-mono text-xs text-primary mt-0.5 shrink-0">
+                      {String(i + 1).padStart(2, '0')}.
+                    </span>
                     <span className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
                       {item}
                     </span>
@@ -406,40 +401,42 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
-      <section className="py-24 bg-primary">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white">
+      {/* ── Final CTA: the ink band ── */}
+      <section className="py-24 bg-[var(--color-border-strong)] text-[var(--color-bg)]">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] opacity-60">
+            § Fin — Your Turn
+          </p>
+          <h2 className="mt-4 font-display text-4xl md:text-5xl font-semibold">
             Start Reading Smarter Today
           </h2>
-          <p className="mt-4 text-indigo-100 max-w-xl mx-auto">
+          <p className="mt-5 opacity-70 max-w-xl mx-auto leading-relaxed">
             Join thousands of students and teachers who are transforming how they
             read and understand research papers.
           </p>
           <button
             onClick={() => navigate('/auth')}
-            className="mt-8 bg-white text-primary font-semibold px-8 py-3 rounded-lg hover:bg-indigo-50 transition-colors"
+            className="mt-9 btn-accent px-9 py-3.5 text-base"
           >
             Get Started Free
           </button>
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="py-10 border-t border-border">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-primary font-bold text-lg">
-            <BookOpen className="w-5 h-5" />
-            <span>ReadLabs</span>
-          </div>
-          <p className="text-sm text-[var(--color-text-secondary)]">
+      {/* ── Colophon ── */}
+      <footer className="py-10 border-t border-border bg-surface">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <Wordmark />
+          <p className="font-display italic text-sm text-[var(--color-text-secondary)]">
             Built for curious minds
           </p>
-          <nav className="flex items-center gap-4 text-sm text-[var(--color-text-secondary)]">
-            <a href="/terms" className="hover:text-primary transition-colors">Terms</a>
+          <nav className="flex items-center gap-4 font-mono text-xs text-[var(--color-text-secondary)]">
+            <a href="/terms" className="hover:text-accent underline-offset-4 hover:underline transition-colors">
+              Terms
+            </a>
             <a
               href="mailto:legal@readlabs.org?subject=Copyright%20Infringement%20Report"
-              className="hover:text-primary transition-colors"
+              className="hover:text-accent underline-offset-4 hover:underline transition-colors"
             >
               Report copyright
             </a>

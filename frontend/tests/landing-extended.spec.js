@@ -35,7 +35,7 @@ test.describe('Landing Page - Extended', () => {
   });
 
   test('teacher section has 4 checklist items', async ({ page }) => {
-    const forTeachers = page.getByRole('heading', { name: 'For Teachers' }).locator('xpath=ancestor::div[contains(@class, "card-hover")]');
+    // Items are globally unique now that the duplicate showcase section is gone
     const teacherChecks = [
       'Upload papers and assign them to your classes',
       'Review student responses and reading progress',
@@ -43,7 +43,7 @@ test.describe('Landing Page - Extended', () => {
       'Manage classes with join codes and student rosters',
     ];
     for (const item of teacherChecks) {
-      await expect(forTeachers.getByText(item)).toBeVisible();
+      await expect(page.getByText(item)).toBeVisible();
     }
   });
 

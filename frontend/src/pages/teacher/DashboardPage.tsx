@@ -49,7 +49,7 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-[var(--color-text-secondary)] text-xs w-8 text-right">{pct}%</span>
+      <span className="font-mono text-[10px] text-[var(--color-text-secondary)] w-8 text-right">{pct}%</span>
     </div>
   );
 }
@@ -65,7 +65,7 @@ export default function TeacherDashboardPage() {
       .catch(() => toast.error("Could not load dashboard"));
   }, [classId]);
 
-  if (!data) return <div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>;
+  if (!data) return <div className="p-8 font-mono text-[11px] uppercase tracking-wider text-[var(--color-text-secondary)]">Loading...</div>;
 
   const { students, assignments } = data;
 
@@ -77,11 +77,14 @@ export default function TeacherDashboardPage() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="section-heading">{data.class?.name}</h1>
+      <div className="flex items-end justify-between mb-8 border-b border-[var(--color-border-strong)] pb-6">
+        <div>
+          <p className="label-mono text-accent">Teacher · Analytics</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--color-text)]">{data.class?.name}</h1>
+        </div>
         <button
           onClick={() => navigate("/teacher/classes")}
-          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm transition-colors flex items-center gap-1"
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-1"
         >
           <ArrowLeft className="w-4 h-4" />
           Classes
@@ -89,38 +92,38 @@ export default function TeacherDashboardPage() {
       </div>
 
       {students.length === 0 && (
-        <p className="text-[var(--color-text-secondary)] text-sm">No students enrolled yet.</p>
+        <p className="font-display italic text-[var(--color-text-secondary)] text-sm">No students enrolled yet.</p>
       )}
 
       {assignments.length === 0 && (
-        <p className="text-[var(--color-text-secondary)] text-sm mb-6">No published assignments yet.</p>
+        <p className="font-display italic text-[var(--color-text-secondary)] text-sm mb-6">No published assignments yet.</p>
       )}
 
       {assignments.map((asn: Assignment) => (
         <div key={asn.id} className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[var(--color-text)] font-semibold">
+            <h2 className="font-display text-lg font-semibold text-[var(--color-text)]">
               Assignment
-              <span className="text-[var(--color-text-secondary)] font-normal text-sm ml-2 capitalize">
+              <span className="font-mono font-normal text-xs tracking-wide text-[var(--color-text-secondary)] ml-2 capitalize">
                 · {asn.difficulty}
               </span>
             </h2>
             <button
               onClick={() => navigate(`/teacher/assignments/${asn.id}/drilldown`)}
-              className="text-primary hover:text-primary-hover text-sm transition-colors flex items-center gap-1"
+              className="text-accent hover:text-primary font-mono text-xs uppercase tracking-wider transition-colors flex items-center gap-1"
             >
               View responses
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="card overflow-hidden">
+          <div className="card overflow-hidden p-0">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left text-[var(--color-text-secondary)] font-medium px-4 py-3">Student</th>
-                  <th className="text-left text-[var(--color-text-secondary)] font-medium px-4 py-3">Progress</th>
-                  <th className="text-left text-[var(--color-text-secondary)] font-medium px-4 py-3">Status</th>
+                <tr className="border-b border-[var(--color-border-strong)]">
+                  <th className="text-left font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--color-text-secondary)] px-4 py-3">Student</th>
+                  <th className="text-left font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--color-text-secondary)] px-4 py-3">Progress</th>
+                  <th className="text-left font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--color-text-secondary)] px-4 py-3">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -133,7 +136,7 @@ export default function TeacherDashboardPage() {
                   return (
                     <tr
                       key={student.student_id}
-                      className="border-b border-border last:border-0 hover:bg-muted cursor-pointer"
+                      className="border-b border-border last:border-0 hover:bg-muted cursor-pointer transition-colors"
                       onClick={() =>
                         navigate(`/teacher/assignments/${asn.id}/students/${student.student_id}/responses`)
                       }
@@ -141,15 +144,15 @@ export default function TeacherDashboardPage() {
                       <td className="px-4 py-3 text-[var(--color-text)]">{student.student_name}</td>
                       <td className="px-4 py-3 w-48">
                         <ProgressBar value={completed} max={total || 1} />
-                        <span className="text-[var(--color-text-secondary)] text-xs">{completed}/{total} sections</span>
+                        <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">{completed}/{total} sections</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm ${
                           status === "completed"
-                            ? "badge bg-emerald-500/10 text-success"
+                            ? "bg-success/10 text-success"
                             : status === "in_progress"
-                            ? "badge bg-primary-light text-primary"
-                            : "badge bg-muted text-[var(--color-text-secondary)]"
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-[var(--color-text-secondary)]"
                         }`}>
                           {status.replace("_", " ")}
                         </span>

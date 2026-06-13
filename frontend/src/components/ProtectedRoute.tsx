@@ -7,8 +7,10 @@ export default function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
-        <p className="text-gray-400 text-sm">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-text-secondary)] animate-soft-pulse">
+          Loading...
+        </p>
       </div>
     );
   }

@@ -43,34 +43,34 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
   const showSoWhat = allSectionsComplete || previewMode;
   const showQuiz = !!(soWhat.ai_feedback || soWhat.skipped);
 
-  if (loading) return <div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>;
-  if (!readingGuide) return <div className="p-8 text-red-400">Assignment not found.</div>;
+  if (loading) return <div className="p-8 font-mono text-sm text-[var(--color-text-secondary)]">Loading...</div>;
+  if (!readingGuide) return <div className="p-8 text-danger">Assignment not found.</div>;
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)]">
       {previewMode && (
-        <div className="bg-amber-600/20 border-b border-amber-600/40 px-6 py-2 text-amber-300 text-sm text-center shrink-0">
+        <div className="bg-warning/10 border-b border-warning/40 px-6 py-2 text-warning font-mono text-xs tracking-wide text-center shrink-0">
           Preview Mode — you are viewing this as a student would. Nothing is saved.
         </div>
       )}
 
-      <div className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
+      <div className="bg-surface border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <div className="min-w-0">
-          <p className="text-xs text-[var(--color-text-secondary)]">{previewMode ? "Preview" : "Reading"}</p>
-          <h1 className="text-[var(--color-text)] font-semibold truncate">{paperTitle}</h1>
+          <p className="label-mono">{previewMode ? "Preview" : "Reading"}</p>
+          <h1 className="font-display text-lg leading-tight text-[var(--color-text)] font-semibold truncate">{paperTitle}</h1>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setSectionsCollapsed(!sectionsCollapsed)}
             data-testid="sections-toggle"
-            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-xs border border-border rounded px-2 py-1 transition-colors flex items-center gap-1"
+            className="font-mono text-[11px] tracking-wide text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-border-strong border border-border rounded-sm px-2 py-1 transition-colors flex items-center gap-1"
           >
             <PanelLeftClose className="w-3 h-3" />
             {sectionsCollapsed ? "Sections" : "Hide"}
           </button>
           <button
             onClick={() => setAiPanelVisible(!aiPanelVisible)}
-            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-xs border border-border rounded px-2 py-1 transition-colors flex items-center gap-1"
+            className="font-mono text-[11px] tracking-wide text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-border-strong border border-border rounded-sm px-2 py-1 transition-colors flex items-center gap-1"
           >
             <PanelRight className="w-3 h-3" />
             {aiPanelVisible ? "Hide AI" : "AI Panel"}

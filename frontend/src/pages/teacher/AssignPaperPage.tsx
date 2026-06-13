@@ -45,35 +45,40 @@ export default function AssignPaperPage() {
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
-      <h1 className="section-heading mb-2">Assign a Paper</h1>
-      <p className="text-[var(--color-text-secondary)] text-sm mb-6">
-        Select an uploaded paper. Gemini will generate the reading guide automatically.
-      </p>
+      <div className="mb-8 border-b border-[var(--color-border-strong)] pb-6">
+        <p className="label-mono text-accent">Teacher · Assignment</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--color-text)]">Assign a Paper</h1>
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          Select an uploaded paper. Gemini will generate the reading guide automatically.
+        </p>
+      </div>
 
       <div className="space-y-2 mb-6">
-        {loading && <p className="text-[var(--color-text-secondary)] text-sm">Loading papers...</p>}
+        {loading && <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--color-text-secondary)]">Loading papers...</p>}
         {!loading && papers.length === 0 && (
-          <div className="card p-8 text-center">
-            <FileText className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
-            <p className="text-[var(--color-text-secondary)] text-sm">
+          <div className="rounded-sm border border-dotted border-[var(--color-muted-foreground)] p-10 text-center">
+            <FileText className="w-8 h-8 text-[var(--color-muted-foreground)] mx-auto mb-3" />
+            <p className="font-display italic text-[var(--color-text-secondary)] text-sm">
               No papers uploaded yet.{" "}
               <button
                 onClick={() => navigate("/teacher/papers")}
-                className="text-primary hover:underline"
+                className="text-accent hover:underline"
               >
                 Upload one first.
               </button>
             </p>
           </div>
         )}
-        {papers.map((paper: Paper) => (
+        {papers.map((paper: Paper, idx: number) => (
           <button
             key={paper.id}
             onClick={() => setSelected(paper.id)}
             className={`card-hover w-full text-left p-4 flex items-center gap-3 ${
-              selected === paper.id ? "ring-2 ring-primary" : ""
+              // "ring-2 ring-primary" is load-bearing: teacher.spec.js asserts it on selection
+              selected === paper.id ? "border-primary ring-2 ring-primary" : ""
             }`}
           >
+            <span className="font-mono text-xs text-accent shrink-0">{String(idx + 1).padStart(2, "0")}.</span>
             <FileText className="w-4 h-4 text-primary shrink-0" />
             <p className="text-[var(--color-text)] font-medium">{paper.title}</p>
           </button>

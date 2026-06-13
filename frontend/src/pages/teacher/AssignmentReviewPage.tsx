@@ -120,14 +120,14 @@ export default function AssignmentReviewPage() {
     }
   };
 
-  if (!assignment) return <div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>;
+  if (!assignment) return <div className="p-8 font-mono text-[11px] uppercase tracking-wider text-[var(--color-text-secondary)]">Loading...</div>;
 
   if (assignment.status === "processing") {
     return (
       <div className="p-8 flex flex-col items-center justify-center min-h-[60vh]">
         <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full mb-4" />
-        <p className="text-[var(--color-text)] text-lg font-medium">Gemini is analyzing the paper...</p>
-        <p className="text-[var(--color-text-secondary)] text-sm mt-1">This takes 10-30 seconds. Don't close this tab.</p>
+        <p className="font-display text-[var(--color-text)] text-lg font-medium">Gemini is analyzing the paper...</p>
+        <p className="font-mono text-[11px] text-[var(--color-text-secondary)] mt-2">This takes 10-30 seconds. Don't close this tab.</p>
       </div>
     );
   }
@@ -135,9 +135,9 @@ export default function AssignmentReviewPage() {
   if (!guide || guide.generation_error) {
     return (
       <div className="p-8">
-        <p className="text-red-400">Reading guide generation failed. Please delete and try again.</p>
+        <p className="text-danger">Reading guide generation failed. Please delete and try again.</p>
         {guide?.generation_error && (
-          <p className="text-[var(--color-text-secondary)] text-xs mt-1">{guide.generation_error}</p>
+          <p className="font-mono text-[11px] text-[var(--color-text-secondary)] mt-1">{guide.generation_error}</p>
         )}
       </div>
     );
@@ -145,10 +145,11 @@ export default function AssignmentReviewPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between gap-4 mb-8 border-b border-[var(--color-border-strong)] pb-6">
         <div>
-          <h1 className="section-heading">Review Reading Guide</h1>
-          <p className="section-subheading mt-0.5">
+          <p className="label-mono text-accent">Teacher · Review</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--color-text)]">Review Reading Guide</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
             Edit questions or add teacher notes, then publish.
           </p>
         </div>
@@ -156,7 +157,7 @@ export default function AssignmentReviewPage() {
           <select
             value={guide.difficulty}
             onChange={(e) => updateDifficulty(e.target.value)}
-            className="bg-muted text-[var(--color-text)] rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary border border-border"
+            className="bg-surface-raised text-[var(--color-text)] rounded px-3 py-1.5 text-sm border border-border focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
           >
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
@@ -181,7 +182,7 @@ export default function AssignmentReviewPage() {
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
-            className="btn-primary disabled:opacity-50 flex items-center gap-1.5"
+            className="btn-accent disabled:opacity-50 flex items-center gap-1.5"
           >
             <Send className="w-3.5 h-3.5" />
             Publish
@@ -192,13 +193,16 @@ export default function AssignmentReviewPage() {
       <div className="space-y-6">
         {guide.sections.map((section: GuideSection, sIdx: number) => (
           <div key={sIdx} className="card p-5">
-            <h2 className="text-[var(--color-text)] font-semibold text-lg mb-1">{section.title}</h2>
+            <div className="flex items-baseline gap-2.5 mb-1">
+              <span className="font-mono text-xs text-accent shrink-0">{String(sIdx + 1).padStart(2, "0")}.</span>
+              <h2 className="text-[var(--color-text)] font-semibold text-lg">{section.title}</h2>
+            </div>
             {section.text && (
-              <p className="text-[var(--color-text-secondary)] text-xs italic mb-4 line-clamp-2">{section.text}</p>
+              <p className="font-display italic text-[var(--color-text-secondary)] text-sm leading-relaxed mb-4 border-l-2 border-[var(--color-accent)] pl-3 line-clamp-2">{section.text}</p>
             )}
 
             <div className="mb-4">
-              <p className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wide mb-2">
+              <p className="label-mono mb-2">
                 Guiding Questions
               </p>
               {section.guiding_questions.map((q: string, qIdx: number) => (
@@ -213,15 +217,15 @@ export default function AssignmentReviewPage() {
             </div>
 
             {section.key_terms && section.key_terms.length > 0 && (
-              <div className="mb-4">
-                <p className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wide mb-1.5">
+              <div className="mb-4 border-t border-dotted border-border pt-3">
+                <p className="label-mono mb-1.5">
                   Key Terms
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {section.key_terms.map((term: string, tIdx: number) => (
                     <span
                       key={tIdx}
-                      className="badge bg-muted text-[var(--color-text)] text-xs"
+                      className="badge bg-muted text-[var(--color-text)] font-mono text-[10px] uppercase tracking-wider rounded-sm"
                     >
                       {term}
                     </span>
@@ -230,8 +234,8 @@ export default function AssignmentReviewPage() {
               </div>
             )}
 
-            <div>
-              <p className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wide mb-1.5">
+            <div className="border-t border-dotted border-border pt-3">
+              <p className="label-mono mb-1.5">
                 Teacher Notes (optional — visible to students)
               </p>
               <textarea

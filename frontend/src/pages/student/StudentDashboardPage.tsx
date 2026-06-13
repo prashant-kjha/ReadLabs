@@ -18,15 +18,15 @@ interface SessionInfo {
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: "badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  intermediate: "badge bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  advanced: "badge bg-red-500/10 text-red-700 dark:text-red-400",
+  beginner: "badge border border-border bg-surface-raised text-success",
+  intermediate: "badge border border-border bg-surface-raised text-warning",
+  advanced: "badge border border-border bg-surface-raised text-danger",
 };
 
 const STATUS_COLORS: Record<string, string> = {
   not_started: "badge bg-muted text-[var(--color-text-secondary)]",
   in_progress: "badge bg-primary-light text-primary",
-  completed: "badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  completed: "badge bg-primary text-[var(--color-primary-foreground)]",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -89,15 +89,18 @@ export default function StudentDashboardPage() {
     return STATUS_LABELS[status] || status;
   };
 
-  if (loading) return <div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>;
+  if (loading) return <div className="p-8 font-mono text-sm text-[var(--color-text-secondary)]">Loading...</div>;
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="section-heading">My Classes</h1>
+      <div className="flex items-end justify-between gap-4 mb-8">
+        <div>
+          <p className="label-mono text-accent">Student · Reading Desk</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--color-text)]">My Classes</h1>
+        </div>
         <button
           onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center gap-1.5"
+          className="btn-primary flex items-center gap-1.5 shrink-0"
         >
           <Plus className="w-4 h-4" />
           Join a Class
@@ -106,11 +109,11 @@ export default function StudentDashboardPage() {
 
       {/* Join modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="card p-6 w-full max-w-sm">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="card p-6 w-full max-w-sm rounded-sm bg-surface-raised border-[var(--color-border-strong)] shadow-print">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[var(--color-text)] font-semibold">Join a Class</h2>
-              <button onClick={() => { setShowModal(false); setClassCode(""); }} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">
+              <h2 className="font-display text-lg font-semibold text-[var(--color-text)]">Join a Class</h2>
+              <button onClick={() => { setShowModal(false); setClassCode(""); }} className="text-[var(--color-text-secondary)] hover:text-accent transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -146,39 +149,46 @@ export default function StudentDashboardPage() {
 
       {/* Classes list */}
       {classes.length === 0 ? (
-        <div className="card p-8 text-center">
-          <BookOpen className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
-          <p className="text-[var(--color-text-secondary)] text-sm">No classes yet. Join one using a class code from your teacher.</p>
+        <div className="rounded-sm border border-dashed border-[var(--color-muted-foreground)] p-10 text-center">
+          <BookOpen className="w-10 h-10 text-[var(--color-muted-foreground)] mx-auto mb-3" strokeWidth={1.25} />
+          <p className="font-display italic text-[var(--color-text-secondary)]">No classes yet. Join one using a class code from your teacher.</p>
         </div>
       ) : (
         <div className="space-y-6">
           {classes.map((cls) => (
-            <div key={cls.class_id} className="card p-5">
-              <div className="flex items-start justify-between mb-1">
-                <h2 className="text-[var(--color-text)] font-semibold text-lg">{cls.class_name}</h2>
-                <span className="text-xs text-[var(--color-text-secondary)] font-mono">{cls.class_code}</span>
+            <div key={cls.class_id} className="card p-0 overflow-hidden">
+              <div className="px-5 pt-5 pb-4 border-b border-dashed border-border">
+                <div className="flex items-start justify-between gap-4">
+                  <h2 className="font-display text-lg font-semibold text-[var(--color-text)]">{cls.class_name}</h2>
+                  <span className="font-mono text-xs text-accent shrink-0">{cls.class_code}</span>
+                </div>
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">Teacher: {cls.teacher_name}</p>
               </div>
-              <p className="text-[var(--color-text-secondary)] text-sm mb-4">Teacher: {cls.teacher_name}</p>
 
               {cls.assignments.length === 0 ? (
-                <p className="text-[var(--color-text-secondary)] text-sm">No published assignments yet.</p>
+                <p className="px-5 py-4 font-display italic text-sm text-[var(--color-text-secondary)]">No published assignments yet.</p>
               ) : (
-                <div className="space-y-2">
-                  {cls.assignments.map((asgn) => {
+                <div className="divide-y divide-border">
+                  {cls.assignments.map((asgn, idx) => {
                     const status = getSessionStatus(asgn.id);
                     return (
                       <button
                         key={asgn.id}
                         onClick={() => navigate(`/student/read/${asgn.id}`)}
-                        className="w-full text-left bg-muted hover:bg-muted/80 rounded-lg px-4 py-3 flex items-center justify-between transition-colors"
+                        className="group w-full text-left px-5 py-3.5 flex items-center justify-between gap-3 transition-colors hover:bg-muted"
                       >
-                        <div>
-                          <p className="text-[var(--color-text)] text-sm font-medium">{asgn.paper_title}</p>
-                          <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[asgn.difficulty] || "badge bg-muted text-[var(--color-text-secondary)]"}`}>
-                            {asgn.difficulty}
+                        <div className="flex items-baseline gap-3 min-w-0">
+                          <span aria-hidden="true" className="font-mono text-[10px] text-[var(--color-muted-foreground)] shrink-0">
+                            {String(idx + 1).padStart(2, "0")}.
                           </span>
+                          <div className="min-w-0">
+                            <p className="font-display text-sm font-medium text-[var(--color-text)] group-hover:text-primary transition-colors">{asgn.paper_title}</p>
+                            <span className={`inline-block mt-1.5 font-mono uppercase tracking-wider ${DIFFICULTY_COLORS[asgn.difficulty] || "badge bg-muted text-[var(--color-text-secondary)]"}`}>
+                              {asgn.difficulty}
+                            </span>
+                          </div>
                         </div>
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[status]}`}>
+                        <span className={`shrink-0 font-mono uppercase tracking-wide ${STATUS_COLORS[status]}`}>
                           {getSessionLabel(status)}
                         </span>
                       </button>

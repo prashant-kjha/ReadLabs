@@ -2,44 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Light Mode (default) ─────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════════════════
+   READLAB AI — "The Reading Room"
+   A scholarly-editorial design system: warm paper, pine ink,
+   vermillion annotations. Fraunces for voice, Schibsted Grotesk for
+   clarity, IBM Plex Mono for marginalia.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Light: The Reading Room, daylight ────────────────────────────── */
 :root {
-  --color-primary: #4F46E5;
-  --color-primary-hover: #4338CA;
-  --color-primary-light: #EEF2FF;
-  --color-accent: #06B6D4;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-danger: #EF4444;
-  --color-bg: #F8FAFC;
-  --color-surface: #FFFFFF;
-  --color-text: #0F172A;
-  --color-text-secondary: #475569;
-  --color-muted: #F1F5F9;
-  --color-muted-foreground: #94A3B8;
-  --color-border: #E2E8F0;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --color-primary: #1e5a3e;
+  --color-primary-hover: #14432d;
+  --color-primary-light: #e4ede2;
+  --color-primary-foreground: #f9f6ee;
+  /* accent/success/warning/muted-foreground are tuned to clear WCAG AA 4.5:1
+     on the paper bg AND on their /10 tints — the a11y.spec axe gate enforces this */
+  --color-accent: #b23a16;
+  --color-success: #276b43;
+  --color-warning: #8a5d0c;
+  --color-danger: #b3402a;
+  --color-bg: #f3eee2;
+  --color-surface: #faf7ef;
+  --color-surface-raised: #fffdf7;
+  --color-text: #20281f;
+  --color-text-secondary: #5d685c;
+  --color-muted: #ebe5d4;
+  --color-muted-foreground: #65695a;
+  --color-border: #d9d2bc;
+  --color-border-strong: #20281f;
+  --shadow-card: 0 1px 2px rgba(32, 40, 31, 0.05), 0 1px 1px rgba(32, 40, 31, 0.03);
+  --shadow-card-hover: 0 6px 18px rgba(32, 40, 31, 0.1), 0 2px 4px rgba(32, 40, 31, 0.05);
+  --shadow-print: 5px 5px 0 0 rgba(32, 40, 31, 0.1);
+  --grain-opacity: 0.5;
 }
 
-/* ── Dark Mode ────────────────────────────────────────────────────── */
+/* ── Dark: The Reading Room, lamplight ────────────────────────────── */
 .dark {
-  --color-primary: #818CF8;
-  --color-primary-hover: #6366F1;
-  --color-primary-light: #1E1B4B;
-  --color-accent: #22D3EE;
-  --color-success: #34D399;
-  --color-warning: #FBBF24;
-  --color-danger: #F87171;
-  --color-bg: #0F172A;
-  --color-surface: #1E293B;
-  --color-text: #F1F5F9;
-  --color-text-secondary: #94A3B8;
-  --color-muted: #1E293B;
-  --color-muted-foreground: #64748B;
-  --color-border: #334155;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.12);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);
+  --color-primary: #8fc7a4;
+  --color-primary-hover: #aad8bb;
+  --color-primary-light: #1c3326;
+  --color-primary-foreground: #0f1d15;
+  --color-accent: #e8784a;
+  --color-success: #6fbf8f;
+  --color-warning: #d9a943;
+  --color-danger: #e07a5f;
+  --color-bg: #111813;
+  --color-surface: #18221b;
+  --color-surface-raised: #1e2a21;
+  --color-text: #ece7d8;
+  --color-text-secondary: #a3ada0;
+  --color-muted: #212e25;
+  --color-muted-foreground: #6f7b6e;
+  --color-border: #2e3c31;
+  --color-border-strong: #ece7d8;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-print: 5px 5px 0 0 rgba(0, 0, 0, 0.35);
+  --grain-opacity: 0.3;
 }
 
 /* ── Base ─────────────────────────────────────────────────────────── */
@@ -48,7 +67,7 @@
     scroll-behavior: smooth;
   }
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: "Schibsted Grotesk", system-ui, -apple-system, sans-serif;
     background-color: var(--color-bg);
     color: var(--color-text);
     transition: background-color 0.2s ease, color 0.2s ease;
@@ -56,16 +75,37 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Focus ring */
-  *:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-    border-radius: 4px;
+  /* Paper grain — a barely-there noise field over everything */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: calc(0.028 * var(--grain-opacity) * 2);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
-  /* Scrollbar */
+  h1, h2, h3 {
+    font-family: "Fraunces", Georgia, serif;
+    font-variation-settings: "opsz" 80;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: #fdfaf3;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -78,7 +118,6 @@
     background: var(--color-muted-foreground);
   }
 
-  /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
@@ -91,46 +130,75 @@
 /* ── Component Utilities ──────────────────────────────────────────── */
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5
-           font-semibold text-sm transition-all duration-150
-           bg-primary text-white hover:bg-primary-hover
-           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded px-5 py-2.5
+           font-semibold text-sm tracking-wide transition-all duration-150
+           bg-primary text-[var(--color-primary-foreground)]
+           border border-transparent
+           hover:bg-primary-hover hover:-translate-y-px active:translate-y-0
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5
-           font-semibold text-sm transition-all duration-150
-           bg-muted text-[var(--color-text)] hover:bg-[var(--color-border)]
-           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
+    @apply inline-flex items-center justify-center gap-2 rounded px-5 py-2.5
+           font-semibold text-sm tracking-wide transition-all duration-150
+           bg-muted text-[var(--color-text)] border border-border
+           hover:border-[var(--color-border-strong)]
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-outline {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5
-           font-semibold text-sm transition-all duration-150
-           border border-border text-[var(--color-text)] hover:bg-muted
+    @apply inline-flex items-center justify-center gap-2 rounded px-5 py-2.5
+           font-semibold text-sm tracking-wide transition-all duration-150
+           border border-[var(--color-border-strong)] text-[var(--color-text)]
+           hover:bg-[var(--color-border-strong)] hover:text-[var(--color-bg)]
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded px-5 py-2.5
+           font-semibold text-sm tracking-wide transition-all duration-150
+           bg-accent text-[#fdfaf3] hover:brightness-110 hover:-translate-y-px active:translate-y-0
            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .card {
-    @apply bg-surface rounded-xl p-5 shadow-card border border-border
-           transition-shadow duration-200;
+    @apply bg-surface rounded-lg p-5 border border-border shadow-card
+           transition-all duration-200;
   }
   .card-hover {
-    @apply card hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer;
+    @apply card hover:shadow-card-hover hover:-translate-y-0.5 hover:border-[var(--color-muted-foreground)] cursor-pointer;
+  }
+  /* A card styled like a printed index card: hard offset shadow */
+  .card-print {
+    @apply bg-surface-raised rounded-sm p-5 border border-[var(--color-border-strong)] shadow-print
+           transition-transform duration-200;
   }
   .input-field {
-    @apply w-full rounded-lg px-4 py-3 text-sm bg-muted border border-border
+    @apply w-full rounded px-4 py-3 text-sm bg-surface-raised border border-border
            text-[var(--color-text)] placeholder:text-[var(--color-muted-foreground)]
-           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+           focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent
            transition-colors duration-150;
   }
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
+  /* Marginalia label: the mono small-caps voice of the system */
+  .label-mono {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--color-text-secondary)];
+  }
   .section-heading {
-    @apply text-2xl font-bold text-[var(--color-text)];
+    @apply font-display text-2xl font-semibold text-[var(--color-text)];
   }
   .section-subheading {
     @apply text-sm text-[var(--color-text-secondary)] leading-relaxed;
+  }
+  /* Horizontal rule with a centered ornament, for section breaks */
+  .rule-ornament {
+    @apply relative flex items-center gap-4 text-[var(--color-muted-foreground)];
+  }
+  .rule-ornament::before,
+  .rule-ornament::after {
+    content: "";
+    @apply flex-1 border-t border-border;
   }
 }

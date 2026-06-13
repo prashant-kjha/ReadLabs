@@ -19,10 +19,10 @@ interface CheckpointEntry {
 }
 
 const SECTION_TYPE_COLORS: Record<string, string> = {
-  Introduction: "bg-blue-500/20 text-blue-800 dark:text-blue-300",
-  Methods: "bg-purple-500/20 text-purple-800 dark:text-purple-300",
-  Results: "bg-green-500/20 text-green-800 dark:text-green-300",
-  Discussion: "bg-amber-500/20 text-amber-800 dark:text-amber-300",
+  Introduction: "bg-primary/10 text-primary",
+  Methods: "bg-accent/10 text-accent",
+  Results: "bg-success/10 text-success",
+  Discussion: "bg-warning/10 text-warning",
   Other: "bg-muted text-[var(--color-text-secondary)]",
 };
 
@@ -60,9 +60,9 @@ export default function SectionsSidebar({
               disabled={locked}
               onClick={() => { if (!locked) { setCollapsed(false); setCurrentSection(i); }}}
               title={s.title}
-              className={`w-7 h-7 rounded flex items-center justify-center text-xs transition-colors ${
-                active ? "bg-primary text-white" :
-                done ? "bg-primary/20 text-primary" :
+              className={`w-7 h-7 rounded-sm flex items-center justify-center font-mono text-xs transition-colors ${
+                active ? "bg-accent text-[#fdfaf3]" :
+                done ? "bg-primary/15 text-primary" :
                 skipped ? "bg-muted text-[var(--color-text-secondary)]" :
                 locked ? "bg-muted text-[var(--color-text-secondary)] opacity-40" :
                 "bg-muted text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
@@ -76,8 +76,8 @@ export default function SectionsSidebar({
           <button
             onClick={() => { setCollapsed(false); setCurrentSection(sections.length); }}
             title="So What?"
-            className={`w-7 h-7 rounded flex items-center justify-center text-xs ${
-              currentSection === sections.length ? "bg-primary text-white" : "bg-muted text-[var(--color-text-secondary)]"
+            className={`w-7 h-7 rounded-sm flex items-center justify-center font-mono text-xs ${
+              currentSection === sections.length ? "bg-accent text-[#fdfaf3]" : "bg-muted text-[var(--color-text-secondary)]"
             }`}
           >
             ?
@@ -87,8 +87,8 @@ export default function SectionsSidebar({
           <button
             onClick={() => { setCollapsed(false); setCurrentSection(sections.length + 1); }}
             title="Quiz"
-            className={`w-7 h-7 rounded flex items-center justify-center text-xs ${
-              currentSection === sections.length + 1 ? "bg-primary text-white" : "bg-muted text-[var(--color-text-secondary)]"
+            className={`w-7 h-7 rounded-sm flex items-center justify-center font-mono text-xs ${
+              currentSection === sections.length + 1 ? "bg-accent text-[#fdfaf3]" : "bg-muted text-[var(--color-text-secondary)]"
             }`}
           >
             Q
@@ -101,7 +101,7 @@ export default function SectionsSidebar({
   return (
     <div className="w-52 shrink-0 bg-surface border-r border-border flex flex-col">
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-        <span className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider">Sections</span>
+        <span className="label-mono">Sections</span>
         <button onClick={() => setCollapsed(true)} aria-label="Collapse sections" className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm">←</button>
       </div>
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
@@ -116,23 +116,24 @@ export default function SectionsSidebar({
               key={i}
               disabled={locked}
               onClick={() => !locked && setCurrentSection(i)}
-              className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 ${
-                active ? "bg-primary text-white" :
-                locked ? "text-[var(--color-text-secondary)] cursor-not-allowed opacity-50" :
-                skipped ? "text-[var(--color-text-secondary)]" :
-                "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-muted"
+              className={`w-full text-left text-sm pl-3 pr-2 py-1.5 rounded-sm border-l-2 transition-colors flex items-center gap-2 ${
+                active ? "border-accent bg-surface-raised text-[var(--color-text)]" :
+                locked ? "border-transparent text-[var(--color-text-secondary)] cursor-not-allowed opacity-50" :
+                skipped ? "border-transparent text-[var(--color-text-secondary)]" :
+                done ? "border-transparent bg-primary/5 text-[var(--color-text-secondary)] hover:text-[var(--color-text)]" :
+                "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-muted"
               }`}
             >
               {skipped ? (
                 <SkipForward className="w-3 h-3 text-[var(--color-text-secondary)]" />
               ) : done ? (
-                <Check className="w-3 h-3 text-success" />
+                <Check className="w-3 h-3 text-primary" />
               ) : (
-                <span className="text-[var(--color-text-secondary)] text-xs">{i + 1}</span>
+                <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">{i + 1}</span>
               )}
               <span className="truncate">{s.title}</span>
               {s.section_type && (
-                <span className={`text-xs px-1 rounded shrink-0 ${SECTION_TYPE_COLORS[s.section_type] || SECTION_TYPE_COLORS.Other}`}>
+                <span className={`font-mono text-[10px] px-1 rounded-sm shrink-0 ${SECTION_TYPE_COLORS[s.section_type] || SECTION_TYPE_COLORS.Other}`}>
                   {s.section_type.slice(0, 1)}
                 </span>
               )}
@@ -142,8 +143,8 @@ export default function SectionsSidebar({
         {showSoWhat && (
           <button
             onClick={() => setCurrentSection(sections.length)}
-            className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${
-              currentSection === sections.length ? "bg-primary text-white" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-muted"
+            className={`w-full text-left text-sm pl-3 pr-2 py-1.5 rounded-sm border-l-2 transition-colors ${
+              currentSection === sections.length ? "border-accent bg-surface-raised text-[var(--color-text)]" : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-muted"
             }`}
           >
             So What?
@@ -152,8 +153,8 @@ export default function SectionsSidebar({
         {showQuiz && (
           <button
             onClick={() => setCurrentSection(sections.length + 1)}
-            className={`w-full text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${
-              currentSection === sections.length + 1 ? "bg-primary text-white" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-muted"
+            className={`w-full text-left text-sm pl-3 pr-2 py-1.5 rounded-sm border-l-2 transition-colors ${
+              currentSection === sections.length + 1 ? "border-accent bg-surface-raised text-[var(--color-text)]" : "border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-muted"
             }`}
           >
             Quiz
@@ -176,13 +177,13 @@ function StructureCoach({ sections, checkpoints }: { sections: Section[]; checkp
   const types = Object.keys(typeCounts);
   if (types.length === 0) return null;
   return (
-    <div className="px-3 py-3 border-t border-border">
-      <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">Structure Guide</p>
+    <div className="px-3 py-3 border-t border-dotted border-border">
+      <p className="label-mono mb-2">Structure Guide</p>
       <div className="space-y-1">
         {types.map((type) => (
-          <div key={type} className={`text-xs px-2 py-1 rounded flex items-center justify-between ${SECTION_TYPE_COLORS[type] || SECTION_TYPE_COLORS.Other}`}>
+          <div key={type} className={`text-xs px-2 py-1 rounded-sm flex items-center justify-between ${SECTION_TYPE_COLORS[type] || SECTION_TYPE_COLORS.Other}`}>
             <span>{type}</span>
-            <span className="text-[var(--color-text-secondary)]">{completedCounts[type] || 0}/{typeCounts[type]}</span>
+            <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">{completedCounts[type] || 0}/{typeCounts[type]}</span>
           </div>
         ))}
       </div>

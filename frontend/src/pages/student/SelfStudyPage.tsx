@@ -16,9 +16,9 @@ interface LibraryPaper {
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: "badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  intermediate: "badge bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  advanced: "badge bg-red-500/10 text-red-700 dark:text-red-400",
+  beginner: "badge border border-border bg-surface-raised text-success",
+  intermediate: "badge border border-border bg-surface-raised text-warning",
+  advanced: "badge border border-border bg-surface-raised text-danger",
 };
 
 export default function SelfStudyPage() {
@@ -171,20 +171,20 @@ export default function SelfStudyPage() {
   const RecommendationPanel = () => {
     if (recommendations.length === 0) return null;
     return (
-      <div className="mb-6">
-        <h2 className="section-subheading mb-3">Recommended for You</h2>
-        <div className="flex gap-3 overflow-x-auto pb-1">
+      <div className="mb-8">
+        <h2 className="label-mono text-accent mb-3">Recommended for You</h2>
+        <div className="flex gap-4 overflow-x-auto pb-2">
           {recommendations.map(({ paper, assignment_id, reason }) => (
-            <div key={assignment_id} className="card p-4 shrink-0 w-64 flex flex-col" data-testid="recommendation-card">
-              <div className="flex items-start gap-2 mb-1">
-                <BookOpen className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <p className="text-[var(--color-text)] text-sm font-medium leading-snug">{paper.title}</p>
+            <div key={assignment_id} className="card-print p-4 shrink-0 w-64 flex flex-col" data-testid="recommendation-card">
+              <div className="flex items-start gap-2 mb-1.5">
+                <BookOpen className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                <p className="font-display text-sm font-semibold leading-snug text-[var(--color-text)]">{paper.title}</p>
               </div>
-              <p className="text-[var(--color-text-secondary)] text-xs italic mb-3 flex-1">{reason}</p>
+              <p className="font-display italic text-xs text-[var(--color-text-secondary)] mb-3 flex-1">{reason}</p>
               <button onClick={() => startRecommendedPaper(assignment_id)}
                 disabled={fetching === assignment_id}
                 data-testid="recommendation-start-button"
-                className="btn-primary text-xs disabled:opacity-50">
+                className="btn-accent text-xs disabled:opacity-50">
                 {fetching === assignment_id ? "Starting..." : "Start Reading"}
               </button>
             </div>
@@ -196,12 +196,15 @@ export default function SelfStudyPage() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="section-heading">Paper Library</h1>
+      <div className="flex items-end justify-between gap-4 mb-8">
+        <div>
+          <p className="label-mono text-accent">Student · Open Stacks</p>
+          <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--color-text)]">Paper Library</h1>
+        </div>
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="btn-primary flex items-center gap-1.5 disabled:opacity-50"
+          className="btn-primary flex items-center gap-1.5 shrink-0 disabled:opacity-50"
         >
           <Upload className="w-4 h-4" />
           {uploading ? "Processing..." : "Upload PDF"}
@@ -222,7 +225,7 @@ export default function SelfStudyPage() {
       {/* Search bar */}
       <form onSubmit={handleSearch} className="flex gap-2 mb-6">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-muted-foreground)]" />
           <input
             type="text"
             value={searchQuery}
@@ -243,7 +246,7 @@ export default function SelfStudyPage() {
           <button
             type="button"
             onClick={() => { setSearchResults(null); setSearchQuery(""); }}
-            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm px-3 flex items-center gap-1"
+            className="text-[var(--color-text-secondary)] hover:text-accent text-sm px-3 flex items-center gap-1 transition-colors"
           >
             <X className="w-3 h-3" />
             Clear
@@ -253,35 +256,33 @@ export default function SelfStudyPage() {
 
       {/* Results */}
       {displayPapers.length === 0 ? (
-        <div className="card p-8 text-center">
-          <BookOpen className="w-10 h-10 text-[var(--color-text-secondary)] mx-auto mb-3" />
-          <p className="text-[var(--color-text-secondary)] text-sm">
+        <div className="rounded-sm border border-dashed border-[var(--color-muted-foreground)] p-10 text-center">
+          <BookOpen className="w-10 h-10 text-[var(--color-muted-foreground)] mx-auto mb-3" strokeWidth={1.25} />
+          <p className="font-display italic text-[var(--color-text-secondary)]">
             {searchResults !== null ? "No papers found. Try a different search." : "No papers in the library yet. Upload one or search above."}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {displayPapers.map((paper) => (
-            <div key={paper.id || paper.core_id} className="card-hover p-4">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-[var(--color-text)] font-medium text-sm leading-tight flex-1">{paper.title}</h3>
-              </div>
-              {paper.authors && <p className="text-[var(--color-text-secondary)] text-xs mb-1">{paper.authors}</p>}
-              {paper.year_published && <p className="text-[var(--color-text-secondary)] text-xs mb-2">{paper.year_published}</p>}
+            <div key={paper.id || paper.core_id} className="card-hover p-4 flex flex-col">
+              <h3 className="font-display text-sm font-semibold leading-snug text-[var(--color-text)] mb-2">{paper.title}</h3>
+              {paper.authors && <p className="font-mono text-[11px] text-[var(--color-text-secondary)] mb-0.5">{paper.authors}</p>}
+              {paper.year_published && <p className="font-mono text-[11px] text-[var(--color-text-secondary)] mb-2">{paper.year_published}</p>}
 
               {paper.fromSearch ? (
                 /* CORE search result */
                 <button
                   onClick={() => handleFetchCore(paper.core_id!, paper.title)}
                   disabled={fetching === paper.core_id}
-                  className="btn-primary w-full text-sm disabled:opacity-50"
+                  className="btn-primary w-full mt-auto text-sm disabled:opacity-50"
                 >
                   {fetching === paper.core_id ? "Fetching..." : "Add to Library & Read"}
                 </button>
               ) : paper.assignment ? (
                 /* Already in library */
-                <div>
-                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[paper.assignment.difficulty] || "badge bg-muted text-[var(--color-text-secondary)]"}`}>
+                <div className="mt-auto">
+                  <span className={`inline-block font-mono uppercase tracking-wider ${DIFFICULTY_COLORS[paper.assignment.difficulty] || "badge bg-muted text-[var(--color-text-secondary)]"}`}>
                     {paper.assignment.difficulty || "—"}
                   </span>
                   <button
@@ -292,7 +293,7 @@ export default function SelfStudyPage() {
                   </button>
                 </div>
               ) : (
-                <p className="text-[var(--color-text-secondary)] text-xs">No reading guide yet.</p>
+                <p className="font-display italic text-xs text-[var(--color-text-secondary)]">No reading guide yet.</p>
               )}
             </div>
           ))}
@@ -302,10 +303,10 @@ export default function SelfStudyPage() {
       {/* Upload processing overlay */}
       {uploading && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="card p-8 text-center">
+          <div className="card-print p-8 text-center">
             <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-            <p className="text-[var(--color-text)] font-medium">Generating reading guide...</p>
-            <p className="text-[var(--color-text-secondary)] text-sm mt-1">This takes 10-30 seconds.</p>
+            <p className="font-display font-semibold text-[var(--color-text)]">Generating reading guide...</p>
+            <p className="font-mono text-xs text-[var(--color-text-secondary)] mt-2">This takes 10-30 seconds.</p>
           </div>
         </div>
       )}
