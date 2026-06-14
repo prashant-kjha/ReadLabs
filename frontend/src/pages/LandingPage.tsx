@@ -403,12 +403,14 @@ export default function LandingPage() {
       </section>
 
       {/* ── Final CTA: the ink band ── */}
-      <section className="py-24 bg-[var(--color-border-strong)] text-[var(--color-bg)]">
+      <section className="pt-[68px] pb-24 bg-[var(--color-border-strong)] text-[var(--color-bg)]">
         <div className="max-w-6xl mx-auto px-6 text-center">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] opacity-60">
-            § Fin — Your Turn
-          </p>
-          <h2 className="mt-4 font-display text-4xl md:text-5xl font-semibold">
+          <div className="rule-ornament text-[var(--color-bg)]">
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] opacity-60 whitespace-nowrap">
+              Your Turn
+            </span>
+          </div>
+          <h2 className="mt-[60px] font-display text-4xl md:text-5xl font-semibold">
             Start Reading Smarter Today
           </h2>
           <p className="mt-5 opacity-70 max-w-xl mx-auto leading-relaxed">
@@ -426,9 +428,9 @@ export default function LandingPage() {
 
       {/* ── Colophon ── */}
       <footer className="py-10 border-t border-border bg-surface">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-6 relative flex flex-col md:flex-row items-center justify-between gap-4">
           <Wordmark />
-          <p className="font-display italic text-sm text-[var(--color-text-secondary)]">
+          <p className="md:absolute md:left-1/2 md:-translate-x-1/2 font-display italic text-sm text-[var(--color-text-secondary)]">
             Built for curious minds
           </p>
           <nav className="flex items-center gap-4 font-mono text-xs text-[var(--color-text-secondary)]">
