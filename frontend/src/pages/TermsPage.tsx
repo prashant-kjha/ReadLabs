@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import Logo from "../components/Logo";
 
 const CONTACT_EMAIL = "legal@readlabs.org";
 
@@ -8,8 +9,8 @@ export default function TermsPage() {
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
       <header className="border-b border-border bg-surface">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-baseline gap-1.5 select-none">
-            <span className="inline-block w-2.5 h-2.5 bg-accent rounded-[1px]" aria-hidden="true" />
+          <Link to="/" className="flex items-center gap-2 select-none">
+            <Logo size={24} />
             <span className="font-display font-bold text-lg leading-none text-[var(--color-text)]">ReadLabs</span>
           </Link>
           <Link

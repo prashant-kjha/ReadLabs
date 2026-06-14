@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 import { getStats } from "../lib/superpowersApi";
 import ThemeToggle from "../components/ThemeToggle";
+import Logo from "./Logo";
 import {
   LayoutDashboard,
   Search,
@@ -30,8 +31,8 @@ import type { ReadingStats } from "../types/superpowers";
 
 function Wordmark() {
   return (
-    <div className="flex items-baseline gap-1.5 select-none">
-      <span className="inline-block w-2.5 h-2.5 bg-accent rounded-[1px] translate-y-[-1px]" aria-hidden="true" />
+    <div className="flex items-center gap-2 select-none">
+      <Logo size={24} />
       <span className="font-display font-bold text-lg leading-none text-[var(--color-text)]">
         ReadLabs
       </span>
