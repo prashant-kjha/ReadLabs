@@ -13,11 +13,12 @@ import {
   BrainCircuit,
 } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
+import Logo from '../components/Logo';
 
 function Wordmark({ size = 'base' }: { size?: 'base' | 'lg' }) {
   return (
-    <span className="inline-flex items-baseline gap-1.5 select-none">
-      <span className="inline-block w-2.5 h-2.5 bg-accent rounded-[1px]" aria-hidden="true" />
+    <span className="inline-flex items-center gap-2 select-none">
+      <Logo size={size === 'lg' ? 32 : 24} />
       <span className={`font-display font-bold leading-none text-[var(--color-text)] ${size === 'lg' ? 'text-2xl' : 'text-lg'}`}>ReadLabs</span>
     </span>
   );

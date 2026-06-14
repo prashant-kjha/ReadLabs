@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import { BookOpen, Brain, Trophy, AlertCircle } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
+import Logo from "../components/Logo";
 
 const PANEL_FEATURES = [
   {
@@ -93,8 +94,8 @@ export default function AuthPage() {
         <div className="absolute inset-y-0 right-3 w-px bg-[#f3eee2]/10" aria-hidden="true" />
 
         <div className="relative z-10 max-w-md px-10 py-16">
-          <div className="flex items-baseline gap-2 mb-12">
-            <span className="inline-block w-3 h-3 bg-[#e8784a] rounded-[1px]" aria-hidden="true" />
+          <div className="flex items-center gap-2.5 mb-12">
+            <Logo size={36} />
             <span className="font-display text-3xl font-bold">ReadLabs</span>
           </div>
 
@@ -128,8 +129,8 @@ export default function AuthPage() {
       <div className="w-full md:w-1/2 lg:w-[45%] flex items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-md">
           {/* Mobile-only branding */}
-          <div className="flex md:hidden items-baseline gap-1.5 mb-8 justify-center">
-            <span className="inline-block w-2.5 h-2.5 bg-accent rounded-[1px]" aria-hidden="true" />
+          <div className="flex md:hidden items-center gap-2 mb-8 justify-center">
+            <Logo size={24} />
             <span className="font-display text-xl font-bold text-[var(--color-text)]">ReadLabs</span>
           </div>
 
