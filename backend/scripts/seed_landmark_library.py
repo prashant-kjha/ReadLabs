@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -36,6 +37,44 @@ CONCURRENCY = int(os.environ.get("SEED_CONCURRENCY", "2"))
 DRY_RUN_SLICE = int(os.environ.get("SEED_DRY_RUN", "0"))
 LIST_PATH = Path(__file__).resolve().parent.parent / "data" / "landmark_papers.json"
 
+# Common words that carry little signal for title matching, so they don't dilute
+# the verification ratio or pad false positives.
+_STOPWORDS = {
+    "the", "and", "for", "with", "from", "that", "this", "are", "via", "its",
+    "our", "their", "using", "towards", "toward", "into", "over", "than", "all",
+    "new", "you", "but", "not", "can", "has", "have", "based", "such", "without",
+}
+
+
+def _title_matches(expected_title: str, text: str, *, min_fraction: float = 0.5) -> bool:
+    """Cheap guard against wrong arXiv IDs: a meaningful share of the expected
+    title's significant tokens must appear in the first page of extracted text.
+    If they don't, the downloaded PDF is almost certainly the wrong paper (or a
+    wrong version), so we skip it rather than burn Pro generation on it.
+
+    Tokens are extracted with a word regex so hyphenated / line-broken compounds
+    (e.g. "Curiosity-driven") split into their parts and still match.
+    """
+    head = text[:4000].lower()
+    toks = {w for w in re.findall(r"[a-z0-9]+", expected_title.lower())
+            if len(w) > 2 and w not in _STOPWORDS}
+    if not toks:
+        return True
+    present = sum(1 for t in toks if t in head)
+    return present / len(toks) >= min_fraction
+
+
+# C0 control chars (except tab/newline/CR) that Postgres `text` columns reject.
+# PyMuPDF occasionally emits NUL (U+0000) for poorly-mapped glyphs, and a single
+# one makes the whole insert fail with SQLSTATE 22P05 (" cannot be
+# converted to text") — which silently dropped ~36 papers in the first batch.
+_TEXT_CTRL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _sanitize_text(s: str) -> str:
+    """Strip control characters Postgres `text` columns can't store."""
+    return _TEXT_CTRL_RE.sub("", s) if s else s
+
 
 async def _fetch_arxiv(arxiv_id: str, title: str) -> dict | None:
     """Download the arXiv PDF and extract full text. Precise for arxiv_id-keyed papers
@@ -52,9 +91,12 @@ async def _fetch_arxiv(arxiv_id: str, title: str) -> dict | None:
                     arxiv_id, r.status_code, r.headers.get("content-type"))
         return None
     extracted = await asyncio.to_thread(extract_text_and_figures, r.content)
-    text = extracted.get("text", "")
+    text = _sanitize_text(extracted.get("text", ""))
     if len(text) < 500:
         log.warning("arxiv extracted text too short for %s (%d chars)", arxiv_id, len(text))
+        return None
+    if not _title_matches(title, text):
+        log.warning("arxiv title mismatch for %r (id=%s) — wrong PDF? skipping", title, arxiv_id)
         return None
     return {"core_id": f"arxiv:{arxiv_id}", "title": title, "full_text": text}
 
@@ -119,7 +161,7 @@ async def _seed_one(db, entry: dict) -> None:
     existing = await db.from_("papers").select("id, extracted_text").eq("title", title).maybe_single().execute()
     if existing.data:
         paper_id = existing.data["id"]
-        full_text = existing.data.get("extracted_text") or ""
+        full_text = _sanitize_text(existing.data.get("extracted_text") or "")
     else:
         core = await _resolve_and_fetch(entry)
         if not core:
