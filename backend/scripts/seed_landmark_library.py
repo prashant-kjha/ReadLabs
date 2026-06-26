@@ -74,64 +74,78 @@ async def _resolve_and_fetch(entry: dict) -> dict | None:
     return core
 
 
+async def _seed_difficulty(db, paper_id: str, title: str, full_text: str, difficulty: str) -> None:
+    """Generate + insert one difficulty variant for an existing paper. Independent of
+    the other two difficulties, so all three can run concurrently."""
+    try:
+        guide = await generate_reading_guide(
+            full_text, figure_count=0, model=PRO_MODEL, difficulty=difficulty,
+        )
+        critical_prompts = guide.pop("critical_prompts", [])
+
+        asn_res = await db.from_("assignments").insert({
+            "class_id": None,
+            "paper_id": paper_id,
+            "status": "published",
+            "reading_guide": guide,
+            "difficulty": difficulty,
+        }).execute()
+        if not asn_res.data:
+            log.error("assignment insert failed: %s [%s]", title, difficulty)
+            return
+        assignment_id = asn_res.data[0]["id"]
+
+        if critical_prompts:
+            for p in critical_prompts:
+                p["assignment_id"] = assignment_id
+            await db.from_("critical_prompts").insert(critical_prompts).execute()
+
+        quiz = await generate_quiz_questions(
+            title, guide.get("sections", []), difficulty, model=PRO_MODEL,
+        )
+        rows = [{**q, "assignment_id": assignment_id} for q in quiz]
+        if rows:
+            await db.from_("quiz_questions").insert(rows).execute()
+        log.info("OK %s [%s]", title, difficulty)
+    except Exception as e:
+        log.exception("FAILED %s [%s]: %s", title, difficulty, e)
+
+
 async def _seed_one(db, entry: dict) -> None:
     title = entry["title"]
 
-    # Idempotency: skip if a paper with this curated title already exists.
-    existing = await db.from_("papers").select("id").eq("title", title).maybe_single().execute()
+    # Get-or-create the paper; the full text comes from the fetch or from the
+    # stored row (so a partial paper can be completed on resume).
+    existing = await db.from_("papers").select("id, extracted_text").eq("title", title).maybe_single().execute()
     if existing.data:
-        log.info("SKIP (exists): %s", title)
+        paper_id = existing.data["id"]
+        full_text = existing.data.get("extracted_text") or ""
+    else:
+        core = await _resolve_and_fetch(entry)
+        if not core:
+            return
+        paper_res = await db.from_("papers").insert({
+            "title": title,
+            "extracted_text": core["full_text"],
+            "figures": [],
+            "uploaded_by": get_settings().landmark_user_id,
+            "core_id": core["core_id"],
+        }).execute()
+        if not paper_res.data:
+            log.error("paper insert failed: %s — %s", title, paper_res.error)
+            return
+        paper_id = paper_res.data[0]["id"]
+        full_text = core["full_text"]
+
+    # Per-difficulty idempotency: only generate missing levels (kill-safe/resumable).
+    have = await db.from_("assignments").select("difficulty").eq("paper_id", paper_id).execute()
+    done = {a["difficulty"] for a in (have.data or [])}
+    todo = [d for d in DIFFICULTIES if d not in done]
+    if not todo:
+        log.info("SKIP (done): %s", title)
         return
 
-    core = await _resolve_and_fetch(entry)
-    if not core:
-        return
-
-    paper_res = await db.from_("papers").insert({
-        "title": title,
-        "extracted_text": core["full_text"],
-        "figures": [],
-        "uploaded_by": get_settings().landmark_user_id,
-        "core_id": core["core_id"],
-    }).execute()
-    if not paper_res.data:
-        log.error("paper insert failed: %s — %s", title, paper_res.error)
-        return
-    paper_id = paper_res.data[0]["id"]
-
-    for difficulty in DIFFICULTIES:
-        try:
-            guide = await generate_reading_guide(
-                core["full_text"], figure_count=0, model=PRO_MODEL, difficulty=difficulty,
-            )
-            critical_prompts = guide.pop("critical_prompts", [])
-
-            asn_res = await db.from_("assignments").insert({
-                "class_id": None,
-                "paper_id": paper_id,
-                "status": "published",
-                "reading_guide": guide,
-                "difficulty": difficulty,
-            }).execute()
-            if not asn_res.data:
-                log.error("assignment insert failed: %s [%s]", title, difficulty)
-                continue
-            assignment_id = asn_res.data[0]["id"]
-
-            if critical_prompts:
-                for p in critical_prompts:
-                    p["assignment_id"] = assignment_id
-                await db.from_("critical_prompts").insert(critical_prompts).execute()
-
-            quiz = await generate_quiz_questions(
-                title, guide.get("sections", []), difficulty, model=PRO_MODEL,
-            )
-            rows = [{**q, "assignment_id": assignment_id} for q in quiz]
-            if rows:
-                await db.from_("quiz_questions").insert(rows).execute()
-            log.info("OK %s [%s]", title, difficulty)
-        except Exception as e:
-            log.exception("FAILED %s [%s]: %s", title, difficulty, e)
+    await asyncio.gather(*[_seed_difficulty(db, paper_id, title, full_text, d) for d in todo])
 
 
 async def main() -> None:
