@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"
 
+    # Landmark-library seed script: UUID of the service user that owns seeded
+    # papers. Only used by backend/scripts/seed_landmark_library.py (not the app).
+    landmark_user_id: str = ""
+
 
 # Secrets that MUST be set for the app to function correctly. Listed explicitly
 # so a misconfigured deployment fails at startup, not on the first auth request.
