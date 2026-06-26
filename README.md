@@ -53,7 +53,10 @@ See [`frontend/.env.example`](frontend/.env.example) for the frontend template.
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase anon / public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) |
-| `GEMINI_API_KEY` | Google Gemini API key |
+| `GEMINI_API_KEY` | Google Gemini API key (used when `AI_PROVIDER=studio`) |
+| `AI_PROVIDER` | `studio` (API key — default/local) or `vertex` (project billing via ADC — production) |
+| `GCP_PROJECT_ID` | GCP project id (required when `AI_PROVIDER=vertex`) |
+| `GCP_REGION` | Vertex AI region, e.g. `us-central1` (used when `AI_PROVIDER=vertex`) |
 | `CORE_API_KEY` | CORE.ac.uk key (optional, for paper search) |
 | `SENTRY_DSN` | Backend error monitoring (optional, leave empty to disable) |
 | `ALLOWED_ORIGINS` | CORS origins, comma-separated (prod only) |

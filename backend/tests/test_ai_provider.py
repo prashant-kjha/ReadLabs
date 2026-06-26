@@ -1,6 +1,7 @@
 import json
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+import backend.ai_provider as ai_provider_module
 from backend.ai_provider import (
     generate_reading_guide,
     generate_class_insights,
@@ -184,3 +185,36 @@ async def test_grade_short_answer():
         )
     assert result["score"] == 1
     assert "explanation" in result
+
+
+@pytest.fixture
+def reset_ai_client():
+    """_get_client() caches its client in a module global; reset it around each test."""
+    ai_provider_module._client = None
+    yield
+    ai_provider_module._client = None
+
+
+def test_get_client_uses_vertex_when_configured(reset_ai_client):
+    settings = MagicMock()
+    settings.ai_provider = "vertex"
+    settings.gcp_project_id = "readlabs-prod"
+    settings.gcp_region = "us-central1"
+    with patch("backend.ai_provider.genai") as mock_genai, patch(
+        "backend.ai_provider.get_settings", return_value=settings
+    ):
+        ai_provider_module._get_client()
+    mock_genai.Client.assert_called_once_with(
+        vertexai=True, project="readlabs-prod", location="us-central1"
+    )
+
+
+def test_get_client_uses_api_key_in_studio_mode(reset_ai_client):
+    settings = MagicMock()
+    settings.ai_provider = "studio"
+    settings.gemini_api_key = "fake-key"
+    with patch("backend.ai_provider.genai") as mock_genai, patch(
+        "backend.ai_provider.get_settings", return_value=settings
+    ):
+        ai_provider_module._get_client()
+    mock_genai.Client.assert_called_once_with(api_key="fake-key")
