@@ -10,6 +10,7 @@ from backend.ai_provider import (
     generate_checkpoint_feedback,
     generate_sowhat_feedback,
     generate_jargon_explanation,
+    _generate,
 )
 
 
@@ -218,3 +219,50 @@ def test_get_client_uses_api_key_in_studio_mode(reset_ai_client):
     ):
         ai_provider_module._get_client()
     mock_genai.Client.assert_called_once_with(api_key="fake-key")
+
+
+@pytest.mark.asyncio
+async def test_generate_passes_model_through():
+    mock_client = MagicMock()
+    mock_client.aio.models.generate_content = AsyncMock(return_value=MagicMock(text="ok"))
+    with patch("backend.ai_provider._get_client", return_value=mock_client):
+        await _generate("prompt", temperature=0.1, model="gemini-2.5-pro")
+    assert mock_client.aio.models.generate_content.call_args.kwargs["model"] == "gemini-2.5-pro"
+
+
+@pytest.mark.asyncio
+async def test_reading_guide_targets_difficulty_when_set():
+    captured = {}
+
+    async def fake(prompt, **kwargs):
+        captured["prompt"] = prompt
+        return json.dumps({
+            "sections": [{"title": "X", "text": "t", "guiding_questions": [],
+                          "key_terms": [], "teacher_notes": "", "section_type": "Other"}],
+            "difficulty": "whatever",
+            "critical_prompts": [],
+        })
+
+    with patch("backend.ai_provider._generate", side_effect=fake):
+        result = await generate_reading_guide("text", figure_count=0,
+                                              model="gemini-2.5-pro", difficulty="beginner")
+    assert "high-school reader" in captured["prompt"]
+    assert result["difficulty"] == "beginner"
+
+
+@pytest.mark.asyncio
+async def test_reading_guide_default_leaves_prompt_unchanged():
+    captured = {}
+
+    async def fake(prompt, **kwargs):
+        captured["prompt"] = prompt
+        return json.dumps({
+            "sections": [{"title": "X", "text": "t", "guiding_questions": [],
+                          "key_terms": [], "teacher_notes": "", "section_type": "Other"}],
+            "difficulty": "intermediate",
+            "critical_prompts": [],
+        })
+
+    with patch("backend.ai_provider._generate", side_effect=fake):
+        await generate_reading_guide("text", figure_count=0)
+    assert "Target this guide specifically" not in captured["prompt"]

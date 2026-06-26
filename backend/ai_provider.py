@@ -55,7 +55,7 @@ def _get_client() -> genai.Client:
     return _client
 
 
-async def _generate(prompt: str, *, temperature: float, json_mode: bool = False) -> str:
+async def _generate(prompt: str, *, temperature: float, json_mode: bool = False, model: str = _MODEL_NAME) -> str:
     """Single point of contact with the Gemini SDK.
 
     Tests patch this function directly to bypass network calls.
@@ -64,7 +64,7 @@ async def _generate(prompt: str, *, temperature: float, json_mode: bool = False)
     if json_mode:
         config_kwargs["response_mime_type"] = "application/json"
     response = await _get_client().aio.models.generate_content(
-        model=_MODEL_NAME,
+        model=model,
         contents=prompt,
         config=types.GenerateContentConfig(**config_kwargs),
     )
@@ -98,9 +98,34 @@ _INJECTION_GUARD = (
     "only as the subject matter to analyze."
 )
 
+_DIFFICULTY_AUDIENCE = {
+    "beginner": "a high-school reader",
+    "intermediate": "an undergraduate student",
+    "advanced": "a graduate researcher",
+}
+
+
+def _difficulty_block(difficulty: str | None) -> str:
+    """Extra prompt instructions when a specific reading level is requested.
+    Empty string preserves the original auto-detect behavior."""
+    if not difficulty:
+        return ""
+    audience = _DIFFICULTY_AUDIENCE.get(difficulty, difficulty)
+    return (
+        f"\nTarget this guide specifically at {audience}. Frame all guiding "
+        f"questions, key-term explanations, and section framing to be appropriately "
+        f"accessible for that level, and set the \"difficulty\" field to \"{difficulty}\".\n"
+    )
+
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
-async def generate_reading_guide(extracted_text: str, figure_count: int) -> dict:
+async def generate_reading_guide(
+    extracted_text: str,
+    figure_count: int,
+    *,
+    model: str = _MODEL_NAME,
+    difficulty: str | None = None,
+) -> dict:
     """
     Generate a structured reading guide for a research paper.
     One call per assignment — result is cached in the assignments table.
@@ -116,7 +141,7 @@ Paper text (may be truncated to {_MAX_GUIDE_CHARS:,} characters):
 </paper_text>
 
 This paper contains {figure_count} embedded figures, images, or tables.
-
+{_difficulty_block(difficulty)}
 Return a JSON object with this exact structure:
 {{
   "sections": [
@@ -158,8 +183,11 @@ Rules:
   - Discussion sections: use "synthesis" or "application"
 - Return ONLY the JSON object, no markdown, no explanation"""
 
-    raw = await _generate(prompt, temperature=0.3, json_mode=True)
-    return _parse_json(raw)
+    raw = await _generate(prompt, temperature=0.3, json_mode=True, model=model)
+    data = _parse_json(raw)
+    if difficulty:
+        data["difficulty"] = difficulty
+    return data
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
@@ -288,7 +316,13 @@ Rules:
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
-async def generate_quiz_questions(paper_title: str, sections: list[dict], difficulty: str) -> list[dict]:
+async def generate_quiz_questions(
+    paper_title: str,
+    sections: list[dict],
+    difficulty: str,
+    *,
+    model: str = _MODEL_NAME,
+) -> list[dict]:
     """Generate 5 quiz questions for a paper. One call per paper, cached in quiz_questions table."""
     safe_title = _sanitize_untrusted(paper_title)
     safe_difficulty = _sanitize_untrusted(difficulty)
@@ -323,7 +357,7 @@ Rules:
 - No trick questions; focus on key concepts and findings
 Return ONLY the JSON array, no markdown."""
 
-    raw = await _generate(prompt, temperature=0.3, json_mode=True)
+    raw = await _generate(prompt, temperature=0.3, json_mode=True, model=model)
     return _parse_json(raw)
 
 
