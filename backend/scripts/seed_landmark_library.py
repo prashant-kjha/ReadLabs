@@ -20,9 +20,11 @@ import os
 import sys
 from pathlib import Path
 
+import httpx
 from backend.config import get_settings
 from backend.db import get_db, aclose_shared_client
 from backend.services.core_api import search_core, fetch_core_full_text
+from backend.services.paper_service import extract_text_and_figures
 from backend.ai_provider import generate_reading_guide, generate_quiz_questions
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -30,15 +32,38 @@ log = logging.getLogger("seed_landmark")
 
 PRO_MODEL = "gemini-2.5-pro"
 DIFFICULTIES = ["beginner", "intermediate", "advanced"]
-CONCURRENCY = int(os.environ.get("SEED_CONCURRENCY", "4"))
+CONCURRENCY = int(os.environ.get("SEED_CONCURRENCY", "2"))
 DRY_RUN_SLICE = int(os.environ.get("SEED_DRY_RUN", "0"))
 LIST_PATH = Path(__file__).resolve().parent.parent / "data" / "landmark_papers.json"
 
 
+async def _fetch_arxiv(arxiv_id: str, title: str) -> dict | None:
+    """Download the arXiv PDF and extract full text. Precise for arxiv_id-keyed papers
+    (avoids CORE's noisy title search, which returns near-duplicate wrong papers)."""
+    url = f"https://arxiv.org/pdf/{arxiv_id}"
+    try:
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+            r = await client.get(url, headers={"User-Agent": "ReadLabs-seed/1.0 (educational reading guides)"})
+    except Exception as e:
+        log.warning("arxiv download error for %s: %s", arxiv_id, e)
+        return None
+    if r.status_code != 200 or "pdf" not in r.headers.get("content-type", "").lower():
+        log.warning("arxiv PDF fetch failed for %s: status=%s content_type=%s",
+                    arxiv_id, r.status_code, r.headers.get("content-type"))
+        return None
+    extracted = await asyncio.to_thread(extract_text_and_figures, r.content)
+    text = extracted.get("text", "")
+    if len(text) < 500:
+        log.warning("arxiv extracted text too short for %s (%d chars)", arxiv_id, len(text))
+        return None
+    return {"core_id": f"arxiv:{arxiv_id}", "title": title, "full_text": text}
+
+
 async def _resolve_and_fetch(entry: dict) -> dict | None:
-    """CORE search by arxiv_id (preferred) or title, then title-verified full-text fetch."""
-    query = entry.get("arxiv_id") or entry["title"]
-    results = await search_core(query, limit=5)
+    """arXiv PDF (preferred when arxiv_id present) → CORE title search/fetch fallback."""
+    if entry.get("arxiv_id"):
+        return await _fetch_arxiv(entry["arxiv_id"], entry["title"])
+    results = await search_core(entry["title"], limit=5)
     if not results:
         log.warning("CORE search empty for %r", entry["title"])
         return None
