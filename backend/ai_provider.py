@@ -40,7 +40,18 @@ _client: genai.Client | None = None
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
-        _client = genai.Client(api_key=get_settings().gemini_api_key)
+        s = get_settings()
+        if s.ai_provider == "vertex":
+            # Vertex AI: authenticates via the Cloud Run runtime SA (ADC). No API key;
+            # bills the GCP project so promotional credits apply.
+            _client = genai.Client(
+                vertexai=True,
+                project=s.gcp_project_id,
+                location=s.gcp_region,
+            )
+        else:
+            # AI Studio: API-key auth (local/dev fallback).
+            _client = genai.Client(api_key=s.gemini_api_key)
     return _client
 
 
