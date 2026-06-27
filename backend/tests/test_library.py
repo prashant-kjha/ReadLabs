@@ -353,9 +353,9 @@ def test_assign_landmark_creates_class_assignment_and_copies_children():
         None,                                          # 3. no dedup
         {"id": "src-asn", "reading_guide": source_guide},  # 4. source guide
         [{"id": "new-class-asn"}],                     # 5. inserted class assignment
-        [{"section_index": 0, "prompt_text": "Why?", "prompt_type": "methodology", "ai_followup": ""}],  # 6. source prompts
+        [{"id": "cp-1", "section_index": 0, "prompt_text": "Why?", "prompt_type": "methodology", "ai_followup": ""}],  # 6. source prompts (own PKs)
         [],                                            # 7. prompts insert result
-        [{"question_text": "Q?", "question_type": "multiple_choice", "options": ["a", "b"], "correct_answer": "a", "explanation": "x"}],  # 8. source quiz
+        [{"id": "qq-1", "question_text": "Q?", "question_type": "multiple_choice", "options": ["a", "b"], "correct_answer": "a", "explanation": "x"}],  # 8. source quiz
         [],                                            # 9. quiz insert result
     )
     app.dependency_overrides[require_teacher] = lambda: teacher
@@ -373,6 +373,19 @@ def test_assign_landmark_creates_class_assignment_and_copies_children():
     assert body["paper_id"] == "p1"
     assert body["difficulty"] == "intermediate"
     assert body["status"] == "published"
+
+    # The copied child rows must be re-pointed to the NEW assignment and must
+    # NOT carry the source's primary key (else a re-assign would PK-conflict).
+    # db.insert records every insert call in endpoint order: [assignment, prompts, quiz].
+    inserted = [call.args[0] for call in db.insert.call_args_list]
+    assert len(inserted) == 3, "expected assignment + prompts + quiz inserts"
+    prompt_rows, quiz_rows = inserted[1], inserted[2]
+    assert prompt_rows and all(
+        "id" not in r and r["assignment_id"] == "new-class-asn" for r in prompt_rows
+    )
+    assert quiz_rows and all(
+        "id" not in r and r["assignment_id"] == "new-class-asn" for r in quiz_rows
+    )
 
 
 def test_assign_landmark_creates_assignment_with_no_children_to_copy():
