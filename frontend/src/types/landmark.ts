@@ -14,3 +14,11 @@ export interface LandmarkLibraryResponse {
   items: LandmarkPaper[];
   has_more: boolean;
 }
+
+export interface AssignLandmarkResponse {
+  assignment_id: string;
+  class_id: string;
+  paper_id: string;
+  difficulty: string;
+  status: string;
+}
