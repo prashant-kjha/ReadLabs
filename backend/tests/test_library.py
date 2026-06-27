@@ -231,3 +231,27 @@ def test_list_landmark_requires_auth():
     app.dependency_overrides.clear()
     response = client.get("/api/v1/library/landmark")
     assert response.status_code == 401
+
+
+def test_list_landmark_featured_returns_curated():
+    student = {"sub": "student-uuid-1"}
+    papers_rows = [
+        {"id": "p1", "title": "Attention Is All You Need", "created_at": "2026-06-01"},
+    ]
+    assignments_rows = [
+        {"id": "a1", "paper_id": "p1", "difficulty": "intermediate"},
+    ]
+    db = make_db(papers_rows, assignments_rows)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with patch("backend.routers.library.get_settings") as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.get("/api/v1/library/landmark/featured")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Attention Is All You Need"

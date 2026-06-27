@@ -27,6 +27,14 @@ router = APIRouter()
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
 
 LANDMARK_PAGE_SIZE = 24
+LANDMARK_FEATURED_TITLES = [
+    "Attention Is All You Need",
+    "Deep Residual Learning for Image Recognition",
+    "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+    "Generative Adversarial Networks",
+    "Denoising Diffusion Probabilistic Models",
+    "Playing Atari with Deep Reinforcement Learning",
+]
 _DIFFICULTY_ORDER = ["beginner", "intermediate", "advanced"]
 
 
@@ -344,6 +352,21 @@ async def list_landmark(
 
     items = await _landmark_papers_with_levels(db, papers)
     return LandmarkLibraryResponse(items=items, has_more=has_more)
+
+
+@router.get("/landmark/featured", response_model=list[LandmarkPaper])
+async def list_landmark_featured(
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    """A small curated set of iconic landmark papers for the dashboard widget."""
+    landmark_user = get_settings().landmark_user_id
+    if not landmark_user:
+        return []
+    papers_res = await db.from_("papers").select("id, title, created_at") \
+        .eq("uploaded_by", landmark_user).in_("title", LANDMARK_FEATURED_TITLES).execute()
+    papers = papers_res.data or []
+    return await _landmark_papers_with_levels(db, papers)
 
 
 # /categories endpoint removed 2026-05-01: was a stub returning [] — the
