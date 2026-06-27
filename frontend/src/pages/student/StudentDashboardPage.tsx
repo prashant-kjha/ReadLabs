@@ -1,8 +1,10 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
+import { libraryApi } from "../../lib/api";
 import toast from "react-hot-toast";
 import { Plus, BookOpen, X } from "lucide-react";
+import type { LandmarkPaper } from "../../types/landmark";
 
 interface EnrolledClass {
   class_id: string;
@@ -38,6 +40,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function StudentDashboardPage() {
   const [classes, setClasses] = useState<EnrolledClass[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
+  const [featured, setFeatured] = useState<LandmarkPaper[]>([]);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -50,12 +53,14 @@ export default function StudentDashboardPage() {
 
   const loadData = async () => {
     try {
-      const [classRes, sessionRes] = await Promise.all([
+      const [classRes, sessionRes, featuredRes] = await Promise.all([
         api.get("/enrollment/classes"),
         api.get("/sessions/"),
+        libraryApi.featuredLandmarks().catch(() => []),
       ]);
       setClasses(classRes.data);
       setSessions(sessionRes.data);
+      setFeatured(featuredRes);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -89,6 +94,15 @@ export default function StudentDashboardPage() {
     return STATUS_LABELS[status] || status;
   };
 
+  const handleStartFeatured = async (assignmentId: string) => {
+    try {
+      await api.post("/sessions/", { assignment_id: assignmentId });
+      navigate(`/student/read/${assignmentId}`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not start reading");
+    }
+  };
+
   if (loading) return <div className="p-8 font-mono text-sm text-[var(--color-text-secondary)]">Loading...</div>;
 
   return (
@@ -106,6 +120,30 @@ export default function StudentDashboardPage() {
           Join a Class
         </button>
       </div>
+
+      {featured.length > 0 && (
+        <div className="mb-8">
+          <h2 className="label-mono text-accent mb-3">Start with a classic</h2>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {featured.map((p) => {
+              const lvl = p.levels.find((l) => l.difficulty === "intermediate") || p.levels[0];
+              return (
+                <div key={p.paper_id} className="card-print p-4 shrink-0 w-64 flex flex-col" data-testid="featured-landmark-card">
+                  <p className="font-display text-sm font-semibold leading-snug text-[var(--color-text)] mb-3 flex-1">{p.title}</p>
+                  <button
+                    type="button"
+                    onClick={() => lvl && handleStartFeatured(lvl.assignment_id)}
+                    disabled={!lvl}
+                    className="btn-accent text-xs disabled:opacity-50"
+                  >
+                    Start Reading
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Join modal */}
       {showModal && (

@@ -305,3 +305,20 @@ test.describe('Student - Streak Widget', () => {
     await expect(page.getByText('Lv.2')).toBeVisible();
   });
 });
+
+test.describe('Student - Landmark Featured Widget', () => {
+  test.beforeEach(async ({ page }) => {
+    mockStudentApiRoutes(page);
+    await loginAsStudent(page);
+    await page.goto('/student/dashboard');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('shows the featured landmark section', async ({ page }) => {
+    await expect(page.getByText('Start with a classic')).toBeVisible();
+  });
+
+  test('shows a featured paper', async ({ page }) => {
+    await expect(page.getByText('Attention Is All You Need')).toBeVisible();
+  });
+});
