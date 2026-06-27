@@ -4,6 +4,7 @@ import type { PaperUploadResponse, PaperListItem, Paper } from "../types/papers"
 import type { ClassItem, ClassWithStudents, EnrolledClass } from "../types/classes";
 import type { AuthResponse } from "../types/auth";
 import type { Session, SessionDetail } from "../types/sessions";
+import type { LandmarkLibraryResponse, LandmarkPaper } from "../types/landmark";
 
 export const API_URL: string =
   import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -236,6 +237,10 @@ export const libraryApi = {
     api.get("/library/browse", { params }).then((r) => r.data),
   fetchCore: (coreId: string, title: string) =>
     api.post("/library/fetch", { core_id: coreId, title }).then((r) => r.data),
+  landmarks: (params?: { q?: string; sort?: string; limit?: number; offset?: number }) =>
+    api.get<LandmarkLibraryResponse>("/library/landmark", { params }).then((r) => r.data),
+  featuredLandmarks: () =>
+    api.get<LandmarkPaper[]>("/library/landmark/featured").then((r) => r.data),
 };
 
 export default api;
