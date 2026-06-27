@@ -4,7 +4,7 @@ import fitz
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
 from backend.main import app
-from backend.deps import require_student, get_db
+from backend.deps import require_student, require_teacher, get_db
 
 client = TestClient(app)
 
@@ -255,3 +255,146 @@ def test_list_landmark_featured_returns_curated():
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["title"] == "Attention Is All You Need"
+
+
+def _assign_body():
+    return {"class_id": "c1", "paper_id": "p1", "difficulty": "intermediate"}
+
+
+def _patch_landmark_settings():
+    """Patch get_settings so landmark_user_id is configured (503 otherwise)."""
+    return patch("backend.routers.library.get_settings")
+
+
+def test_assign_landmark_requires_auth():
+    app.dependency_overrides.clear()
+    response = client.post("/api/v1/library/landmark/assign", json=_assign_body())
+    assert response.status_code == 401
+
+
+def test_assign_landmark_rejects_class_not_yours():
+    teacher = {"sub": "teacher-uuid-1"}
+    db = make_db(None)  # class-ownership select returns nothing → 403
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.post("/api/v1/library/landmark/assign", json=_assign_body())
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 403
+
+
+def test_assign_landmark_rejects_non_landmark_paper():
+    teacher = {"sub": "teacher-uuid-1"}
+    db = make_db(
+        {"id": "c1"},                       # class owned by teacher
+        {"uploaded_by": "someone-else"},    # paper NOT owned by landmark user → 404
+    )
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.post("/api/v1/library/landmark/assign", json=_assign_body())
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 404
+
+
+def test_assign_landmark_returns_existing_on_dedup():
+    teacher = {"sub": "teacher-uuid-1"}
+    db = make_db(
+        {"id": "c1"},                                   # class owned
+        {"uploaded_by": "landmark-user-uuid"},          # landmark paper
+        {"id": "existing-asn", "status": "published"},  # dedup hit → return as-is
+    )
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.post("/api/v1/library/landmark/assign", json=_assign_body())
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["assignment_id"] == "existing-asn"
+    assert body["status"] == "published"
+
+
+def test_assign_landmark_404_when_no_guide_for_level():
+    teacher = {"sub": "teacher-uuid-1"}
+    db = make_db(
+        {"id": "c1"},                           # class owned
+        {"uploaded_by": "landmark-user-uuid"},  # landmark paper
+        None,                                   # no dedup
+        None,                                   # no source guide for this level → 404
+    )
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.post("/api/v1/library/landmark/assign", json=_assign_body())
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 404
+    assert "guide" in response.json()["detail"].lower() or "level" in response.json()["detail"].lower()
+
+
+def test_assign_landmark_creates_class_assignment_and_copies_children():
+    teacher = {"sub": "teacher-uuid-1"}
+    source_guide = {"sections": [{"title": "Intro", "text": "..."}]}
+    db = make_db(
+        {"id": "c1"},                                  # 1. class owned
+        {"uploaded_by": "landmark-user-uuid"},         # 2. landmark paper
+        None,                                          # 3. no dedup
+        {"id": "src-asn", "reading_guide": source_guide},  # 4. source guide
+        [{"id": "new-class-asn"}],                     # 5. inserted class assignment
+        [{"section_index": 0, "prompt_text": "Why?", "prompt_type": "methodology", "ai_followup": ""}],  # 6. source prompts
+        [],                                            # 7. prompts insert result
+        [{"question_text": "Q?", "question_type": "multiple_choice", "options": ["a", "b"], "correct_answer": "a", "explanation": "x"}],  # 8. source quiz
+        [],                                            # 9. quiz insert result
+    )
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.post("/api/v1/library/landmark/assign", json=_assign_body())
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["assignment_id"] == "new-class-asn"
+    assert body["class_id"] == "c1"
+    assert body["paper_id"] == "p1"
+    assert body["difficulty"] == "intermediate"
+    assert body["status"] == "published"
+
+
+def test_assign_landmark_creates_assignment_with_no_children_to_copy():
+    """A source with no prompts/quiz still assigns cleanly (empty-copy branch)."""
+    teacher = {"sub": "teacher-uuid-1"}
+    source_guide = {"sections": [{"title": "Intro", "text": "..."}]}
+    db = make_db(
+        {"id": "c1"},                                  # 1. class owned
+        {"uploaded_by": "landmark-user-uuid"},         # 2. landmark paper
+        None,                                          # 3. no dedup
+        {"id": "src-asn", "reading_guide": source_guide},  # 4. source guide
+        [{"id": "new-class-asn"}],                     # 5. inserted class assignment
+        [],                                            # 6. source prompts (empty → no insert)
+        [],                                            # 7. source quiz (empty → no insert)
+    )
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.post("/api/v1/library/landmark/assign", json=_assign_body())
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["assignment_id"] == "new-class-asn"

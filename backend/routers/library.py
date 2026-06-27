@@ -4,7 +4,7 @@ import logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks, Request
 from backend.db import get_db, storage_headers
-from backend.deps import require_student
+from backend.deps import require_student, require_teacher
 from backend.services.paper_service import extract_text_and_figures
 from backend.services.core_api import search_core, fetch_core_full_text
 from backend.ai_provider import generate_reading_guide
@@ -19,6 +19,8 @@ from backend.schemas.library import (
     LandmarkPaper,
     LandmarkLevel,
     LandmarkLibraryResponse,
+    AssignLandmarkRequest,
+    AssignLandmarkResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,6 +68,20 @@ async def _landmark_papers_with_levels(db, papers: list[dict]) -> list[LandmarkP
         )
         for p in papers
     ]
+
+
+async def _copy_child_rows(db, table: str, source_id: str, new_id: str) -> None:
+    """Copy critical_prompts / quiz_questions rows from a source assignment to a
+    new one. Drops the source primary key (so the insert gets fresh ids) and
+    re-points assignment_id. No-op when the source has none."""
+    res = await db.from_(table).select("*").eq("assignment_id", source_id).execute()
+    rows = res.data or []
+    if not rows:
+        return
+    for row in rows:
+        row.pop("id", None)
+        row["assignment_id"] = new_id
+    await db.from_(table).insert(rows).execute()
 
 
 async def _process_self_study(
@@ -372,3 +388,74 @@ async def list_landmark_featured(
 # /categories endpoint removed 2026-05-01: was a stub returning [] — the
 # `category` taxonomy was never implemented in the schema. Re-add this when
 # you add a category column and decide on the taxonomy.
+
+
+@router.post("/landmark/assign", response_model=AssignLandmarkResponse)
+async def assign_landmark(
+    body: AssignLandmarkRequest,
+    user=Depends(require_teacher),
+    db=Depends(get_db),
+):
+    """Assign a landmark paper at a chosen level to a class by COPYING the
+    pre-built reading guide (no Gemini). Idempotent: re-assigning the same
+    class+paper+difficulty returns the existing class assignment."""
+    landmark_user = get_settings().landmark_user_id
+    if not landmark_user:
+        raise HTTPException(status_code=503, detail="Landmark library not configured")
+
+    # 1. Class must belong to this teacher.
+    cls = await db.from_("classes").select("id") \
+        .eq("id", body.class_id).eq("teacher_id", user["sub"]).maybe_single().execute()
+    if not cls.data:
+        raise HTTPException(status_code=403, detail="Class not found or not yours")
+
+    # 2. Paper must be a landmark (service-user-owned) paper.
+    paper = await db.from_("papers").select("uploaded_by") \
+        .eq("id", body.paper_id).maybe_single().execute()
+    if not paper.data or paper.data.get("uploaded_by") != landmark_user:
+        raise HTTPException(status_code=404, detail="Paper not found in landmark library")
+
+    # 3. Dedup: an existing class assignment for this class+paper+level is returned as-is.
+    existing = await db.from_("assignments").select("id, status") \
+        .eq("class_id", body.class_id).eq("paper_id", body.paper_id) \
+        .eq("difficulty", body.difficulty).maybe_single().execute()
+    if existing.data:
+        return AssignLandmarkResponse(
+            assignment_id=existing.data["id"],
+            class_id=body.class_id,
+            paper_id=body.paper_id,
+            difficulty=body.difficulty,
+            status=existing.data.get("status", "published"),
+        )
+
+    # 4. Load the source landmark (class_id IS NULL, published) guide for this level.
+    source = await db.from_("assignments").select("id, reading_guide") \
+        .eq("paper_id", body.paper_id).eq("difficulty", body.difficulty) \
+        .is_("class_id", "null").eq("status", "published").maybe_single().execute()
+    guide = source.data.get("reading_guide") if source.data else None
+    if not guide or not isinstance(guide.get("sections"), list):
+        raise HTTPException(status_code=404, detail="No reading guide available for this level")
+
+    # 5. Insert the new class assignment with the copied guide (published, no Gemini).
+    inserted = await db.from_("assignments").insert({
+        "class_id": body.class_id,
+        "paper_id": body.paper_id,
+        "difficulty": body.difficulty,
+        "status": "published",
+        "reading_guide": guide,
+    }).execute()
+    if not inserted.data:
+        raise HTTPException(status_code=500, detail="Failed to create assignment")
+    new_id = inserted.data[0]["id"]
+
+    # 6. Copy critical_prompts + quiz_questions from the source (re-point assignment_id).
+    await _copy_child_rows(db, "critical_prompts", source.data["id"], new_id)
+    await _copy_child_rows(db, "quiz_questions", source.data["id"], new_id)
+
+    return AssignLandmarkResponse(
+        assignment_id=new_id,
+        class_id=body.class_id,
+        paper_id=body.paper_id,
+        difficulty=body.difficulty,
+        status="published",
+    )
