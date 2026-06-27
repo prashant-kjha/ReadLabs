@@ -257,6 +257,23 @@ function mockStudentApiRoutes(page) {
     },
   ];
 
+  const mockLandmarkPapers = {
+    items: [
+      {
+        paper_id: 'lp1',
+        title: 'Attention Is All You Need',
+        created_at: '2026-06-01',
+        levels: [
+          { difficulty: 'beginner', assignment_id: 'la1' },
+          { difficulty: 'intermediate', assignment_id: 'la2' },
+          { difficulty: 'advanced', assignment_id: 'la3' },
+        ],
+      },
+    ],
+    has_more: false,
+  };
+  const mockFeaturedLandmarks = [mockLandmarkPapers.items[0]];
+
   const mockCategories = ['Biology', 'Computer Science', 'Chemistry', 'Physics'];
   const mockRecommendations = [
     { paper: { id: 'rec1', title: 'Recommended Paper 1' }, assignment_id: 'rec-asn-1', reason: 'Based on your reading history' },
@@ -304,6 +321,12 @@ function mockStudentApiRoutes(page) {
 
   page.route('**/api/v1/library/**', (route) => {
     const url = route.request().url();
+    if (url.includes('/library/landmark/featured')) {
+      return route.fulfill({ json: mockFeaturedLandmarks });
+    }
+    if (url.includes('/library/landmark')) {
+      return route.fulfill({ json: mockLandmarkPapers });
+    }
     if (url.includes('/library/browse')) {
       return route.fulfill({ json: mockLibraryPapers });
     }
@@ -354,7 +377,7 @@ function mockStudentApiRoutes(page) {
     return route.fulfill({ json: {} });
   });
 
-  return { mockEnrolledClasses, mockSessions, mockSession, mockLibraryPapers, mockStats };
+  return { mockEnrolledClasses, mockSessions, mockSession, mockLibraryPapers, mockLandmarkPapers, mockStats };
 }
 
 /**

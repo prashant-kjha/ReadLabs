@@ -15,6 +15,7 @@ import {
   Flame,
   Zap,
   Award,
+  BookOpen,
 } from "lucide-react";
 
 const TEACHER_LINKS = [
@@ -25,6 +26,7 @@ const TEACHER_LINKS = [
 const STUDENT_LINKS = [
   { to: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/student/self-study", label: "Self-Study", icon: Search },
+  { to: "/student/library", label: "Library", icon: BookOpen },
 ];
 
 import type { ReadingStats } from "../types/superpowers";
