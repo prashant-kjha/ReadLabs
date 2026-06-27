@@ -65,3 +65,17 @@ class LandmarkPaper(BaseModel):
 class LandmarkLibraryResponse(BaseModel):
     items: list[LandmarkPaper]
     has_more: bool
+
+
+class AssignLandmarkRequest(BaseModel):
+    class_id: str
+    paper_id: str
+    difficulty: str
+
+
+class AssignLandmarkResponse(BaseModel):
+    assignment_id: str
+    class_id: str
+    paper_id: str
+    difficulty: str
+    status: str
