@@ -42,6 +42,7 @@ function AppRoutes() {
           {/* Teacher routes */}
           <Route path="/teacher/papers" element={<RoleRoute allowedRole="teacher"><PapersPage /></RoleRoute>} />
           <Route path="/teacher/classes" element={<RoleRoute allowedRole="teacher"><ClassesPage /></RoleRoute>} />
+          <Route path="/teacher/library" element={<RoleRoute allowedRole="teacher"><LandmarkLibraryPage /></RoleRoute>} />
           <Route path="/teacher/assignments/:assignmentId/review" element={<RoleRoute allowedRole="teacher"><AssignmentReviewPage /></RoleRoute>} />
           <Route path="/teacher/classes/:classId/assign" element={<RoleRoute allowedRole="teacher"><AssignPaperPage /></RoleRoute>} />
           <Route path="/teacher/assignments/:assignmentId/preview" element={<RoleRoute allowedRole="teacher"><ReadingPage previewMode={true} /></RoleRoute>} />

@@ -21,6 +21,7 @@ import {
 const TEACHER_LINKS = [
   { to: "/teacher/papers", label: "Papers", icon: FileText },
   { to: "/teacher/classes", label: "Classes", icon: Users },
+  { to: "/teacher/library", label: "Library", icon: BookOpen },
 ];
 
 const STUDENT_LINKS = [

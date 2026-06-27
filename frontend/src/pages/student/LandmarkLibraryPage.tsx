@@ -1,18 +1,23 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { libraryApi } from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 import toast from "react-hot-toast";
 import { Search, BookOpen } from "lucide-react";
 import LandmarkPaperCard from "../../components/landmark/LandmarkPaperCard";
+import AssignToClassModal from "../../components/landmark/AssignToClassModal";
 import type { LandmarkPaper } from "../../types/landmark";
 
 export default function LandmarkLibraryPage() {
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const isTeacher = role === "teacher";
   const [papers, setPapers] = useState<LandmarkPaper[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [startedIds, setStartedIds] = useState<Set<string>>(new Set());
+  const [assignTarget, setAssignTarget] = useState<{ paper: LandmarkPaper; difficulty: string } | null>(null);
 
   // Debounced load on query change (also fires once on mount with empty query).
   useEffect(() => {
@@ -26,9 +31,14 @@ export default function LandmarkLibraryPage() {
   const load = async (q: string) => {
     setLoading(true);
     try {
+      // Sessions are student-scoped (the /sessions/ list is the caller's own).
+      // Teachers never start reading here, so skip that fetch for them.
+      // NOTE: leave `r.data` untyped — axios infers `any`, which is what makes
+      // the `.map((s: { assignment_id: string }) => …)` annotation type-check
+      // (matching the proven Phase 1 page). Do not cast it.
       const [res, sessions] = await Promise.all([
         libraryApi.landmarks({ q: q || undefined, limit: 24, offset: 0 }),
-        api.get("/sessions/").then((r) => r.data).catch(() => []),
+        isTeacher ? Promise.resolve([]) : api.get("/sessions/").then((r) => r.data).catch(() => []),
       ]);
       setPapers(res.items);
       setStartedIds(new Set((sessions || []).map((s: { assignment_id: string }) => s.assignment_id)));
@@ -51,11 +61,20 @@ export default function LandmarkLibraryPage() {
     }
   };
 
+  const handleAssign = (paper: LandmarkPaper, difficulty: string) => {
+    setAssignTarget({ paper, difficulty });
+  };
+
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <div className="mb-8">
-        <p className="label-mono text-accent">Student · Landmark Library</p>
+        <p className="label-mono text-accent">{isTeacher ? "Teacher" : "Student"} · Landmark Library</p>
         <h1 className="mt-2 font-display text-3xl font-semibold text-[var(--color-text)]">Landmark Papers</h1>
+        {isTeacher && (
+          <p className="mt-2 font-mono text-xs text-[var(--color-text-secondary)]">
+            Assign a classic paper to a class — students read the pre-built guide, no AI generation needed.
+          </p>
+        )}
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); load(query.trim()); }} className="flex gap-2 mb-6">
@@ -82,7 +101,14 @@ export default function LandmarkLibraryPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {papers.map((p) => (
-            <LandmarkPaperCard key={p.paper_id} paper={p} startedAssignmentIds={startedIds} onStart={handleStart} />
+            <LandmarkPaperCard
+              key={p.paper_id}
+              paper={p}
+              role={role ?? undefined}
+              startedAssignmentIds={startedIds}
+              onStart={handleStart}
+              onAssign={handleAssign}
+            />
           ))}
         </div>
       )}
@@ -91,6 +117,14 @@ export default function LandmarkLibraryPage() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
         </div>
+      )}
+
+      {assignTarget && (
+        <AssignToClassModal
+          paper={assignTarget.paper}
+          difficulty={assignTarget.difficulty}
+          onClose={() => setAssignTarget(null)}
+        />
       )}
     </div>
   );
