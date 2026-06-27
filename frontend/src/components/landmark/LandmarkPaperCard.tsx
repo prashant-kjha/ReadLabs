@@ -10,12 +10,15 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 
 interface Props {
   paper: LandmarkPaper;
+  role?: string;
   startedAssignmentIds?: Set<string>;
-  onStart: (assignmentId: string) => void;
+  onStart?: (assignmentId: string) => void;
+  onAssign?: (paper: LandmarkPaper, difficulty: string) => void;
 }
 
-export default function LandmarkPaperCard({ paper, startedAssignmentIds, onStart }: Props) {
+export default function LandmarkPaperCard({ paper, role, startedAssignmentIds, onStart, onAssign }: Props) {
   const levels = paper.levels;
+  const isTeacher = role === "teacher";
   const defaultDifficulty =
     levels.find((l) => l.difficulty === "intermediate")?.difficulty || levels[0]?.difficulty || "";
   const [selected, setSelected] = useState(defaultDifficulty);
@@ -45,14 +48,25 @@ export default function LandmarkPaperCard({ paper, startedAssignmentIds, onStart
           </button>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={() => selectedLevel && onStart(selectedLevel.assignment_id)}
-        disabled={!selectedLevel}
-        className="btn-primary w-full mt-auto text-sm disabled:opacity-50"
-      >
-        {started ? "Continue Reading" : "Start Reading"}
-      </button>
+      {isTeacher ? (
+        <button
+          type="button"
+          onClick={() => selectedLevel && onAssign?.(paper, selectedLevel.difficulty)}
+          disabled={!selectedLevel}
+          className="btn-primary w-full mt-auto text-sm disabled:opacity-50"
+        >
+          Assign to class
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => selectedLevel && onStart?.(selectedLevel.assignment_id)}
+          disabled={!selectedLevel}
+          className="btn-primary w-full mt-auto text-sm disabled:opacity-50"
+        >
+          {started ? "Continue Reading" : "Start Reading"}
+        </button>
+      )}
     </div>
   );
 }
