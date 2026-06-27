@@ -48,3 +48,20 @@ class CoreSearchResult(BaseModel):
     year_published: int | None = None
     download_url: str | None = None
     similarity: float | None = None
+
+
+class LandmarkLevel(BaseModel):
+    difficulty: str
+    assignment_id: str
+
+
+class LandmarkPaper(BaseModel):
+    paper_id: str
+    title: str
+    created_at: str | None = None
+    levels: list[LandmarkLevel] = []
+
+
+class LandmarkLibraryResponse(BaseModel):
+    items: list[LandmarkPaper]
+    has_more: bool

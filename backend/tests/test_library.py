@@ -21,7 +21,7 @@ def make_db(*return_values):
         return MagicMock(data=[])
 
     db = MagicMock()
-    for attr in ["from_", "select", "insert", "update", "upsert", "eq", "in_", "single", "order", "limit"]:
+    for attr in ["from_", "select", "insert", "update", "upsert", "eq", "in_", "ilike", "is_", "single", "maybe_single", "order", "limit", "offset"]:
         setattr(db, attr, MagicMock(return_value=db))
     db.execute = mock_execute
     return db
@@ -196,3 +196,38 @@ def test_browse_returns_library_papers():
 
     assert response.status_code == 200
     assert len(response.json()) == 2
+
+
+def test_list_landmark_returns_papers_with_levels():
+    student = {"sub": "student-uuid-1"}
+    papers_rows = [
+        {"id": "p1", "title": "Attention Is All You Need", "created_at": "2026-06-01"},
+        {"id": "p2", "title": "BERT", "created_at": "2026-06-02"},
+    ]
+    assignments_rows = [
+        {"id": "a1", "paper_id": "p1", "difficulty": "advanced"},
+        {"id": "a2", "paper_id": "p1", "difficulty": "beginner"},
+        {"id": "a3", "paper_id": "p2", "difficulty": "intermediate"},
+    ]
+    db = make_db(papers_rows, assignments_rows)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with patch("backend.routers.library.get_settings") as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.get("/api/v1/library/landmark")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["has_more"] is False
+    attn = next(it for it in body["items"] if it["paper_id"] == "p1")
+    assert [lvl["difficulty"] for lvl in attn["levels"]] == ["beginner", "advanced"]
+
+
+def test_list_landmark_requires_auth():
+    app.dependency_overrides.clear()
+    response = client.get("/api/v1/library/landmark")
+    assert response.status_code == 401

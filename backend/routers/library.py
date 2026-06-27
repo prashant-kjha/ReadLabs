@@ -16,12 +16,48 @@ from backend.schemas.library import (
     LibraryStatusResponse,
     LibraryPaperResponse,
     CoreSearchResult,
+    LandmarkPaper,
+    LandmarkLevel,
+    LandmarkLibraryResponse,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
+
+LANDMARK_PAGE_SIZE = 24
+_DIFFICULTY_ORDER = ["beginner", "intermediate", "advanced"]
+
+
+def _difficulty_rank(difficulty: str | None) -> int:
+    return _DIFFICULTY_ORDER.index(difficulty) if difficulty in _DIFFICULTY_ORDER else 99
+
+
+async def _landmark_papers_with_levels(db, papers: list[dict]) -> list[LandmarkPaper]:
+    """Attach each paper's published landmark (class_id IS NULL) difficulty levels,
+    sorted beginner -> advanced. Shared by the list and featured endpoints."""
+    paper_ids = [p["id"] for p in papers]
+    levels_by_paper: dict[str, list[dict]] = {pid: [] for pid in paper_ids}
+    if paper_ids:
+        asn_res = await db.from_("assignments").select("id, paper_id, difficulty") \
+            .in_("paper_id", paper_ids).eq("status", "published").is_("class_id", "null").execute()
+        for a in (asn_res.data or []):
+            levels_by_paper.setdefault(a["paper_id"], []).append(
+                {"difficulty": a["difficulty"], "assignment_id": a["id"]}
+            )
+    return [
+        LandmarkPaper(
+            paper_id=p["id"],
+            title=p["title"],
+            created_at=p.get("created_at"),
+            levels=sorted(
+                levels_by_paper.get(p["id"], []),
+                key=lambda lvl: _difficulty_rank(lvl["difficulty"]),
+            ),
+        )
+        for p in papers
+    ]
 
 
 async def _process_self_study(
@@ -274,6 +310,40 @@ async def fetch_core_paper(
         "title": core_data["title"],
         "status": "processing",
     }
+
+
+@router.get("/landmark", response_model=LandmarkLibraryResponse)
+async def list_landmark(
+    q: str = "",
+    sort: str = "created",
+    limit: int = LANDMARK_PAGE_SIZE,
+    offset: int = 0,
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    """Browse the curated landmark library (service-user-owned papers) with the
+    available difficulty level for each. Search is case-insensitive title ilike."""
+    landmark_user = get_settings().landmark_user_id
+    if not landmark_user:
+        raise HTTPException(status_code=503, detail="Landmark library not configured")
+
+    limit = max(1, min(int(limit), 50))
+    offset = max(0, int(offset))
+
+    papers_q = db.from_("papers").select("id, title, created_at").eq("uploaded_by", landmark_user)
+    if q.strip():
+        papers_q = papers_q.ilike("title", f"%{q.strip()}%")
+    if sort == "title":
+        papers_q = papers_q.order("title", desc=False)
+    else:
+        papers_q = papers_q.order("created_at", desc=True)
+    papers_res = await papers_q.limit(limit + 1).offset(offset).execute()
+    rows = papers_res.data or []
+    has_more = len(rows) > limit
+    papers = rows[:limit]
+
+    items = await _landmark_papers_with_levels(db, papers)
+    return LandmarkLibraryResponse(items=items, has_more=has_more)
 
 
 # /categories endpoint removed 2026-05-01: was a stub returning [] — the
