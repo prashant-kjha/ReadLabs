@@ -35,7 +35,7 @@ async def search_core(query: str, limit: int = 20) -> list[dict]:
     headers = {"Authorization": f"Bearer {get_settings().core_api_key}"}
     params = {"q": query, "limit": limit, "offset": 0}
 
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
         resp = await client.get(CORE_SEARCH_URL, headers=headers, params=params)
 
     if resp.status_code != 200:
@@ -73,7 +73,7 @@ async def fetch_core_full_text(core_id: str, expected_title: str) -> dict | None
     """
     headers = {"Authorization": f"Bearer {get_settings().core_api_key}"}
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         resp = await client.get(f"{CORE_RECORD_URL}/{core_id}", headers=headers)
 
     if resp.status_code != 200:

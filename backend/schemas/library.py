@@ -48,3 +48,45 @@ class CoreSearchResult(BaseModel):
     year_published: int | None = None
     download_url: str | None = None
     similarity: float | None = None
+
+
+class LandmarkLevel(BaseModel):
+    difficulty: str
+    assignment_id: str
+
+
+class LandmarkPaper(BaseModel):
+    paper_id: str
+    title: str
+    created_at: str | None = None
+    levels: list[LandmarkLevel] = []
+
+
+class LandmarkLibraryResponse(BaseModel):
+    items: list[LandmarkPaper]
+    has_more: bool
+
+
+class AssignLandmarkRequest(BaseModel):
+    class_id: str
+    paper_id: str
+    difficulty: str
+
+
+class AssignLandmarkResponse(BaseModel):
+    assignment_id: str
+    class_id: str
+    paper_id: str
+    difficulty: str
+    status: str
+
+
+class LandmarkProgressItem(BaseModel):
+    assignment_id: str
+    status: str
+    completed_at: str | None = None
+    current_section_index: int = 0
+
+
+class LandmarkProgressResponse(BaseModel):
+    progress: list[LandmarkProgressItem]

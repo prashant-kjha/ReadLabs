@@ -122,6 +122,24 @@ function mockTeacherApiRoutes(page) {
     assignments: [mockAssignment],
   };
 
+  const mockLandmarkPapers = {
+    items: [
+      {
+        paper_id: 'lp1',
+        title: 'Attention Is All You Need',
+        created_at: '2026-06-01',
+        levels: [
+          { difficulty: 'beginner', assignment_id: 'la1' },
+          { difficulty: 'intermediate', assignment_id: 'la2' },
+          { difficulty: 'advanced', assignment_id: 'la3' },
+        ],
+      },
+    ],
+    has_more: false,
+  };
+  const mockFeaturedLandmarks = [mockLandmarkPapers.items[0]];
+  const assignCalls = [];
+
   // Intercept all API calls and return mock data
   page.route('**/api/v1/papers/**', (route) => {
     if (route.request().method() === 'GET' && route.request().url().endsWith('/papers/')) {
@@ -131,6 +149,17 @@ function mockTeacherApiRoutes(page) {
       return route.fulfill({
         json: { id: 'p3', title: 'New Paper', text_length: 0, figure_count: 0 },
       });
+    }
+    return route.fulfill({ json: {} });
+  });
+
+  // classesApi.list() hits the bare `/classes` path (no trailing slash), which
+  // the `**/api/v1/classes/**` glob below does not cover (`/**` needs a segment).
+  // Handle the list endpoint (both slash forms) here so the AssignToClassModal
+  // class picker resolves to mockClasses.
+  page.route('**/api/v1/classes', (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({ json: mockClasses });
     }
     return route.fulfill({ json: {} });
   });
@@ -171,11 +200,36 @@ function mockTeacherApiRoutes(page) {
     return route.fulfill({ json: mockAssignment });
   });
 
+  page.route('**/api/v1/library/landmark**', (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (url.includes('/library/landmark/featured')) {
+      return route.fulfill({ json: mockFeaturedLandmarks });
+    }
+    if (method === 'POST' && url.includes('/library/landmark/assign')) {
+      const body = route.request().postDataJSON();
+      assignCalls.push(body);
+      return route.fulfill({
+        json: {
+          assignment_id: 'cls-asn-1',
+          class_id: (body && body.class_id) || 'c1',
+          paper_id: (body && body.paper_id) || 'lp1',
+          difficulty: (body && body.difficulty) || 'intermediate',
+          status: 'published',
+        },
+      });
+    }
+    if (url.includes('/library/landmark')) {
+      return route.fulfill({ json: mockLandmarkPapers });
+    }
+    return route.fulfill({ json: {} });
+  });
+
   page.route('**/api/v1/dashboard/**', (route) => {
     return route.fulfill({ json: mockDashboard });
   });
 
-  return { mockPapers, mockClasses, mockAssignment, mockDashboard };
+  return { mockPapers, mockClasses, mockAssignment, mockDashboard, mockLandmarkPapers, assignCalls };
 }
 
 /**
@@ -257,6 +311,41 @@ function mockStudentApiRoutes(page) {
     },
   ];
 
+  const mockLandmarkPapers = {
+    items: [
+      {
+        paper_id: 'lp1',
+        title: 'Attention Is All You Need',
+        created_at: '2026-06-01',
+        levels: [
+          { difficulty: 'beginner', assignment_id: 'la1' },
+          { difficulty: 'intermediate', assignment_id: 'la2' },
+          { difficulty: 'advanced', assignment_id: 'la3' },
+        ],
+      },
+      {
+        paper_id: 'lp2',
+        title: 'Deep Residual Learning for Image Recognition',
+        created_at: '2026-06-02',
+        levels: [{ difficulty: 'intermediate', assignment_id: 'lb1' }],
+      },
+      {
+        paper_id: 'lp3',
+        title: 'Generative Adversarial Networks',
+        created_at: '2026-06-03',
+        levels: [{ difficulty: 'beginner', assignment_id: 'lc1' }],
+      },
+    ],
+    has_more: false,
+  };
+  const mockFeaturedLandmarks = [mockLandmarkPapers.items[0]];
+  const mockLandmarkProgress = {
+    progress: [
+      { assignment_id: 'la2', status: 'in_progress', current_section_index: 1, completed_at: null },
+      { assignment_id: 'lb1', status: 'completed', current_section_index: 2, completed_at: '2026-06-20' },
+    ],
+  };
+
   const mockCategories = ['Biology', 'Computer Science', 'Chemistry', 'Physics'];
   const mockRecommendations = [
     { paper: { id: 'rec1', title: 'Recommended Paper 1' }, assignment_id: 'rec-asn-1', reason: 'Based on your reading history' },
@@ -304,6 +393,15 @@ function mockStudentApiRoutes(page) {
 
   page.route('**/api/v1/library/**', (route) => {
     const url = route.request().url();
+    if (url.includes('/library/landmark/featured')) {
+      return route.fulfill({ json: mockFeaturedLandmarks });
+    }
+    if (url.includes('/library/landmark/progress')) {
+      return route.fulfill({ json: mockLandmarkProgress });
+    }
+    if (url.includes('/library/landmark')) {
+      return route.fulfill({ json: mockLandmarkPapers });
+    }
     if (url.includes('/library/browse')) {
       return route.fulfill({ json: mockLibraryPapers });
     }
@@ -354,7 +452,7 @@ function mockStudentApiRoutes(page) {
     return route.fulfill({ json: {} });
   });
 
-  return { mockEnrolledClasses, mockSessions, mockSession, mockLibraryPapers, mockStats };
+  return { mockEnrolledClasses, mockSessions, mockSession, mockLibraryPapers, mockLandmarkPapers, mockLandmarkProgress, mockStats };
 }
 
 /**

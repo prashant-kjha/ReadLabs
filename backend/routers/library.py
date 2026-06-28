@@ -4,7 +4,7 @@ import logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks, Request
 from backend.db import get_db, storage_headers
-from backend.deps import require_student
+from backend.deps import require_student, require_teacher
 from backend.services.paper_service import extract_text_and_figures
 from backend.services.core_api import search_core, fetch_core_full_text
 from backend.ai_provider import generate_reading_guide
@@ -16,12 +16,74 @@ from backend.schemas.library import (
     LibraryStatusResponse,
     LibraryPaperResponse,
     CoreSearchResult,
+    LandmarkPaper,
+    LandmarkLevel,
+    LandmarkLibraryResponse,
+    AssignLandmarkRequest,
+    AssignLandmarkResponse,
+    LandmarkProgressItem,
+    LandmarkProgressResponse,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_PDF_BYTES = 20 * 1024 * 1024  # 20 MB
+
+LANDMARK_PAGE_SIZE = 24
+LANDMARK_FEATURED_TITLES = [
+    "Attention Is All You Need",
+    "Deep Residual Learning for Image Recognition",
+    "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+    "Generative Adversarial Networks",
+    "Denoising Diffusion Probabilistic Models",
+    "Playing Atari with Deep Reinforcement Learning",
+]
+_DIFFICULTY_ORDER = ["beginner", "intermediate", "advanced"]
+
+
+def _difficulty_rank(difficulty: str | None) -> int:
+    return _DIFFICULTY_ORDER.index(difficulty) if difficulty in _DIFFICULTY_ORDER else 99
+
+
+async def _landmark_papers_with_levels(db, papers: list[dict]) -> list[LandmarkPaper]:
+    """Attach each paper's published landmark (class_id IS NULL) difficulty levels,
+    sorted beginner -> advanced. Shared by the list and featured endpoints."""
+    paper_ids = [p["id"] for p in papers]
+    levels_by_paper: dict[str, list[dict]] = {pid: [] for pid in paper_ids}
+    if paper_ids:
+        asn_res = await db.from_("assignments").select("id, paper_id, difficulty") \
+            .in_("paper_id", paper_ids).eq("status", "published").is_("class_id", "null").execute()
+        for a in (asn_res.data or []):
+            levels_by_paper.setdefault(a["paper_id"], []).append(
+                {"difficulty": a["difficulty"], "assignment_id": a["id"]}
+            )
+    return [
+        LandmarkPaper(
+            paper_id=p["id"],
+            title=p["title"],
+            created_at=p.get("created_at"),
+            levels=sorted(
+                levels_by_paper.get(p["id"], []),
+                key=lambda lvl: _difficulty_rank(lvl["difficulty"]),
+            ),
+        )
+        for p in papers
+    ]
+
+
+async def _copy_child_rows(db, table: str, source_id: str, new_id: str) -> None:
+    """Copy critical_prompts / quiz_questions rows from a source assignment to a
+    new one. Drops the source primary key (so the insert gets fresh ids) and
+    re-points assignment_id. No-op when the source has none."""
+    res = await db.from_(table).select("*").eq("assignment_id", source_id).execute()
+    rows = res.data or []
+    if not rows:
+        return
+    for row in rows:
+        row.pop("id", None)
+        row["assignment_id"] = new_id
+    await db.from_(table).insert(rows).execute()
 
 
 async def _process_self_study(
@@ -276,6 +338,162 @@ async def fetch_core_paper(
     }
 
 
+@router.get("/landmark", response_model=LandmarkLibraryResponse)
+async def list_landmark(
+    q: str = "",
+    sort: str = "created",
+    limit: int = LANDMARK_PAGE_SIZE,
+    offset: int = 0,
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    """Browse the curated landmark library (service-user-owned papers) with the
+    available difficulty level for each. Search is case-insensitive title ilike."""
+    landmark_user = get_settings().landmark_user_id
+    if not landmark_user:
+        raise HTTPException(status_code=503, detail="Landmark library not configured")
+
+    limit = max(1, min(int(limit), 50))
+    offset = max(0, int(offset))
+
+    papers_q = db.from_("papers").select("id, title, created_at").eq("uploaded_by", landmark_user)
+    if q.strip():
+        papers_q = papers_q.ilike("title", f"%{q.strip()}%")
+    if sort == "title":
+        papers_q = papers_q.order("title", desc=False)
+    else:
+        papers_q = papers_q.order("created_at", desc=True)
+    papers_res = await papers_q.limit(limit + 1).offset(offset).execute()
+    rows = papers_res.data or []
+    has_more = len(rows) > limit
+    papers = rows[:limit]
+
+    items = await _landmark_papers_with_levels(db, papers)
+    return LandmarkLibraryResponse(items=items, has_more=has_more)
+
+
+@router.get("/landmark/featured", response_model=list[LandmarkPaper])
+async def list_landmark_featured(
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    """A small curated set of iconic landmark papers for the dashboard widget."""
+    landmark_user = get_settings().landmark_user_id
+    if not landmark_user:
+        return []
+    papers_res = await db.from_("papers").select("id, title, created_at") \
+        .eq("uploaded_by", landmark_user).in_("title", LANDMARK_FEATURED_TITLES).execute()
+    papers = papers_res.data or []
+    return await _landmark_papers_with_levels(db, papers)
+
+
 # /categories endpoint removed 2026-05-01: was a stub returning [] — the
 # `category` taxonomy was never implemented in the schema. Re-add this when
 # you add a category column and decide on the taxonomy.
+
+
+@router.post("/landmark/assign", response_model=AssignLandmarkResponse)
+async def assign_landmark(
+    body: AssignLandmarkRequest,
+    user=Depends(require_teacher),
+    db=Depends(get_db),
+):
+    """Assign a landmark paper at a chosen level to a class by COPYING the
+    pre-built reading guide (no Gemini). Idempotent: re-assigning the same
+    class+paper+difficulty returns the existing class assignment."""
+    landmark_user = get_settings().landmark_user_id
+    if not landmark_user:
+        raise HTTPException(status_code=503, detail="Landmark library not configured")
+
+    # 1. Class must belong to this teacher.
+    cls = await db.from_("classes").select("id") \
+        .eq("id", body.class_id).eq("teacher_id", user["sub"]).maybe_single().execute()
+    if not cls.data:
+        raise HTTPException(status_code=403, detail="Class not found or not yours")
+
+    # 2. Paper must be a landmark (service-user-owned) paper.
+    paper = await db.from_("papers").select("uploaded_by") \
+        .eq("id", body.paper_id).maybe_single().execute()
+    if not paper.data or paper.data.get("uploaded_by") != landmark_user:
+        raise HTTPException(status_code=404, detail="Paper not found in landmark library")
+
+    # 3. Dedup: an existing class assignment for this class+paper+level is returned as-is.
+    existing = await db.from_("assignments").select("id, status") \
+        .eq("class_id", body.class_id).eq("paper_id", body.paper_id) \
+        .eq("difficulty", body.difficulty).maybe_single().execute()
+    if existing.data:
+        return AssignLandmarkResponse(
+            assignment_id=existing.data["id"],
+            class_id=body.class_id,
+            paper_id=body.paper_id,
+            difficulty=body.difficulty,
+            status=existing.data.get("status", "published"),
+        )
+
+    # 4. Load the source landmark (class_id IS NULL, published) guide for this level.
+    source = await db.from_("assignments").select("id, reading_guide") \
+        .eq("paper_id", body.paper_id).eq("difficulty", body.difficulty) \
+        .is_("class_id", "null").eq("status", "published").maybe_single().execute()
+    guide = source.data.get("reading_guide") if source.data else None
+    if not guide or not isinstance(guide.get("sections"), list):
+        raise HTTPException(status_code=404, detail="No reading guide available for this level")
+
+    # 5. Insert the new class assignment with the copied guide (published, no Gemini).
+    inserted = await db.from_("assignments").insert({
+        "class_id": body.class_id,
+        "paper_id": body.paper_id,
+        "difficulty": body.difficulty,
+        "status": "published",
+        "reading_guide": guide,
+    }).execute()
+    if not inserted.data:
+        raise HTTPException(status_code=500, detail="Failed to create assignment")
+    new_id = inserted.data[0]["id"]
+
+    # 6. Copy critical_prompts + quiz_questions from the source (re-point assignment_id).
+    await _copy_child_rows(db, "critical_prompts", source.data["id"], new_id)
+    await _copy_child_rows(db, "quiz_questions", source.data["id"], new_id)
+
+    return AssignLandmarkResponse(
+        assignment_id=new_id,
+        class_id=body.class_id,
+        paper_id=body.paper_id,
+        difficulty=body.difficulty,
+        status="published",
+    )
+
+
+@router.get("/landmark/progress", response_model=LandmarkProgressResponse)
+async def landmark_progress(
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    """The caller's reading status across landmark library assignments
+    (status + last section + completion). Powers the browse page's status badges,
+    the 'Continue reading' CTA, and the Phase-3 progress summary. Returns only
+    sessions whose assignment is a landmark (service-user-owned, class_id IS NULL,
+    published) assignment — class assignments are excluded."""
+    landmark_user = get_settings().landmark_user_id
+    if not landmark_user:
+        raise HTTPException(status_code=503, detail="Landmark library not configured")
+
+    # PostgREST can't express the papers→assignments join through this query
+    # builder, so resolve the landmark assignment ids in two steps.
+    papers_res = await db.from_("papers").select("id").eq("uploaded_by", landmark_user).execute()
+    paper_ids = [p["id"] for p in (papers_res.data or [])]
+    if not paper_ids:
+        return LandmarkProgressResponse(progress=[])
+
+    asn_res = await db.from_("assignments").select("id") \
+        .in_("paper_id", paper_ids).is_("class_id", "null").eq("status", "published").execute()
+    landmark_ids = [a["id"] for a in (asn_res.data or [])]
+    if not landmark_ids:
+        return LandmarkProgressResponse(progress=[])
+
+    sessions_res = await db.from_("student_sessions") \
+        .select("assignment_id, status, current_section_index, completed_at") \
+        .eq("student_id", user["sub"]).in_("assignment_id", landmark_ids).execute()
+
+    return LandmarkProgressResponse(
+        progress=[LandmarkProgressItem(**row) for row in (sessions_res.data or [])]
+    )

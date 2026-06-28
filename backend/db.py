@@ -82,6 +82,15 @@ class QueryBuilder:
         self._params["limit"] = str(n)
         return self
 
+    def ilike(self, column: str, value: str) -> "QueryBuilder":
+        """PostgREST case-insensitive LIKE: column=ilike.<value>."""
+        self._params[column] = f"ilike.{value}"
+        return self
+
+    def offset(self, n: int) -> "QueryBuilder":
+        self._params["offset"] = str(n)
+        return self
+
     def maybe_single(self) -> "QueryBuilder":
         self._single = True
         self._params["limit"] = "1"

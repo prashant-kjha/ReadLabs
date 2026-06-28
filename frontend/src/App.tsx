@@ -18,6 +18,7 @@ import AssignmentDrilldownPage from "./pages/teacher/AssignmentDrilldownPage";
 import StudentDashboardPage from "./pages/student/StudentDashboardPage";
 import ReadingPage from "./pages/student/ReadingPage";
 import SelfStudyPage from "./pages/student/SelfStudyPage";
+import LandmarkLibraryPage from "./pages/student/LandmarkLibraryPage";
 
 function AppRoutes() {
   const { user, role } = useAuth();
@@ -41,6 +42,7 @@ function AppRoutes() {
           {/* Teacher routes */}
           <Route path="/teacher/papers" element={<RoleRoute allowedRole="teacher"><PapersPage /></RoleRoute>} />
           <Route path="/teacher/classes" element={<RoleRoute allowedRole="teacher"><ClassesPage /></RoleRoute>} />
+          <Route path="/teacher/library" element={<RoleRoute allowedRole="teacher"><LandmarkLibraryPage /></RoleRoute>} />
           <Route path="/teacher/assignments/:assignmentId/review" element={<RoleRoute allowedRole="teacher"><AssignmentReviewPage /></RoleRoute>} />
           <Route path="/teacher/classes/:classId/assign" element={<RoleRoute allowedRole="teacher"><AssignPaperPage /></RoleRoute>} />
           <Route path="/teacher/assignments/:assignmentId/preview" element={<RoleRoute allowedRole="teacher"><ReadingPage previewMode={true} /></RoleRoute>} />
@@ -51,6 +53,7 @@ function AppRoutes() {
           <Route path="/student/dashboard" element={<RoleRoute allowedRole="student"><StudentDashboardPage /></RoleRoute>} />
           <Route path="/student/read/:assignmentId" element={<RoleRoute allowedRole="student"><ReadingPage previewMode={false} optionalCheckpoints={true} /></RoleRoute>} />
           <Route path="/student/self-study" element={<RoleRoute allowedRole="student"><SelfStudyPage /></RoleRoute>} />
+          <Route path="/student/library" element={<RoleRoute allowedRole="student"><LandmarkLibraryPage /></RoleRoute>} />
         </Route>
       </Route>
 

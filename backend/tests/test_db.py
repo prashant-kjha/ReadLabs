@@ -26,3 +26,13 @@ def test_is_null_filter_chainable():
     qb.eq("paper_id", "p-1").is_("class_id", "null")
     assert qb._params["paper_id"] == "eq.p-1"
     assert qb._params["class_id"] == "is.null"
+
+
+def test_querybuilder_ilike_and_offset_set_params():
+    q = QueryBuilder("papers")
+    q.select("*").eq("uploaded_by", "u1").ilike("title", "%attn%").order("created_at", desc=True).limit(10).offset(20)
+    assert q._params["uploaded_by"] == "eq.u1"
+    assert q._params["title"] == "ilike.%attn%"
+    assert q._params["order"] == "created_at.desc"
+    assert q._params["limit"] == "10"
+    assert q._params["offset"] == "20"
