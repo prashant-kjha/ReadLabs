@@ -22,3 +22,14 @@ export interface AssignLandmarkResponse {
   difficulty: string;
   status: string;
 }
+
+export interface LandmarkProgressEntry {
+  assignment_id: string;
+  status: "not_started" | "in_progress" | "completed";
+  current_section_index: number;
+  completed_at?: string | null;
+}
+
+export interface LandmarkProgressResponse {
+  progress: LandmarkProgressEntry[];
+}
