@@ -323,10 +323,28 @@ function mockStudentApiRoutes(page) {
           { difficulty: 'advanced', assignment_id: 'la3' },
         ],
       },
+      {
+        paper_id: 'lp2',
+        title: 'Deep Residual Learning for Image Recognition',
+        created_at: '2026-06-02',
+        levels: [{ difficulty: 'intermediate', assignment_id: 'lb1' }],
+      },
+      {
+        paper_id: 'lp3',
+        title: 'Generative Adversarial Networks',
+        created_at: '2026-06-03',
+        levels: [{ difficulty: 'beginner', assignment_id: 'lc1' }],
+      },
     ],
     has_more: false,
   };
   const mockFeaturedLandmarks = [mockLandmarkPapers.items[0]];
+  const mockLandmarkProgress = {
+    progress: [
+      { assignment_id: 'la2', status: 'in_progress', current_section_index: 1, completed_at: null },
+      { assignment_id: 'lb1', status: 'completed', current_section_index: 2, completed_at: '2026-06-20' },
+    ],
+  };
 
   const mockCategories = ['Biology', 'Computer Science', 'Chemistry', 'Physics'];
   const mockRecommendations = [
@@ -377,6 +395,9 @@ function mockStudentApiRoutes(page) {
     const url = route.request().url();
     if (url.includes('/library/landmark/featured')) {
       return route.fulfill({ json: mockFeaturedLandmarks });
+    }
+    if (url.includes('/library/landmark/progress')) {
+      return route.fulfill({ json: mockLandmarkProgress });
     }
     if (url.includes('/library/landmark')) {
       return route.fulfill({ json: mockLandmarkPapers });
@@ -431,7 +452,7 @@ function mockStudentApiRoutes(page) {
     return route.fulfill({ json: {} });
   });
 
-  return { mockEnrolledClasses, mockSessions, mockSession, mockLibraryPapers, mockLandmarkPapers, mockStats };
+  return { mockEnrolledClasses, mockSessions, mockSession, mockLibraryPapers, mockLandmarkPapers, mockLandmarkProgress, mockStats };
 }
 
 /**
