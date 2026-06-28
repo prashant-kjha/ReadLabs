@@ -6,17 +6,39 @@ import toast from "react-hot-toast";
 import { Search, BookOpen } from "lucide-react";
 import LandmarkPaperCard from "../../components/landmark/LandmarkPaperCard";
 import AssignToClassModal from "../../components/landmark/AssignToClassModal";
-import type { LandmarkPaper } from "../../types/landmark";
+import type { LandmarkPaper, LandmarkProgressEntry } from "../../types/landmark";
+
+type PaperStatus = "not_started" | "in_progress" | "completed";
+type Filter = "all" | PaperStatus;
+
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "not_started", label: "Not started" },
+  { key: "in_progress", label: "In progress" },
+  { key: "completed", label: "Completed" },
+];
+
+// A paper's rollup status across its started levels: completed beats in-progress
+// beats not-started. (A paper can have a session on one difficulty but not another.)
+function paperStatus(paper: LandmarkPaper, progress: Map<string, LandmarkProgressEntry>): PaperStatus {
+  const statuses = paper.levels
+    .map((l) => progress.get(l.assignment_id)?.status)
+    .filter((s): s is LandmarkProgressEntry["status"] => Boolean(s));
+  if (statuses.includes("completed")) return "completed";
+  if (statuses.includes("in_progress")) return "in_progress";
+  return "not_started";
+}
 
 export default function LandmarkLibraryPage() {
   const navigate = useNavigate();
   const { role } = useAuth();
   const isTeacher = role === "teacher";
   const [papers, setPapers] = useState<LandmarkPaper[]>([]);
+  const [progressByAssignment, setProgressByAssignment] = useState<Map<string, LandmarkProgressEntry>>(new Map());
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
-  const [startedIds, setStartedIds] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState<{ paper: LandmarkPaper; difficulty: string } | null>(null);
 
   // Debounced load on query change (also fires once on mount with empty query).
@@ -31,17 +53,17 @@ export default function LandmarkLibraryPage() {
   const load = async (q: string) => {
     setLoading(true);
     try {
-      // Sessions are student-scoped (the /sessions/ list is the caller's own).
-      // Teachers never start reading here, so skip that fetch for them.
-      // NOTE: leave `r.data` untyped — axios infers `any`, which is what makes
-      // the `.map((s: { assignment_id: string }) => …)` annotation type-check
-      // (matching the proven Phase 1 page). Do not cast it.
-      const [res, sessions] = await Promise.all([
+      // Landmark progress is student-scoped: the endpoint returns only the
+      // caller's sessions on landmark assignments. Teachers never read here,
+      // so skip the fetch for them.
+      const [res, progress] = await Promise.all([
         libraryApi.landmarks({ q: q || undefined, limit: 24, offset: 0 }),
-        isTeacher ? Promise.resolve([]) : api.get("/sessions/").then((r) => r.data).catch(() => []),
+        isTeacher
+          ? Promise.resolve({ progress: [] as LandmarkProgressEntry[] })
+          : libraryApi.getLandmarkProgress().catch(() => ({ progress: [] as LandmarkProgressEntry[] })),
       ]);
       setPapers(res.items);
-      setStartedIds(new Set((sessions || []).map((s: { assignment_id: string }) => s.assignment_id)));
+      setProgressByAssignment(new Map((progress.progress || []).map((e) => [e.assignment_id, e])));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Could not load library");
     } finally {
@@ -65,6 +87,19 @@ export default function LandmarkLibraryPage() {
     setAssignTarget({ paper, difficulty });
   };
 
+  // Progress summary + filters are student-only (teachers don't read here).
+  const showProgress = !isTeacher;
+  const startedCount = showProgress
+    ? papers.filter((p) => paperStatus(p, progressByAssignment) !== "not_started").length
+    : 0;
+  const completedCount = showProgress
+    ? papers.filter((p) => paperStatus(p, progressByAssignment) === "completed").length
+    : 0;
+  const visible =
+    showProgress && filter !== "all"
+      ? papers.filter((p) => paperStatus(p, progressByAssignment) === filter)
+      : papers;
+
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <div className="mb-8">
@@ -76,6 +111,33 @@ export default function LandmarkLibraryPage() {
           </p>
         )}
       </div>
+
+      {/* My Progress summary + filter chips (student only). */}
+      {showProgress && (
+        <div className="mb-6">
+          <p data-testid="landmark-progress-summary" className="font-mono text-xs text-[var(--color-text-secondary)] mb-2">
+            <span className="text-[var(--color-text)] font-semibold">{startedCount}</span> started ·{" "}
+            <span className="text-[var(--color-text)] font-semibold">{completedCount}</span> completed
+          </p>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by progress">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFilter(f.key)}
+                aria-pressed={filter === f.key}
+                className={`font-mono text-xs px-3 py-1 rounded-sm border transition-colors ${
+                  filter === f.key
+                    ? "bg-primary text-[var(--color-primary-foreground)] border-primary"
+                    : "border-border bg-surface-raised text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={(e) => { e.preventDefault(); load(query.trim()); }} className="flex gap-2 mb-6">
         <div className="flex-1 relative">
@@ -93,19 +155,21 @@ export default function LandmarkLibraryPage() {
 
       {loading ? (
         <p className="font-mono text-sm text-[var(--color-text-secondary)]">Loading...</p>
-      ) : papers.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="rounded-sm border border-dashed border-[var(--color-muted-foreground)] p-10 text-center">
           <BookOpen className="w-10 h-10 text-[var(--color-muted-foreground)] mx-auto mb-3" strokeWidth={1.25} />
-          <p className="font-display italic text-[var(--color-text-secondary)]">No papers found. Try a different search.</p>
+          <p className="font-display italic text-[var(--color-text-secondary)]">
+            {showProgress && filter !== "all" ? "No papers in this category yet." : "No papers found. Try a different search."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {papers.map((p) => (
+          {visible.map((p) => (
             <LandmarkPaperCard
               key={p.paper_id}
               paper={p}
               role={role ?? undefined}
-              startedAssignmentIds={startedIds}
+              progressByAssignment={progressByAssignment}
               onStart={handleStart}
               onAssign={handleAssign}
             />
