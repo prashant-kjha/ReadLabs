@@ -411,3 +411,81 @@ def test_assign_landmark_creates_assignment_with_no_children_to_copy():
         app.dependency_overrides.clear()
     assert response.status_code == 200
     assert response.json()["assignment_id"] == "new-class-asn"
+
+
+def test_progress_requires_auth():
+    app.dependency_overrides.clear()
+    response = client.get("/api/v1/library/landmark/progress")
+    assert response.status_code == 401
+
+
+def test_progress_503_when_not_configured():
+    student = {"sub": "student-uuid-1"}
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: make_db()
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = None
+            response = client.get("/api/v1/library/landmark/progress")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 503
+
+
+def test_progress_returns_students_landmark_sessions():
+    student = {"sub": "student-uuid-1"}
+    db = make_db(
+        [{"id": "p1"}],                                                                       # 1. landmark paper ids
+        [{"id": "la1"}],                                                                      # 2. landmark assignment ids
+        [{"assignment_id": "la1", "status": "in_progress", "current_section_index": 2, "completed_at": None}],  # 3. this student's sessions
+    )
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.get("/api/v1/library/landmark/progress")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["progress"]) == 1
+    item = body["progress"][0]
+    assert item["assignment_id"] == "la1"
+    assert item["status"] == "in_progress"
+    assert item["current_section_index"] == 2
+    assert item["completed_at"] is None
+
+
+def test_progress_empty_when_no_landmark_papers():
+    student = {"sub": "student-uuid-1"}
+    db = make_db([])  # no landmark papers → short-circuit before assignments/sessions
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.get("/api/v1/library/landmark/progress")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["progress"] == []
+
+
+def test_progress_empty_when_student_has_no_sessions():
+    student = {"sub": "student-uuid-1"}
+    db = make_db(
+        [{"id": "p1"}],   # landmark papers
+        [{"id": "la1"}],  # landmark assignments
+        [],               # no sessions for this student
+    )
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with _patch_landmark_settings() as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.get("/api/v1/library/landmark/progress")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["progress"] == []

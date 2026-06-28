@@ -21,6 +21,8 @@ from backend.schemas.library import (
     LandmarkLibraryResponse,
     AssignLandmarkRequest,
     AssignLandmarkResponse,
+    LandmarkProgressItem,
+    LandmarkProgressResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -458,4 +460,40 @@ async def assign_landmark(
         paper_id=body.paper_id,
         difficulty=body.difficulty,
         status="published",
+    )
+
+
+@router.get("/landmark/progress", response_model=LandmarkProgressResponse)
+async def landmark_progress(
+    user=Depends(require_student),
+    db=Depends(get_db),
+):
+    """The caller's reading status across landmark library assignments
+    (status + last section + completion). Powers the browse page's status badges,
+    the 'Continue reading' CTA, and the Phase-3 progress summary. Returns only
+    sessions whose assignment is a landmark (service-user-owned, class_id IS NULL,
+    published) assignment — class assignments are excluded."""
+    landmark_user = get_settings().landmark_user_id
+    if not landmark_user:
+        raise HTTPException(status_code=503, detail="Landmark library not configured")
+
+    # PostgREST can't express the papers→assignments join through this query
+    # builder, so resolve the landmark assignment ids in two steps.
+    papers_res = await db.from_("papers").select("id").eq("uploaded_by", landmark_user).execute()
+    paper_ids = [p["id"] for p in (papers_res.data or [])]
+    if not paper_ids:
+        return LandmarkProgressResponse(progress=[])
+
+    asn_res = await db.from_("assignments").select("id") \
+        .in_("paper_id", paper_ids).is_("class_id", "null").eq("status", "published").execute()
+    landmark_ids = [a["id"] for a in (asn_res.data or [])]
+    if not landmark_ids:
+        return LandmarkProgressResponse(progress=[])
+
+    sessions_res = await db.from_("student_sessions") \
+        .select("assignment_id, status, current_section_index, completed_at") \
+        .eq("student_id", user["sub"]).in_("assignment_id", landmark_ids).execute()
+
+    return LandmarkProgressResponse(
+        progress=[LandmarkProgressItem(**row) for row in (sessions_res.data or [])]
     )
