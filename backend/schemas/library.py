@@ -79,3 +79,14 @@ class AssignLandmarkResponse(BaseModel):
     paper_id: str
     difficulty: str
     status: str
+
+
+class LandmarkProgressItem(BaseModel):
+    assignment_id: str
+    status: str
+    completed_at: str | None = None
+    current_section_index: int = 0
+
+
+class LandmarkProgressResponse(BaseModel):
+    progress: list[LandmarkProgressItem]
