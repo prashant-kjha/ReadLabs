@@ -2,6 +2,18 @@
 
 AI-guided research paper reading tool for students. Teachers upload papers, Gemini generates reading guides with guiding questions and checkpoints, and students read interactively with real-time AI feedback, jargon lookup, and comprehension quizzes. Hosted at [readlabs.org](readlabs.org)
 
+## Features
+
+**Core reading workflow**
+- Teachers upload papers (PDF or via CORE search); Gemini generates a structured reading guide — sections, guiding questions, key terms, and a comprehension quiz.
+- Students read with section-by-section AI checkpoint feedback, a "So What?" synthesis prompt, inline jargon / key-term lookup, and quizzes.
+- XP, streaks, and levels keep students engaged; teachers get a per-class progress dashboard.
+
+**Landmark Library** — a pre-seeded, browseable collection of classic papers (live in production)
+- **149 landmark papers** with **440 pre-generated reading guides** — up to three difficulty levels each (beginner / intermediate / advanced), generated once with Gemini 2.5 Pro via Vertex AI. Students read the pre-built guide directly, so there is **zero per-read AI cost**.
+- Students browse `/student/library` (title search + difficulty picker), start reading instantly, see a "Start with a classic" featured row on the dashboard, and track progress with a **My Progress** summary (started / completed counts, filter chips, and a "Continue reading" CTA).
+- Teachers browse `/teacher/library` and **assign a landmark paper to a class** — the pre-built guide, critical prompts, and quiz are copied to a class assignment instantly, no generation needed.
+
 ## Tech Stack
 
 - **Frontend**: React 19 + TypeScript (strict) + Vite + Tailwind CSS
@@ -58,6 +70,7 @@ See [`frontend/.env.example`](frontend/.env.example) for the frontend template.
 | `GCP_PROJECT_ID` | GCP project id (required when `AI_PROVIDER=vertex`) |
 | `GCP_REGION` | Vertex AI region, e.g. `us-central1` (used when `AI_PROVIDER=vertex`) |
 | `CORE_API_KEY` | CORE.ac.uk key (optional, for paper search) |
+| `LANDMARK_USER_ID` | Supabase user id of the landmark-library service account; scopes the `/library/landmark*` endpoints. **Required in production** (leave unset locally to disable the library). |
 | `SENTRY_DSN` | Backend error monitoring (optional, leave empty to disable) |
 | `ALLOWED_ORIGINS` | CORS origins, comma-separated (prod only) |
 | `ENVIRONMENT` | `development` or `production` |
@@ -153,6 +166,20 @@ Reports route to `legal@readlabs.org`, referenced in
 `Layout.tsx`). This address is a Cloudflare Email Routing alias that forwards to
 the operator's inbox. If you operate in the US and want DMCA safe-harbor
 protection, register a Designated Agent with the US Copyright Office.
+
+### Seeding / refreshing the landmark library
+
+The landmark library is populated by
+[`backend/scripts/seed_landmark_library.py`](backend/scripts/seed_landmark_library.py),
+which downloads papers from arXiv, generates up to three difficulty-level
+reading guides each (Gemini 2.5 Pro via Vertex AI), and writes them as
+`published` self-study assignments owned by the `LANDMARK_USER_ID` service
+account. It is **idempotent per difficulty** — safe to re-run to fill gaps
+(e.g. papers added to the source list later) without creating duplicates. It
+needs Vertex AI credentials (`gcloud auth application-default login`, or a
+short-lived user-managed key for the runtime service account — create and
+delete it each run). Source paper list:
+[`backend/data/landmark_papers.json`](backend/data/landmark_papers.json).
 
 ## Contributing
 
