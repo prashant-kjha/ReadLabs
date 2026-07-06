@@ -148,7 +148,8 @@ async def upload_paper(
     async with httpx.AsyncClient(timeout=60) as c:
         r = await c.post(storage_url, headers=upload_headers, content=pdf_bytes)
     if r.status_code not in (200, 201):
-        raise HTTPException(status_code=500, detail=f"Failed to store PDF: {r.text}")
+        logger.error("storage upload failed (%s): %s", r.status_code, r.text[:300])
+        raise HTTPException(status_code=500, detail="Failed to store PDF")
 
     # Insert paper
     paper_result = await db.from_("papers").insert({
@@ -160,7 +161,8 @@ async def upload_paper(
     }).execute()
 
     if not paper_result.data:
-        raise HTTPException(status_code=500, detail=f"Failed to create paper record: {paper_result.error}")
+        logger.error("paper insert failed: %s", paper_result.error)
+        raise HTTPException(status_code=500, detail="Failed to create paper record")
     paper = paper_result.data[0]
 
     # Create self-study assignment (class_id=null)
@@ -171,7 +173,8 @@ async def upload_paper(
     }).execute()
 
     if not assignment_result.data:
-        raise HTTPException(status_code=500, detail=f"Failed to create assignment: {assignment_result.error}")
+        logger.error("assignment insert failed: %s", assignment_result.error)
+        raise HTTPException(status_code=500, detail="Failed to create assignment")
     assignment = assignment_result.data[0]
 
     # Trigger background guide generation

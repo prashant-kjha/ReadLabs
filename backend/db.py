@@ -71,7 +71,15 @@ class QueryBuilder:
         return self
 
     def in_(self, column: str, values: list) -> "QueryBuilder":
-        self._params[column] = f"in.({','.join(str(v) for v in values)})"
+        # PostgREST reserves , . : ( ) inside in.(...) lists. Double-quote every
+        # string value (escaping \ and ") so values like multi-word titles or
+        # anything user-influenced can't break out of the filter expression.
+        def _quote(v: Any) -> str:
+            if isinstance(v, str):
+                escaped = v.replace("\\", "\\\\").replace('"', '\\"')
+                return f'"{escaped}"'
+            return str(v)
+        self._params[column] = f"in.({','.join(_quote(v) for v in values)})"
         return self
 
     def order(self, column: str, desc: bool = False) -> "QueryBuilder":
