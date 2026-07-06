@@ -61,7 +61,9 @@ async def start_session(body: StartSessionRequest, user=Depends(require_student)
             raise HTTPException(status_code=500, detail="Session conflict but row not found")
         session = existing.data
     else:
-        raise HTTPException(status_code=500, detail=f"Failed to create session: {result.error}")
+        # Log the raw DB error server-side; never echo it to the client.
+        logger.error("session insert failed (status %s): %s", result.status_code, result.error)
+        raise HTTPException(status_code=500, detail="Failed to create session")
 
     paper = await db.from_("papers").select("title") \
         .eq("id", assignment.data["paper_id"]).single().execute()
@@ -292,6 +294,26 @@ async def preview_jargon(request: Request, body: PreviewJargonRequest, user=Depe
 @router.post("/preview/keyterm")
 @limiter.limit("60/hour")
 async def preview_keyterm(request: Request, body: PreviewKeyTermRequest, user=Depends(require_teacher), db=Depends(get_db)):
+    # Ownership gate: the DB client bypasses RLS, so this is the only check
+    # preventing a teacher from reading or poisoning another teacher's
+    # key-term cache. Class assignments must belong to one of the caller's
+    # classes; self-study assignments (class_id NULL) must point at a paper
+    # the caller uploaded.
+    assignment = await db.from_("assignments").select("class_id, paper_id") \
+        .eq("id", body.assignment_id).single().execute()
+    if not assignment.data:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if assignment.data.get("class_id"):
+        cls = await db.from_("classes").select("id") \
+            .eq("id", assignment.data["class_id"]).eq("teacher_id", user["sub"]).single().execute()
+        if not cls.data:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    else:
+        paper = await db.from_("papers").select("id") \
+            .eq("id", assignment.data["paper_id"]).eq("uploaded_by", user["sub"]).single().execute()
+        if not paper.data:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
     cached = await db.from_("key_term_definitions").select("explanation") \
         .eq("assignment_id", body.assignment_id).eq("term", body.term.lower()).single().execute()
     if cached.data:
@@ -334,7 +356,7 @@ async def lookup_jargon(
         explanation = await generate_jargon_explanation(body.term, body.context_snippet)
     except Exception as e:
         logger.error("jargon: generate_jargon_explanation failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"AI generation failed: {e}")
+        raise HTTPException(status_code=500, detail="AI generation failed")
     logger.info("jargon: got explanation type=%s len=%s repr=%.100s", type(explanation).__name__, len(explanation) if explanation else "None", repr(explanation))
 
     if not explanation:

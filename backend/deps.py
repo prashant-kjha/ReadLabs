@@ -69,7 +69,8 @@ async def get_current_user(
     except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except JWTError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+        logger.info("JWT verification failed: %s", e)
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 async def get_optional_user(

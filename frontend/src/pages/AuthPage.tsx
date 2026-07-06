@@ -1,11 +1,35 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import { BookOpen, Brain, Trophy, AlertCircle } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
+
+function GoogleIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.52 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.26-2.09 3.58-5.17 3.58-8.81z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.88-3.01c-1.07.72-2.45 1.15-4.06 1.15-3.13 0-5.78-2.11-6.72-4.95H1.27v3.11A12 12 0 0 0 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.28 14.28a7.2 7.2 0 0 1 0-4.56V6.61H1.27a12 12 0 0 0 0 10.78l4.01-3.11z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.77c1.76 0 3.34.61 4.59 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.61l4.01 3.11C6.22 6.88 8.87 4.77 12 4.77z"
+      />
+    </svg>
+  );
+}
 
 const PANEL_FEATURES = [
   {
@@ -34,6 +58,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -64,6 +89,25 @@ export default function AuthPage() {
       toast.error(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      // Redirects to Google; on success the browser lands on /auth/callback,
+      // which finishes the profile lookup and role-based navigation.
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (oauthError) throw oauthError;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Google sign-in failed";
+      setError(message);
+      toast.error(message);
+      setGoogleLoading(false);
     }
   };
 
@@ -259,6 +303,28 @@ export default function AuthPage() {
                 {loading ? "Loading..." : mode === "signin" ? "Log In" : "Create Account"}
               </button>
             </form>
+            )}
+
+            {/* Google sign-in */}
+            {!(signupSuccess && mode === "signup") && (
+              <>
+                <div className="relative my-5 flex items-center" aria-hidden="true">
+                  <div className="flex-1 border-t border-border" />
+                  <span className="px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
+                    or
+                  </span>
+                  <div className="flex-1 border-t border-border" />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={googleLoading}
+                  className="w-full flex items-center justify-center gap-2.5 rounded-sm border border-border bg-surface-raised py-2.5 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-muted disabled:opacity-60"
+                >
+                  <GoogleIcon />
+                  {googleLoading ? "Redirecting…" : "Continue with Google"}
+                </button>
+              </>
             )}
 
             {/* Toggle Mode Link */}

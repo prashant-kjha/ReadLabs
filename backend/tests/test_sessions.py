@@ -319,3 +319,80 @@ def test_session_start_db_error_returns_500_not_silent_fetch():
 
     assert response.status_code == 500
     assert "Failed to create session" in response.json()["detail"]
+
+
+# ── /preview/keyterm ownership (added 2026-07-06) ──────────────────────────
+# The DB client bypasses RLS, so the route-level ownership check is the only
+# thing preventing a teacher from reading or poisoning another teacher's
+# key-term cache.
+
+
+def test_preview_keyterm_forbidden_for_other_teachers_assignment():
+    teacher = {"sub": "teacher-A"}
+    assignment = {"class_id": "cls-1", "paper_id": "p-1"}
+    other_teachers_class = None  # classes lookup scoped to teacher-A finds nothing
+
+    db = make_db(assignment, other_teachers_class)
+
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        r = client.post("/api/v1/sessions/preview/keyterm",
+                        json={"assignment_id": "asn-1", "term": "RCT", "context_snippet": "..."})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 403
+
+
+def test_preview_keyterm_forbidden_for_self_study_paper_not_owned():
+    teacher = {"sub": "teacher-A"}
+    assignment = {"class_id": None, "paper_id": "p-1"}
+    paper_not_owned = None  # papers lookup scoped to teacher-A finds nothing
+
+    db = make_db(assignment, paper_not_owned)
+
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        r = client.post("/api/v1/sessions/preview/keyterm",
+                        json={"assignment_id": "asn-1", "term": "RCT", "context_snippet": "..."})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 403
+
+
+def test_preview_keyterm_missing_assignment_404():
+    teacher = {"sub": "teacher-A"}
+    db = make_db(None)
+
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        r = client.post("/api/v1/sessions/preview/keyterm",
+                        json={"assignment_id": "asn-1", "term": "RCT", "context_snippet": "..."})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 404
+
+
+def test_preview_keyterm_owner_gets_cached():
+    teacher = {"sub": "teacher-A"}
+    assignment = {"class_id": "cls-1", "paper_id": "p-1"}
+    owned_class = {"id": "cls-1"}
+    cached = {"explanation": "RCT means randomized controlled trial."}
+
+    db = make_db(assignment, owned_class, cached)
+
+    app.dependency_overrides[require_teacher] = lambda: teacher
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        r = client.post("/api/v1/sessions/preview/keyterm",
+                        json={"assignment_id": "asn-1", "term": "RCT", "context_snippet": "..."})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert r.json()["cached"] is True
