@@ -131,6 +131,13 @@ export const authApi = {
     api.post<AuthResponse>("/auth/signin", data).then((r) => r.data),
   me: () =>
     api.get<{ user_id: string; name: string; role: string }>("/auth/me").then((r) => r.data),
+  // Idempotent: ensures a user_profiles row exists after an OAuth (Google)
+  // sign-in and returns it. The Bearer token comes from the Supabase session
+  // via the request interceptor.
+  oauthProfile: () =>
+    api
+      .post<{ user_id: string; name: string; role: "teacher" | "student" }>("/auth/oauth/profile")
+      .then((r) => r.data),
 };
 
 // ── Papers ──────────────────────────────────────────────────────────────────

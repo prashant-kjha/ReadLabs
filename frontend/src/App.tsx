@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import RoleRoute from "./components/RoleRoute";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
 import TermsPage from "./pages/TermsPage";
 import Layout from "./components/Layout";
 import PapersPage from "./pages/teacher/PapersPage";
@@ -32,6 +33,9 @@ function AppRoutes() {
 
       {/* Auth */}
       <Route path="/auth" element={user ? <Navigate to={defaultPath} /> : <AuthPage />} />
+      {/* OAuth landing — must render even while `user` is unset; it completes
+          the login itself and then navigates by role. */}
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
       {/* Public legal pages */}
       <Route path="/terms" element={<TermsPage />} />

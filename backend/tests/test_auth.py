@@ -186,3 +186,122 @@ def test_signin_happy_path_returns_tokens(unauth_client, mock_db):
     assert body["refresh_token"] == "tok_refresh"
     assert body["role"] == "student"
     assert body["user_id"] == "uuid-good"
+
+
+def test_signup_rejects_short_password(unauth_client):
+    """Server-side password policy: < 8 chars must be rejected regardless of
+    the Supabase project's dashboard setting."""
+    response = unauth_client.post("/api/v1/auth/signup", json={
+        "email": "weak@test.com",
+        "password": "short1",
+        "name": "Weak",
+    })
+    assert response.status_code == 422
+
+
+# ── /auth/oauth/profile (Google sign-in support, added 2026-07-06) ──────────
+
+
+def _override_user(user):
+    from backend.deps import get_current_user
+    app.dependency_overrides[get_current_user] = lambda: user
+
+
+def test_oauth_profile_requires_auth():
+    app.dependency_overrides.clear()
+    with TestClient(app) as c:
+        r = c.post("/api/v1/auth/oauth/profile")
+    assert r.status_code == 401
+
+
+def test_oauth_profile_returns_existing_profile(mock_db):
+    _override_user({"sub": "uuid-oauth", "email": "g@test.com"})
+    mock_db.execute = AsyncMock(return_value=MagicMock(data={"name": "Existing", "role": "teacher"}))
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        with TestClient(app) as c:
+            r = c.post("/api/v1/auth/oauth/profile")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body == {"user_id": "uuid-oauth", "name": "Existing", "role": "teacher"}
+
+
+def test_oauth_profile_creates_student_profile_with_google_name(mock_db):
+    """First Google sign-in: no profile row yet — one must be created with
+    role='student' (the privilege-escalation gate) and the Google full name."""
+    _override_user({
+        "sub": "uuid-new",
+        "email": "new@gmail.com",
+        "user_metadata": {"full_name": "New Reader"},
+    })
+
+    insert_capture = {}
+
+    def capture_insert(payload):
+        insert_capture["payload"] = payload
+        return mock_db
+    mock_db.insert = MagicMock(side_effect=capture_insert)
+    # 1st execute: profile select → None; 2nd: insert → row
+    mock_db.execute = AsyncMock(side_effect=[
+        MagicMock(data=None),
+        MagicMock(data=[{"name": "New Reader", "role": "student"}]),
+    ])
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        with TestClient(app) as c:
+            r = c.post("/api/v1/auth/oauth/profile")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["role"] == "student"
+    assert body["name"] == "New Reader"
+    assert insert_capture["payload"]["role"] == "student"
+    assert insert_capture["payload"]["user_id"] == "uuid-new"
+
+
+def test_oauth_profile_insert_race_falls_back_to_select(mock_db):
+    """Two concurrent callbacks: the losing insert must re-select and return
+    the existing row instead of erroring."""
+    _override_user({"sub": "uuid-race", "email": "race@gmail.com", "user_metadata": {}})
+    mock_db.execute = AsyncMock(side_effect=[
+        MagicMock(data=None),                       # initial select: no row yet
+        MagicMock(data=None, error="duplicate key"),  # insert loses the race
+        MagicMock(data={"name": "Race", "role": "student"}),  # re-select wins
+    ])
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        with TestClient(app) as c:
+            r = c.post("/api/v1/auth/oauth/profile")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert r.json() == {"user_id": "uuid-race", "name": "Race", "role": "student"}
+
+
+def test_oauth_profile_falls_back_to_email_prefix_for_name(mock_db):
+    _override_user({"sub": "uuid-noname", "email": "plain.reader@gmail.com"})
+    insert_capture = {}
+
+    def capture_insert(payload):
+        insert_capture["payload"] = payload
+        return mock_db
+    mock_db.insert = MagicMock(side_effect=capture_insert)
+    mock_db.execute = AsyncMock(side_effect=[
+        MagicMock(data=None),
+        MagicMock(data=[{"name": "plain.reader", "role": "student"}]),
+    ])
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        with TestClient(app) as c:
+            r = c.post("/api/v1/auth/oauth/profile")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert insert_capture["payload"]["name"] == "plain.reader"

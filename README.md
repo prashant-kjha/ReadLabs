@@ -84,6 +84,28 @@ See [`frontend/.env.example`](frontend/.env.example) for the frontend template.
 | `VITE_API_URL` | Backend API URL (`http://localhost:8000` for dev) |
 | `VITE_SENTRY_DSN` | Frontend error monitoring (optional, leave empty to disable) |
 
+### Google sign-in
+
+"Continue with Google" on the auth page uses Supabase's OAuth flow
+(`signInWithOAuth` → `/auth/callback` → `POST /api/v1/auth/oauth/profile`).
+First-time Google users get a `user_profiles` row created as a **student**
+(same gate as email signup); teachers are still provisioned manually.
+
+One-time provider setup (the button shows a Supabase error until this is done):
+
+1. **Google Cloud console** → APIs & Services → Credentials → *Create OAuth
+   client ID* (type: Web application):
+   - Authorized JavaScript origins: `https://readlabs.org`
+   - Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+2. **Supabase dashboard** → Authentication → Providers → Google: enable, paste
+   the client ID + secret from step 1.
+3. **Supabase dashboard** → Authentication → URL Configuration: add
+   `https://readlabs.org/auth/callback` to the redirect allow-list.
+
+For local dev, set `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` /
+`SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` in your shell before `supabase start`
+(see `[auth.external.google]` in `supabase/config.toml`).
+
 ## Testing
 
 ```bash

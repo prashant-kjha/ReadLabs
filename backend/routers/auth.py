@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
 import httpx
 from backend.config import get_settings
@@ -8,6 +9,7 @@ from backend.schemas.auth import (
     SignupRequest, SigninRequest, AuthResponse, MeResponse, SignupResponse,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -101,6 +103,46 @@ async def signin(request: Request, body: SigninRequest, db=Depends(get_db)):
         "name": profile_resp.data["name"],
         "role": profile_resp.data["role"],
     }
+
+
+@router.post("/oauth/profile", response_model=MeResponse)
+@limiter.limit("30/minute")
+async def oauth_profile(request: Request, user=Depends(get_current_user), db=Depends(get_db)):
+    """
+    Ensure a user_profiles row exists for an OAuth-authenticated user (e.g.
+    first Google sign-in) and return it. Idempotent.
+
+    New profiles are ALWAYS created as students — the same privilege-escalation
+    gate as /signup. The display name comes from the identity provider's
+    user_metadata (never from the request body, which is not read at all).
+    """
+    user_id = user["sub"]
+    profile = await db.from_("user_profiles").select("name, role") \
+        .eq("user_id", user_id).single().execute()
+    if profile.data:
+        return {"user_id": user_id, **profile.data}
+
+    meta = user.get("user_metadata") or {}
+    name = (meta.get("full_name") or meta.get("name")
+            or (user.get("email") or "").split("@")[0] or "Reader")
+    name = name.strip()[:120] or "Reader"
+
+    inserted = await db.from_("user_profiles").insert({
+        "user_id": user_id,
+        "name": name,
+        "role": "student",
+    }).execute()
+    if not inserted.data:
+        # Likely lost a create race (double-fired callback) — the unique
+        # user_id constraint rejected our insert, so the row must exist now.
+        retry = await db.from_("user_profiles").select("name, role") \
+            .eq("user_id", user_id).single().execute()
+        if retry.data:
+            return {"user_id": user_id, **retry.data}
+        logger.error("oauth profile creation failed for %s: %s", user_id, inserted.error)
+        raise HTTPException(status_code=500, detail="Failed to create profile")
+
+    return {"user_id": user_id, "name": name, "role": "student"}
 
 
 @router.get("/me", response_model=MeResponse)
