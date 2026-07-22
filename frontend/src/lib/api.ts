@@ -155,8 +155,10 @@ export const papersApi = {
     api.get<PaperListItem[]>("/papers").then((r) => r.data),
   get: (id: string) =>
     api.get<Paper>(`/papers/${id}`).then((r) => r.data),
+  // url is null when the paper is stored as extracted text only (landmark
+  // library / CORE-fetched papers) — that is a valid response, not a failure.
   getPdfUrl: (id: string) =>
-    api.get<{ url: string }>(`/papers/${id}/pdf-url`).then((r) => r.data),
+    api.get<{ url: string | null }>(`/papers/${id}/pdf-url`).then((r) => r.data),
 };
 
 // ── Classes ─────────────────────────────────────────────────────────────────

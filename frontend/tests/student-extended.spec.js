@@ -5,7 +5,14 @@
  * skip/advance, structure coach, locked sections, layout persistence.
  */
 const { test, expect } = require('@playwright/test');
-const { loginAsStudent, mockStudentApiRoutes, STUDENT_USER } = require('./helpers');
+const {
+  loginAsStudent,
+  mockStudentApiRoutes,
+  mockSessionWithPaper,
+  routeSamplePdf,
+  SAMPLE_PDF_URL,
+  STUDENT_USER,
+} = require('./helpers');
 
 // ── Student Dashboard Extended ────────────────────────────────────────────────
 
@@ -345,25 +352,46 @@ test.describe('Student - Reading Page Section Navigation', () => {
 // ── Reading Page - PDF Viewer ──────────────────────────────────────────────────
 
 test.describe('Student - Reading Page PDF Viewer', () => {
-  test('shows loading state when no PDF URL', async ({ page }) => {
+  test('shows the no-PDF empty state when the paper has no PDF', async ({ page }) => {
     mockStudentApiRoutes(page);
     await loginAsStudent(page);
     await page.goto('/student/read/a1');
     await page.waitForLoadState('networkidle');
 
-    // PDF viewer shows loading text when URL is not available (mock doesn't return pdfUrl)
-    await expect(page.getByText('Loading PDF')).toBeVisible();
+    // The default mock session carries no paper_id — a text-only paper, which
+    // is a normal state for the landmark library, not a load failure.
+    await expect(page.getByTestId('pdf-unavailable')).toBeVisible();
+    await expect(page.getByText('No PDF available')).toBeVisible();
   });
 
-  test('shows page counter and zoom controls', async ({ page }) => {
+  test('shows page counter and zoom controls once the PDF renders', async ({ page }) => {
     mockStudentApiRoutes(page);
+    await mockSessionWithPaper(page);
+    await routeSamplePdf(page);
+    await page.route('**/api/v1/papers/**/pdf-url', (route) =>
+      route.fulfill({ json: { url: SAMPLE_PDF_URL } }));
     await loginAsStudent(page);
     await page.goto('/student/read/a1');
     await page.waitForLoadState('networkidle');
 
-    // The PDF viewer control bar exists (even if showing "Loading PDF...")
-    // The zoom and page controls are rendered in a bar with zoom buttons
-    await expect(page.getByText('Loading PDF')).toBeVisible();
+    // One-page fixture: page counter reads 1 / 1 and zoom starts at 100%.
+    await expect(page.getByText('1 / 1')).toBeVisible();
+    await expect(page.getByText('100%')).toBeVisible();
+  });
+
+  test('zoom in raises the zoom level', async ({ page }) => {
+    mockStudentApiRoutes(page);
+    await mockSessionWithPaper(page);
+    await routeSamplePdf(page);
+    await page.route('**/api/v1/papers/**/pdf-url', (route) =>
+      route.fulfill({ json: { url: SAMPLE_PDF_URL } }));
+    await loginAsStudent(page);
+    await page.goto('/student/read/a1');
+    await expect(page.getByText('100%')).toBeVisible();
+
+    // The zoom-in button is the last control in the viewer's toolbar.
+    await page.locator('button').filter({ has: page.locator('svg.lucide-zoom-in') }).click();
+    await expect(page.getByText('125%')).toBeVisible();
   });
 });
 

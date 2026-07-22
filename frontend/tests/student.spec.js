@@ -3,7 +3,14 @@
  * Tests StudentDashboardPage, SelfStudyPage, ReadingPage.
  */
 const { test, expect } = require('@playwright/test');
-const { loginAsStudent, mockStudentApiRoutes, STUDENT_USER } = require('./helpers');
+const {
+  loginAsStudent,
+  mockStudentApiRoutes,
+  mockSessionWithPaper,
+  routeSamplePdf,
+  SAMPLE_PDF_URL,
+  STUDENT_USER,
+} = require('./helpers');
 
 test.describe('Student - Dashboard Page', () => {
   test.beforeEach(async ({ page }) => {
@@ -194,8 +201,9 @@ test.describe('Student - Reading Page', () => {
     await expect(page.getByText('AI Guidance')).toBeVisible();
   });
 
-  test('shows PDF viewer controls', async ({ page }) => {
-    await expect(page.getByText(/Loading PDF/)).toBeVisible();
+  test('shows the no-PDF empty state for a text-only paper', async ({ page }) => {
+    // The default mock session has no paper_id, i.e. a paper stored as text only.
+    await expect(page.getByTestId('pdf-unavailable')).toBeVisible();
   });
 
   test('shows jargon lookup input', async ({ page }) => {
@@ -320,5 +328,66 @@ test.describe('Student - Landmark Featured Widget', () => {
 
   test('shows a featured paper', async ({ page }) => {
     await expect(page.getByText('Attention Is All You Need')).toBeVisible();
+  });
+});
+
+test.describe('Student - Reading Page PDF states', () => {
+  // Landmark-library and CORE-fetched papers are stored as extracted text only,
+  // so /pdf-url legitimately answers {url: null}. That must read as an empty
+  // state, not as a failure or a spinner that never resolves.
+  async function openReadingPage(page, pdfRoute) {
+    mockStudentApiRoutes(page);
+    // The session must carry a paper_id for a PDF to be requested at all.
+    await mockSessionWithPaper(page);
+    await routeSamplePdf(page);
+    await page.route('**/api/v1/papers/**/pdf-url', pdfRoute);
+    await loginAsStudent(page);
+    await page.goto('/student/read/a1');
+    await page.waitForLoadState('networkidle');
+  }
+
+  test('shows an empty state when the paper has no PDF', async ({ page }) => {
+    await openReadingPage(page, (route) => route.fulfill({ json: { url: null } }));
+
+    await expect(page.getByTestId('pdf-unavailable')).toBeVisible();
+    await expect(page.getByText('No PDF available')).toBeVisible();
+    await expect(page.getByText('Loading PDF...')).toHaveCount(0);
+  });
+
+  test('shows a retryable error when the PDF URL request fails', async ({ page }) => {
+    await openReadingPage(page, (route) =>
+      route.fulfill({ status: 500, json: { detail: 'Failed to generate PDF URL' } }));
+
+    await expect(page.getByTestId('pdf-error')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+  });
+
+  test('renders the PDF when one is available', async ({ page }) => {
+    await openReadingPage(page, (route) => route.fulfill({ json: { url: SAMPLE_PDF_URL } }));
+
+    await expect(page.getByText('1 / 1')).toBeVisible();
+    await expect(page.getByTestId('pdf-unavailable')).toHaveCount(0);
+  });
+
+  test('retry re-requests the PDF and renders it once available', async ({ page }) => {
+    // Flip the flag explicitly rather than counting calls: StrictMode double-
+    // fires the init effect, so the Nth request isn't a stable signal.
+    let failing = true;
+    let requests = 0;
+    await openReadingPage(page, (route) => {
+      requests += 1;
+      return failing
+        ? route.fulfill({ status: 500, json: { detail: 'boom' } })
+        : route.fulfill({ json: { url: SAMPLE_PDF_URL } });
+    });
+
+    await expect(page.getByTestId('pdf-error')).toBeVisible();
+    const before = requests;
+
+    failing = false;
+    await page.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(page.getByText('1 / 1')).toBeVisible();
+    expect(requests).toBeGreaterThan(before);
   });
 });

@@ -166,9 +166,14 @@ async def get_pdf_url(paper_id: str, user=Depends(require_student), db=Depends(g
         .eq("id", paper_id) \
         .single() \
         .execute()
-    if not result.data or not result.data.get("pdf_path"):
-        logger.warning("pdf-url: paper %s has no pdf_path", paper_id)
-        raise HTTPException(status_code=404, detail="Paper not found or no PDF attached")
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    if not result.data.get("pdf_path"):
+        # Not an error: landmark-library and CORE-fetched papers are stored as
+        # extracted text only. Say so plainly so the client can render an empty
+        # state rather than a failure. 404 stays reserved for "not yours".
+        logger.info("pdf-url: paper %s has no stored PDF", paper_id)
+        return {"url": None}
 
     pdf_path = result.data["pdf_path"]
     object_path = pdf_path.removeprefix("papers/")
