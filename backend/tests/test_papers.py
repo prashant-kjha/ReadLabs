@@ -221,6 +221,43 @@ def test_get_pdf_url_returns_signed_url_when_student_has_session():
     assert "token=xyz" in body["url"]
 
 
+def test_get_pdf_url_returns_null_when_paper_has_no_pdf():
+    """An authorized paper with no stored PDF is not an error — it's a paper we
+    only have the extracted text for (landmark library / CORE-fetched papers).
+    Return 200 with url=null so the client can show an honest empty state
+    instead of a failure toast. 404 stays reserved for 'you can't see this'."""
+    mock_student = {"sub": "student-uuid-123"}
+
+    db_results = [
+        MagicMock(data=None),                # not owner
+        MagicMock(data=[{"id": "asn-1"}]),   # an assignment uses this paper
+        MagicMock(data=[{"id": "sess-1"}]),  # student has a session for it
+        MagicMock(data={"pdf_path": None}),  # ...but the paper has no PDF
+    ]
+    call_count = [0]
+
+    async def mock_execute():
+        idx = call_count[0]
+        call_count[0] += 1
+        return db_results[idx]
+
+    mock_db = MagicMock()
+    for attr in ["from_", "select", "eq", "in_", "single", "limit", "order"]:
+        setattr(mock_db, attr, MagicMock(return_value=mock_db))
+    mock_db.execute = mock_execute
+
+    app.dependency_overrides[_require_student] = lambda: mock_student
+    app.dependency_overrides[_get_db] = lambda: mock_db
+    try:
+        response = api_client.get("/api/v1/papers/paper-uuid-1/pdf-url")
+    finally:
+        app.dependency_overrides.pop(_require_student, None)
+        app.dependency_overrides.pop(_get_db, None)
+
+    assert response.status_code == 200
+    assert response.json() == {"url": None}
+
+
 def test_get_pdf_url_rejects_student_without_access():
     """Student with no ownership and no session for an assignment using the paper
     must get 404 — they cannot enumerate papers by ID."""

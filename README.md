@@ -203,6 +203,28 @@ short-lived user-managed key for the runtime service account — create and
 delete it each run). Source paper list:
 [`backend/data/landmark_papers.json`](backend/data/landmark_papers.json).
 
+The seeding script stores each paper's **extracted text only**, so the PDF
+viewer has nothing to render until
+[`backend/scripts/backfill_landmark_pdfs.py`](backend/scripts/backfill_landmark_pdfs.py)
+has been run. It downloads each landmark paper's PDF from arXiv, uploads it to
+the `papers` Storage bucket under `landmark/<paper_id>.pdf`, and fills in
+`papers.pdf_path`. Only rows with `pdf_path IS NULL` are touched, so it is
+idempotent and resumable — re-run it to pick up new papers or retry failures.
+It needs `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `LANDMARK_USER_ID`
+(no AI credentials):
+
+```bash
+# from the repo root
+python -m backend.scripts.backfill_landmark_pdfs --dry-run   # preview
+python -m backend.scripts.backfill_landmark_pdfs --limit 5   # try a few first
+python -m backend.scripts.backfill_landmark_pdfs             # full run
+```
+
+Papers with no PDF (a failed backfill, or a CORE-fetched paper that has no PDF
+at all) are not an error state: `GET /papers/{id}/pdf-url` answers `{"url":
+null}` and the reading page shows a "No PDF available" panel alongside the
+reading guide.
+
 ## Contributing
 
 Bug reports and PRs welcome. Please open an issue first for any non-trivial

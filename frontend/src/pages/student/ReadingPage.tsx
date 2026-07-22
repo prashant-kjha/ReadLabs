@@ -15,7 +15,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
   const { assignmentId } = useParams();
 
   const {
-    loading, readingGuide, paperTitle, currentSection, pdfUrl,
+    loading, readingGuide, paperTitle, currentSection, pdfUrl, pdfStatus, pdfNote, retryPdf,
     checkpoints, soWhat, jargonExplanation, jargonPending,
     quizQuestions, quizAnswers, quizResults, quizGenerating, quizSubmitting,
     currentAssignmentId, sectionsCollapsed, aiPanelWidth, aiPanelVisible,
@@ -91,7 +91,7 @@ export default function ReadingPage({ previewMode = false, optionalCheckpoints =
           previewMode={previewMode}
         />
 
-        <PdfViewer url={pdfUrl} />
+        <PdfViewer url={pdfUrl} status={pdfStatus} note={pdfNote} onRetry={retryPdf} />
 
         <AiGuidancePanel
           section={section!}

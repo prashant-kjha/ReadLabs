@@ -21,6 +21,15 @@ interface SoWhatState {
   feedbackError?: boolean;
 }
 
+// "unavailable" means the paper has no PDF stored (text-only source), which is
+// a normal state — distinct from "error", where fetching the URL actually failed.
+export type PdfStatus = "loading" | "ready" | "unavailable" | "error";
+
+const PDF_NOTE_TEXT_ONLY =
+  "This paper came from an open-access text source, so there's no PDF to display. The reading guide covers the full paper.";
+const PDF_NOTE_PREVIEW = "The PDF isn't shown in teacher preview.";
+const PDF_NOTE_SESSION_FAILED = "The reading session couldn't be loaded, so there's nothing to show here.";
+
 interface ReadingState {
   // Session
   loading: boolean;
@@ -32,6 +41,9 @@ interface ReadingState {
 
   // PDF
   pdfUrl: string | null;
+  pdfStatus: PdfStatus;
+  pdfNote: string | null;
+  paperId: string | null;
 
   // Checkpoints: keyed by section index
   checkpoints: Record<number, CheckpointState>;
@@ -61,6 +73,7 @@ interface ReadingState {
   // Actions
   initPreview: (assignmentId: string) => Promise<void>;
   initSession: (assignmentId: string) => Promise<void>;
+  retryPdf: () => Promise<void>;
   setCurrentSection: (index: number) => void;
   advanceSection: () => Promise<void>;
   updateCpText: (sectionIndex: number, text: string) => void;
@@ -158,6 +171,9 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   currentSection: 0,
   currentAssignmentId: null,
   pdfUrl: null,
+  pdfStatus: "loading",
+  pdfNote: null,
+  paperId: null,
   checkpoints: {},
   soWhat: { text: "", ai_feedback: null, pending: false, skipped: false },
   jargonExplanation: null,
@@ -184,6 +200,10 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
       set({
         readingGuide: data.reading_guide,
         paperTitle: data.paper_title || "Paper Preview",
+        // The signed-URL endpoint is student-only, so preview never has a PDF.
+        // Say that plainly instead of spinning on "Loading PDF..." forever.
+        pdfStatus: "unavailable",
+        pdfNote: PDF_NOTE_PREVIEW,
         loading: false,
       });
     } catch (err: unknown) {
@@ -193,7 +213,8 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   },
 
   initSession: async (assignmentId) => {
-    set({ loading: true });
+    // Clear any previous paper's PDF so it can't flash while this one loads.
+    set({ loading: true, pdfUrl: null, pdfStatus: "loading", pdfNote: null });
     try {
       const { data } = await api.post("/sessions/", { assignment_id: assignmentId });
       const cpMap: Record<number, CheckpointState> = {};
@@ -210,15 +231,23 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
         : { text: "", ai_feedback: null, pending: false, skipped: false };
 
       let pdfUrl: string | null = null;
+      let pdfStatus: PdfStatus = "unavailable";
+      let pdfNote: string | null = PDF_NOTE_TEXT_ONLY;
       if (data.paper_id) {
         try {
           const pdfData = await getPdfUrl(data.paper_id);
-          pdfUrl = pdfData.url;
+          pdfUrl = pdfData.url ?? null;
+          pdfStatus = pdfUrl ? "ready" : "unavailable";
         } catch {
-          toast.error("Could not load PDF");
+          // A real failure (network / auth / server), unlike a text-only paper.
+          pdfStatus = "error";
+          pdfNote = null;
         }
       }
       set({
+        pdfStatus,
+        pdfNote: pdfStatus === "ready" ? null : pdfNote,
+        paperId: data.paper_id ?? null,
         sessionId: data.session_id,
         currentAssignmentId: data.assignment_id,
         readingGuide: data.reading_guide,
@@ -230,8 +259,30 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
         loading: false,
       });
     } catch (err: unknown) {
-      set({ loading: false });
+      // The session never loaded, so there is no paper to show either — don't
+      // leave the viewer spinning on "Loading PDF..." forever.
+      set({ loading: false, pdfStatus: "unavailable", pdfNote: PDF_NOTE_SESSION_FAILED });
       toast.error(err instanceof Error ? err.message : "Could not start session");
+    }
+  },
+
+  retryPdf: async () => {
+    const { paperId } = get();
+    if (!paperId) {
+      // Nothing to re-request — settle on the empty state rather than no-op.
+      set({ pdfStatus: "unavailable", pdfNote: PDF_NOTE_TEXT_ONLY });
+      return;
+    }
+    set({ pdfStatus: "loading", pdfNote: null });
+    try {
+      const { url } = await getPdfUrl(paperId);
+      set({
+        pdfUrl: url ?? null,
+        pdfStatus: url ? "ready" : "unavailable",
+        pdfNote: url ? null : PDF_NOTE_TEXT_ONLY,
+      });
+    } catch {
+      set({ pdfStatus: "error", pdfNote: null });
     }
   },
 

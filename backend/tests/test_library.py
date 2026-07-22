@@ -227,6 +227,55 @@ def test_list_landmark_returns_papers_with_levels():
     assert [lvl["difficulty"] for lvl in attn["levels"]] == ["beginner", "advanced"]
 
 
+def test_list_landmark_omits_papers_with_no_published_levels():
+    """Unpublishing a landmark paper's guides must take it out of the library.
+
+    A paper with no published level has nothing to read, and the card renders
+    with a dead disabled button — so don't list it at all.
+    """
+    student = {"sub": "student-uuid-1"}
+    papers_rows = [
+        {"id": "p1", "title": "Attention Is All You Need", "created_at": "2026-06-01"},
+        {"id": "p2", "title": "Unpublished Paper", "created_at": "2026-06-02"},
+    ]
+    assignments_rows = [
+        {"id": "a1", "paper_id": "p1", "difficulty": "intermediate"},
+    ]
+    db = make_db(papers_rows, assignments_rows)
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with patch("backend.routers.library.get_settings") as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.get("/api/v1/library/landmark")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert [it["paper_id"] for it in response.json()["items"]] == ["p1"]
+
+
+def test_list_landmark_featured_omits_papers_with_no_published_levels():
+    student = {"sub": "student-uuid-1"}
+    papers_rows = [
+        {"id": "p1", "title": "Attention Is All You Need", "created_at": "2026-06-01"},
+    ]
+    db = make_db(papers_rows, [])  # every level unpublished
+
+    app.dependency_overrides[require_student] = lambda: student
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        with patch("backend.routers.library.get_settings") as mock_settings:
+            mock_settings.return_value.landmark_user_id = "landmark-user-uuid"
+            response = client.get("/api/v1/library/landmark/featured")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_list_landmark_requires_auth():
     app.dependency_overrides.clear()
     response = client.get("/api/v1/library/landmark")

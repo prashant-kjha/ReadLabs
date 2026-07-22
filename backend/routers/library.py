@@ -48,7 +48,12 @@ def _difficulty_rank(difficulty: str | None) -> int:
 
 async def _landmark_papers_with_levels(db, papers: list[dict]) -> list[LandmarkPaper]:
     """Attach each paper's published landmark (class_id IS NULL) difficulty levels,
-    sorted beginner -> advanced. Shared by the list and featured endpoints."""
+    sorted beginner -> advanced. Shared by the list and featured endpoints.
+
+    Papers with no published level are dropped: there is nothing to read, and the
+    card would render with a dead disabled button. This is what makes
+    unpublishing a landmark paper's guides remove it from the library.
+    """
     paper_ids = [p["id"] for p in papers]
     levels_by_paper: dict[str, list[dict]] = {pid: [] for pid in paper_ids}
     if paper_ids:
@@ -64,11 +69,12 @@ async def _landmark_papers_with_levels(db, papers: list[dict]) -> list[LandmarkP
             title=p["title"],
             created_at=p.get("created_at"),
             levels=sorted(
-                levels_by_paper.get(p["id"], []),
+                levels_by_paper[p["id"]],
                 key=lambda lvl: _difficulty_rank(lvl["difficulty"]),
             ),
         )
         for p in papers
+        if levels_by_paper.get(p["id"])
     ]
 
 

@@ -3,6 +3,54 @@
  * Provides reusable utilities for authentication, API mocking, and common interactions.
  */
 
+const path = require('path');
+
+// A real one-page PDF, served from the app's own origin so react-pdf can fetch
+// it. Lets the viewer tests assert what actually renders rather than a spinner.
+const SAMPLE_PDF_URL = 'http://localhost:3000/__fixtures__/sample.pdf';
+
+async function routeSamplePdf(page) {
+  await page.route('**/__fixtures__/sample.pdf', (route) =>
+    route.fulfill({
+      path: path.join(__dirname, 'fixtures', 'sample.pdf'),
+      contentType: 'application/pdf',
+    }));
+}
+
+/**
+ * Override the session POST so the reading page has a paper to fetch a PDF for.
+ * The default student mocks deliberately omit paper_id (text-only paper), so
+ * PDF-viewer tests need this. Register after mockStudentApiRoutes — the most
+ * recently registered Playwright route wins.
+ */
+async function mockSessionWithPaper(page) {
+  await page.route('**/api/v1/sessions/', (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
+    return route.fulfill({
+      json: {
+        session_id: 'sess1',
+        assignment_id: 'a1',
+        paper_id: 'lp1',
+        paper_title: 'Attention Is All You Need',
+        current_section_index: 0,
+        reading_guide: {
+          difficulty: 'intermediate',
+          sections: [{
+            title: 'Introduction',
+            section_type: 'Introduction',
+            text: 'Recurrent models have dominated sequence transduction.',
+            guiding_questions: ['What problem does this solve?'],
+            key_terms: ['attention'],
+            teacher_notes: '',
+          }],
+        },
+        checkpoints: [],
+        sowhat: null,
+      },
+    });
+  });
+}
+
 const TEACHER_USER = {
   id: 'test-teacher-001',
   email: 'teacher@test.com',
@@ -481,6 +529,9 @@ function mockAuthRoutes(page) {
 module.exports = {
   TEACHER_USER,
   STUDENT_USER,
+  SAMPLE_PDF_URL,
+  routeSamplePdf,
+  mockSessionWithPaper,
   loginAs,
   loginAsTeacher,
   loginAsStudent,
